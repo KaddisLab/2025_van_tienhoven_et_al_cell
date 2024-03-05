@@ -36,11 +36,15 @@ run_vartrix <- function(cellranger_run_folder, region_vcf, mapq = 20, mode = "co
     sample_id <- basename(cellranger_run_folder)
     bam_path <- glue::glue("{cellranger_run_folder}/outs/possorted_genome_bam.bam")
     barcode_path <- glue::glue("{cellranger_run_folder}/outs/filtered_feature_bc_matrix/barcodes.tsv.gz")
+    run_path <- glue::glue("{analysis_cache}/vartrix_out/{sample_id}_{mode}")
+    
+    if (!file.exists(glue::glue("{run_path}/barcodes.tsv"))) {
+        # copy barcodes to run path and unzip
+        system(glue::glue("cp {barcode_path} {run_path}/barcodes.tsv.gz && gunzip {run_path}/barcodes.tsv.gz"))
+    }
 
     #TODO  - cluster specific
-    ref_genome <- "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa"
-
-    run_path <- glue::glue("{analysis_cache}/vartrix_out/{sample_id}_{mode}")
+    ref_genome <- ifelse(hprcc::get_cluster() == "gemini", "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa", "")
 
     dir.create(run_path, recursive = TRUE, showWarnings = FALSE)
     
@@ -63,10 +67,10 @@ run_vartrix <- function(cellranger_run_folder, region_vcf, mapq = 20, mode = "co
 cd {run_path}
 
 vartrix_linux --bam '{bam_path}' \\
-        --cell-barcodes '{barcode_path}' \\
+        --cell-barcodes '{run_path}/barcodes.tsv' \\
         --fasta  {ref_genome} \\
-        --out-variants '{run_path}/var_out.txt' \\
-        --ref-matrix '{run_path}/ref_out.txt' \\
+        --out-variants '{run_path}/var_out.tsv' \\
+        --ref-matrix '{run_path}/ref_out.mtx' \\
         --mapq {mapq} \\
         --threads 8 \\
         --scoring-method {mode} \\
