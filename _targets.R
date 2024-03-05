@@ -123,7 +123,6 @@ list(
     tar_target(cellranger_run_folders_10xv2, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count/", nfcore_scrnaseq_multiqc_10xv2), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders, c(cellranger_run_folders_10xv3, cellranger_run_folders_10xv2), deployment = "main"),
 # Download SNPs ---------------------------------------------------------------------
-
     tar_target(
         snp_vcf,
         {destfile <- glue::glue("{analysis_cache}/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz")
@@ -172,11 +171,33 @@ list(
         pattern = map(cellranger_run_folders),
         format = "file",
         cue = tar_cue(mode = "always")
-        )
-
-
+        ),
 # QC ------------------------------------------------------------------------------------------
-    # cellbender
+    tar_target(cellbender_h5,
+        run_cellbender(cellranger_run_folder = cellranger_run_folders),
+        pattern = map(cellranger_run_folders),
+        deployment = "main",
+        format = "file",
+        cue = tar_cue(mode = "always")
+    ),
+# Housekeeping -------------------------------------------------------------------------------
+    # Define a target that checks if two weeks have passed
+    tar_target(
+        invalidate_fortnightly,
+        as.integer(Sys.Date() - as.Date("1970-01-01")) %/% 14 %% 2 == 0,
+        deployment = "main"
+    ),
+    # Update the mtime of all files in the cache
+    tar_target(
+        touch_cache,
+        function(invalidate_fortnightly, analysis_cache) {
+            if (invalidate_fortnightly) {
+                sapply(c(analysis_cache, list.files(analysis_cache, full.names = TRUE, recursive = TRUE)), 
+                    function(f) Sys.setFileTime(f, Sys.time()))
+            }
+        },
+        deployment = "main"
+    )
     # ddqc  https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
 
 )
