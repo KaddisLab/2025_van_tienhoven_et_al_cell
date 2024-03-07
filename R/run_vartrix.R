@@ -5,17 +5,16 @@
 #'
 #' @param bam_file Path to the Cellranger BAM file.
 #' @param cell_barcodes_file Path to the file with cell barcodes to be evaluated.
-#' @param fasta_file Genome fasta file.
-#' @param vcf_file Called variant file (VCF).
+#' @param ref_genome Genome fasta file.
+#' @param region_vcf Called variant file (VCF).
 #' @param min_mapq Minimum read mapping quality to consider. Default is 0.
-#' @param threads Number of parallel threads to use. Default is 1.
 #'
 #' @return The path to the VarTrix run directory if an existing run is found, the path to the
 #' batch script if a new run is initiated, or a message indicating that a run has already been
 #' submitted. The function aims to ensure that each sample is processed once and efficiently utilizes
 #' available genomic data for genotyping.
 #'
-#' @details This function checks for the existence of previous VarTrix runs for the specified
+#' @details The function checks for the existence of previous VarTrix runs for the specified
 #' sample and either resumes them or initiates a new run by creating a batch submission script.
 #' It handles directory creation, script preparation, and job submission, streamlining the
 #' process of single-cell genotyping in a high-throughput computing environment. Requires the
@@ -27,7 +26,7 @@
 #' @importFrom glue glue
 #' @importFrom here here
 #' @export
-run_vartrix <- function(cellranger_run_folder, region_vcf, mapq = 20, mode = "consensus", additional_args = "") {
+run_vartrix <- function(cellranger_run_folder, region_vcf, mapq = 30, mode = "consensus", ref_genome = "refdata-gex-GRCh38-2020-A", additional_args = "") {
 
     # check that mode is one of consensus, coverage, or alt_fraction
     if (!(mode %in% c("consensus", "coverage", "alt_fraction"))) {
@@ -38,41 +37,39 @@ run_vartrix <- function(cellranger_run_folder, region_vcf, mapq = 20, mode = "co
     barcode_path <- glue::glue("{cellranger_run_folder}/outs/filtered_feature_bc_matrix/barcodes.tsv.gz")
     run_path <- glue::glue("{analysis_cache}/vartrix_out/{sample_id}_{mode}")
     
-    if (!file.exists(glue::glue("{run_path}/barcodes.tsv"))) {
-        # copy barcodes to run path and unzip
-        system(glue::glue("cp {barcode_path} {run_path}/barcodes.tsv.gz && gunzip {run_path}/barcodes.tsv.gz"))
-    }
-
-    #TODO  - cluster specific
-    ref_genome <- ifelse(hprcc::get_cluster() == "gemini", "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa", "")
+    if (ref_genome == "refdata-gex-GRCh38-2020-A") {
+        ref_genome <- ifelse(hprcc::get_cluster() == "gemini", 
+            "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa",
+            "/ref_genome/igenomes/Homo_sapiens/10X/refdata-gex-GRCh38-2020-A/fasta/genome.fa")
+        } 
 
     dir.create(run_path, recursive = TRUE, showWarnings = FALSE)
     
     # Check if a successful VarTrix run exists
-    if (file.exists(glue::glue("{run_path}/out_matrix.mtx"))) {
+    if (file.exists(glue::glue("{run_path}/ref_matrix.mtx"))) {
         print(glue::glue("Found existing VarTrix run, skipping run for {sample_id}..."))
-        return(glue::glue("{run_path}/out_matrix.mtx"))
+        return(glue::glue("{run_path}/ref_matrix.mtx"))
     } else if (!file.exists(glue::glue("{run_path}/run_vartrix.sh"))) {
         # Create a sbatch script
         script_content <- glue::glue("#!/bin/bash
 #SBATCH --job-name={sample_id}_{mode}_vartrix
-#SBATCH --time=12:00:00
-#SBATCH --cpus-per-task=8
-#SBATCH --mem-per-cpu=40G
-#SBATCH --export=NONE
-#SBATCH --get-user-env=L
+#SBATCH --time=16:00:00
+#SBATCH --cpus-per-task=12
+#SBATCH --mem-per-cpu=16G
+#SBATCH --chdir={run_path}
 #SBATCH -e {run_path}/slurm-%j.err
 #SBATCH -o {run_path}/slurm-%j.out
 
-cd {run_path}
-
+#TODO - use a singularity container
 vartrix_linux --bam '{bam_path}' \\
-        --cell-barcodes '{run_path}/barcodes.tsv' \\
-        --fasta  {ref_genome} \\
-        --out-variants '{run_path}/var_out.tsv' \\
-        --ref-matrix '{run_path}/ref_out.mtx' \\
+        --cell-barcodes {barcode_path} \\
+        --out-barcodes '{run_path}/colnames.tsv' \\
+        --fasta {ref_genome} \\
+        --out-variants '{run_path}/rownames.tsv' \\
+        --ref-matrix '{run_path}/ref_matrix.mtx' \\
+        --out-matrix '{run_path}/alt_matrix.mtx' \\
         --mapq {mapq} \\
-        --threads 8 \\
+        --threads 12 \\
         --scoring-method {mode} \\
         --vcf '{region_vcf}' \\
         {additional_args}
@@ -81,7 +78,7 @@ vartrix_linux --bam '{bam_path}' \\
         cat(script_content, file = glue::glue("{run_path}/run_vartrix.sh"))
 
         # Submit to the cluster & return the path of the run script
-        system(glue::glue("sbatch {run_path}/run_vartrix.sh && sleep 0.1"), wait = FALSE)
+        system(glue::glue("sleep 0.1 && sbatch {run_path}/run_vartrix.sh"), wait = FALSE)
         return(glue::glue("{run_path}/run_vartrix.sh"))
     } else {
         print(glue::glue("The VarTrix run for \"{sample_id}\" has already been submitted. Check the SLURM job queue or navigate to {run_path} and submit the `run_vartrix.sh` script to resume the run."))
