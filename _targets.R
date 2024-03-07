@@ -109,7 +109,6 @@ list(
             sample_sheet = renamed_sample_sheet_10xv2,
             protocol = "10XV2"),
         deployment = "main",
-        cue = tar_cue(mode = "always")
         ),
     tar_target(
         nfcore_scrnaseq_multiqc_10xv3,
@@ -157,22 +156,14 @@ list(
             output_vcf_path = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz"),
         resources = small, format = "file"),
     tar_target(
-        vartrix_consensus,
-        run_vartrix(cellranger_run_folders, vartrix_vcf),
-        deployment = "main",
-        pattern = map(cellranger_run_folders),
-        format = "file",
-        cue = tar_cue(mode = "always")
-        ),
-    tar_target(
         vartrix_coverage,
-        run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage"),
+        run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
         deployment = "main",
         pattern = map(cellranger_run_folders),
         format = "file",
         cue = tar_cue(mode = "always")
         ),
-# QC ------------------------------------------------------------------------------------------
+# Cellbender using CellRanger counts ------------------------------------------------------------
     tar_target(cellbender_h5,
         run_cellbender(cellranger_run_folder = cellranger_run_folders),
         pattern = map(cellranger_run_folders),
@@ -180,23 +171,55 @@ list(
         format = "file",
         cue = tar_cue(mode = "always")
     ),
-# Housekeeping -------------------------------------------------------------------------------
-    # Define a target that checks if two weeks have passed
     tar_target(
-        invalidate_fortnightly,
-        as.integer(Sys.Date() - as.Date("1970-01-01")) %/% 14 %% 2 == 0,
-        deployment = "main"
+        cellbender_seurat_objects,
+        make_seurat_cellbender(cellbender_h5, cellranger_run_folders),
+        pattern = map(cellbender_h5, cellranger_run_folders),
+        deployment = "main",
+        format = "file"
     ),
+# Cell type annotation --------------------------------------------------------------
+    # Get cell atlas from Tosti et al. 2021
+    # https://doi.org/10.1053/j.gastro.2020.11.010
+    # http://singlecell.charite.de/cellbrowser/pancreas/
+    tar_target(
+        download_tosti_etal_files,
+        {
+            base_url <- "http://singlecell.charite.de/cellbrowser/pancreas/Adult_Pancreas/"
+            files_to_download <- c("exprMatrix.tsv.gz", "meta.tsv", "Seurat_umap.coords.tsv.gz")
+            dest_paths <- lapply(files_to_download, function(file) {
+            dest_file_path <- file.path(analysis_cache, "data/tosti_etal", file)
+            dir.create(dirname(dest_file_path), showWarnings = FALSE, recursive = TRUE)
+            url <- paste0(base_url, file)
+            download.file(url, destfile = dest_file_path, mode = "wb")
+            return(dest_file_path)
+            })
+            unlist(dest_paths)
+        },
+        format = "file", deployment = "main"
+    ),
+    tar_target(
+        tosti_etal_seurat_object,
+        make_seurat_tosti_etal(download_tosti_etal_files),
+        format = "file", deployment = "main"
+    ),
+    tar_target(
+        HPCA_cell_types_metadata,
+        seurat_annotate_hsa_cell_type(cellbender_seurat_objects, "HPCA"),
+        pattern = map(cellbender_seurat_objects),
+        format = "file",
+        resources = medium
+    ),
+
+# Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
         touch_cache,
-        function(invalidate_fortnightly, analysis_cache) {
-            if (invalidate_fortnightly) {
                 sapply(c(analysis_cache, list.files(analysis_cache, full.names = TRUE, recursive = TRUE)), 
-                    function(f) Sys.setFileTime(f, Sys.time()))
-            }
-        },
-        deployment = "main"
+                    function(f) Sys.setFileTime(f, Sys.time())),
+        deployment = "main",
+        cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(3, units = "weeks")
+      )
     )
     # ddqc  https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
 
