@@ -144,3 +144,39 @@ filter_and_trim_vcf <- function(vcf_path, fai_path, gr_filter = NULL, output_vcf
   return(output_vcf_path)
 }
 
+# #read in vartrix data
+
+# burgertools::ReadVartrix(strip.suffix = FALSE)
+# snp_vcf <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz"
+# ref
+# alt
+# barcodes
+# genotypes<-burgertools::ReadVcf(snp_vcf)
+
+vcf_2_matrix <- function(file = "") {
+  cat("Reading VCF file.\n")
+  vcf <- readr::read_tsv(file = file, comment = "##", show_col_types = FALSE)
+  colnames(vcf)[1] <- stringr::str_replace(colnames(vcf)[1], pattern = "#", replacement = "")
+  
+  # Generate unique row names of the form chr-position-ref-alt
+  cat("Generating unique row names of the form chr-position-ref-alt.\n")
+  UNIQUE_ID <- paste0(vcf$CHROM, "-", vcf$POS, "-", vcf$REF, "-", vcf$ALT)
+  vcf$UNIQUE_ID <- UNIQUE_ID
+  
+  # Generating (non-unique) IDs in VEP 'uploaded variant' conventions
+  cat("Generating (non-unique) IDs in VEP 'uploaded variant' conventions.\n")
+  # Process to generate IDs that match VEP conventions
+  # Assume REF and ALT are always given and positions do not need adjustment for this dataset
+  VEP_ID <- ifelse(vcf$ID == ".", paste0(vcf$CHROM, "_", vcf$POS, "_", vcf$REF, "/", vcf$ALT), vcf$ID)
+  vcf$VEP_ID <- VEP_ID
+  
+  # Simplify the VCF object for return, removing unnecessary columns if needed
+  # Here, just adding UNIQUE_ID and VEP_ID to the original VCF tibble
+  # Further processing can be added as per the analysis requirements
+  
+  cat("Returning VCF object with variants and VEP IDs.\n")
+  vcf_out_path <- file.path(glue::glue("{analysis_cache}/data/snp_vcf_matrix.tsv"))
+  readr::write_tsv(vcf, path = vcf_out_path)
+  return(vcf_out_path)
+}
+
