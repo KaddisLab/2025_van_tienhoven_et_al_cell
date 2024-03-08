@@ -1,4 +1,4 @@
-#' Annotate human cell types
+#' Annotate human cell types using SinglR
 #'
 #' Uses the SingleR::SingleR() function to label cell types according to expression profiles 
 #' from the databases made available via the the `{celldex}` package. The Seurat object per-cell 
@@ -19,11 +19,9 @@
 #' @source https://bioconductor.org/books/release/SingleRBook/
 #' @author Denis O'Meally, Yu-Husan Fu
 #' @export
-seurat_annotate_hsa_cell_type <- function(seurat_object, ref = "DICE") {
-    # Check if the input is a Seurat object, else read it from qs file
-    if (!inherits(seurat_object, "Seurat")) {
-        seurat_object <- qs::qread(seurat_object)
-        }
+seurat_singleR_hsa_cell_type <- function(seurat_object, ref = "DICE") {
+    seurat_object <- load_seurat(seurat_object)
+
     if (!isNormalized(seurat_object)) {
         seurat_object <- NormalizeData(seurat_object)
         }
