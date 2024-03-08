@@ -156,12 +156,14 @@ list(
             output_vcf_path = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz"),
         resources = small, format = "file"),
     tar_target(
+        vartrix_vcf_matrix, vcf_2_matrix(snp_vcf),
+        resources = small, format = "file"),
+    tar_target(
         vartrix_coverage,
         run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
         deployment = "main",
         pattern = map(cellranger_run_folders),
         format = "file",
-        cue = tar_cue(mode = "always")
         ),
 # Cellbender using CellRanger counts ------------------------------------------------------------
     tar_target(cellbender_h5,
@@ -169,7 +171,6 @@ list(
         pattern = map(cellranger_run_folders),
         deployment = "main",
         format = "file",
-        cue = tar_cue(mode = "always")
     ),
     tar_target(
         cellbender_seurat_objects,
@@ -183,33 +184,26 @@ list(
     # https://doi.org/10.1053/j.gastro.2020.11.010
     # http://singlecell.charite.de/cellbrowser/pancreas/
     tar_target(
-        download_tosti_etal_files,
-        {
-            base_url <- "http://singlecell.charite.de/cellbrowser/pancreas/Adult_Pancreas/"
-            files_to_download <- c("exprMatrix.tsv.gz", "meta.tsv", "Seurat_umap.coords.tsv.gz")
-            dest_paths <- lapply(files_to_download, function(file) {
-            dest_file_path <- file.path(analysis_cache, "data/tosti_etal", file)
-            dir.create(dirname(dest_file_path), showWarnings = FALSE, recursive = TRUE)
-            url <- paste0(base_url, file)
-            download.file(url, destfile = dest_file_path, mode = "wb")
-            return(dest_file_path)
-            })
-            unlist(dest_paths)
-        },
-        format = "file", deployment = "main"
-    ),
-    tar_target(
         tosti_etal_seurat_object,
-        make_seurat_tosti_etal(download_tosti_etal_files),
-        format = "file", deployment = "main"
+        make_seurat_tosti_etal(),
+        format = "file", resources = medium
     ),
     tar_target(
-        HPCA_cell_types_metadata,
-        seurat_annotate_hsa_cell_type(cellbender_seurat_objects, "HPCA"),
+        tosti_cell_type_tsv,
+        seurat_transfer_cell_type_annotation(cellbender_seurat_objects, tosti_etal_seurat_object, cell_type_col = "Cluster"),
         pattern = map(cellbender_seurat_objects),
         format = "file",
-        resources = medium
+        resources = small
     ),
+# Cell cycle annotation --------------------------------------------------------------
+    tar_target(
+        cell_cycle_tsv,
+        seurat_cell_cycle(cellbender_seurat_objects),
+        pattern = map(cellbender_seurat_objects),
+        format = "file",
+        resources = small
+    ),
+
 
 # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
@@ -219,7 +213,7 @@ list(
                     function(f) Sys.setFileTime(f, Sys.time())),
         deployment = "main",
         cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(3, units = "weeks")
-      )
+        )
     )
     # ddqc  https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
 
