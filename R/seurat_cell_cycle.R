@@ -21,11 +21,8 @@
 #' annotated_object <- seurat_annotate_cell_cycle(seurat_object)
 #' @export
 seurat_cell_cycle <- function(seurat_object, mmu = FALSE) {
+    seurat_object <- load_seurat(seurat_object)
 
-    # Check if the input is a Seurat object, else read it from qs file
-    if (!inherits(seurat_object, "Seurat")) {
-        seurat_object <- qs::qread(seurat_object)
-    }
     if (!isNormalized(seurat_object)) {
         seurat_object <- Seurat::NormalizeData(seurat_object)
     }
