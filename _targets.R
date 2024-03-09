@@ -190,7 +190,7 @@ list(
     ),
     tar_target(
         tosti_cell_type_tsv,
-        seurat_transfer_cell_type_annotation(cellbender_seurat_objects, tosti_etal_seurat_object, cell_type_col = "Cluster"),
+        seurat_singleR_transfer_label(cellbender_seurat_objects, tosti_etal_seurat_object, cell_type_col = "Cluster"),
         pattern = map(cellbender_seurat_objects),
         format = "file",
         resources = small
