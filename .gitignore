@@ -10,3 +10,4 @@ logs/*
 
 R.old
 analysis_cache
+.Rprofile
