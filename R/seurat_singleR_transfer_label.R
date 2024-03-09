@@ -9,6 +9,7 @@
 #' @param ref_seurat_object a seurat object or path to the QS file for the reference Seurat object.
 #' @param cell_type_col The name of the metadata column in the reference Seurat object
 #'        that contains cell type annotations.
+#' @param out_folder The name of the folder to save the output files.
 #' @param de_method The differential expression method to be used by SingleR. Possible
 #'        values are "wilcox", "bimod", "t", "negbinom", "poisson", or "LR".
 #'        Default is "wilcox".
@@ -47,7 +48,7 @@
 #' @importFrom tibble rownames_to_column as_tibble
 #' @importFrom glue glue
 #' @export
-seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object, cell_type_col, de_method = "wilcox") {
+seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object, cell_type_col, de_method = "wilcox", out_folder = "cell_type_out") {
     query_seurat_object <- load_seurat(query_seurat_object) |> initialQC()
     ref_seurat_object <- load_seurat(ref_seurat_object) |> initialQC()
 
@@ -88,11 +89,11 @@ seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object
     sample_id <- query_seurat_object@meta.data$orig.ident[1]
     ref_id <- ref_seurat_object@project.name
     
-    cell_type_table_path <- glue::glue("{analysis_cache}/cell_type_out/{sample_id}_{ref_id}_cell_type.csv")
+    cell_type_table_path <- glue::glue("{analysis_cache}/{out_folder}/{sample_id}_{ref_id}_cell_type.csv")
 
     dir.create(dirname(cell_type_table_path), showWarnings = FALSE, recursive = TRUE)
 
-    cell_type_table |> write.csv(cell_type_table_path)
+    cell_type_table |> write.csv(cell_type_table_path, row.names = FALSE, quote = FALSE)
 
     return(cell_type_table_path)
 }
