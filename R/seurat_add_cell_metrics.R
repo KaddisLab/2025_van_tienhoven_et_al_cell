@@ -2,13 +2,12 @@
 #'
 #' This function enriches a Seurat object with additional metadata columns representing
 #' percentages of mitochondrial genes (MT), ribosomal proteins (RP and RL), hemoglobin genes (HB),
-#' platelet-specific genes (PECAM1 and PF4), the XIST gene, and Y chromosome genes. It is designed
+#' platelet-specific genes (PECAM1 and PF4), the XIST gene, and human Y chromosome genes. It is designed
 #' to help in the identification of potential cell types and quality control metrics.
 #'
-#' @param seurat_object A Seurat object or a file path to a saved Seurat object in `.qs` format.
-#'                      The function checks the input and reads the Seurat object if a file path is provided.
+#' @param seurat_object A Seurat object or a file path to a saved Seurat object.
 #'
-#' @return The Seurat object with added metadata columns for each of the specified gene set percentages:
+#' @return Seurat object with added metadata columns for each of the specified gene set percentages:
 #'         `percent_mt`, `percent_rb`, `percent_hb`, `percent_pl`, `percent_xist`, and `percent_chrY`.
 #'
 #' @details The function calculates the percentage of expression for mitochondrial genes, ribosomal proteins,
@@ -28,14 +27,9 @@
 #' @importFrom Matrix colSums
 #' @export
 seurat_add_cell_metrics <- function(seurat_object) {
-    # Check if the input is a Seurat object, else read it from qs file path
-    if (!inherits(seurat_object, "Seurat")) {
-        seurat_object <- qs::qread(seurat_object)
-    }
-
-
-        seurat_object <- Seurat::AddMetaData(seurat_object,
-            metadata = data.frame(
+        
+        seurat_object <- load_seurat(seurat_object) |>
+            Seurat::AddMetaData(metadata = data.frame(
                 Seurat::PercentageFeatureSet(seurat_object, pattern = "^MT-"),
                 Seurat::PercentageFeatureSet(seurat_object, pattern = "^RP[SL][[:digit:]]|^RPLP[[:digit:]]|^RPSA"),
                 Seurat::PercentageFeatureSet(seurat_object, pattern = "^HB[^(P)]"),
