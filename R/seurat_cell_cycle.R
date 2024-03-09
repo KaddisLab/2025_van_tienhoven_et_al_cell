@@ -7,7 +7,7 @@
 #'
 #' @title Annotate human or mouse cell cycle
 #' @description This function annotates the cell cycle phases of cells in a Seurat object.
-#' @param seurat_object a Seurat object or a path to a seurat object saved as "qs" format
+#' @param seurat_object a Seurat object or a file path to a seurat object
 #' @param mmu Logical indicating whether to convert human gene symbols to mouse gene symbols.
 #' @import Seurat
 #' @import gprofiler2
@@ -44,8 +44,10 @@ seurat_cell_cycle <- function(seurat_object, mmu = FALSE) {
     cell_cycle <- seurat_object[[]] |> as.data.frame() |> tibble::rownames_to_column(var = "cell") |> select("cell", "S.Score", "G2M.Score", "Phase") |> unique() |> tibble::as_tibble()
 
     sample_id <- seurat_object@meta.data$orig.ident[1]
-    cell_cycle_path <- glue::glue("{analysis_cache}/cell_cycle_out/{sample_id}_cell_cycle.tsv")
+    cell_cycle_path <- glue::glue("{analysis_cache}/cell_cycle_out/{sample_id}_cell_cycle.csv")
     dir.create(dirname(cell_cycle_path), showWarnings = FALSE, recursive = TRUE)
-    write.table(cell_cycle, cell_cycle_path, sep = "\t", quote = FALSE, row.names = FALSE)
+    
+    cell_cycle |> write.csv(cell_cycle_path, row.names = FALSE, quote = FALSE)
+
     return(cell_cycle_path)
 }
