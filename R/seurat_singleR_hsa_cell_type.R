@@ -19,7 +19,7 @@
 #' @source https://bioconductor.org/books/release/SingleRBook/
 #' @author Denis O'Meally, Yu-Husan Fu
 #' @export
-seurat_singleR_hsa_cell_type <- function(seurat_object, ref = "DICE") {
+seurat_singleR_hsa_cell_type <- function(seurat_object, ref = "DICE", out_folder = "cell_type_out") {
     seurat_object <- load_seurat(seurat_object)
 
     if (!isNormalized(seurat_object)) {
@@ -86,10 +86,10 @@ seurat_singleR_hsa_cell_type <- function(seurat_object, ref = "DICE") {
     
     sample_id <- seurat_object@meta.data$orig.ident[1]
 
-    cell_type_path <- glue::glue("{analysis_cache}/cell_type_out/{sample_id}_{ref}_cell_type.csv")
+    cell_type_path <- glue::glue("{analysis_cache}/{out_folder}/{sample_id}_{ref}_cell_type.csv")
     dir.create(dirname(cell_type_path), showWarnings = FALSE, recursive = TRUE)
 
-    cell_type |> write_csv(cell_type_path)
+    cell_type |> write.csv(cell_type_path, row.names = FALSE, quote = FALSE)
 
     return(cell_type_path)
 }
