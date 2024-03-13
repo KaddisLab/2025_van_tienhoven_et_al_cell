@@ -195,6 +195,16 @@ list(
         format = "file",
         resources = small
     ),
+    # Azimuth - human pancreas --------------------------------------------------------
+    tar_target(
+        azimuth_reference_path,
+        download_zenodo_files(
+            urls = c(
+                "https://zenodo.org/records/4546926/files/idx.annoy?download=1",
+                "https://zenodo.org/records/4546926/files/ref.Rds?download=1"),
+            dest_dir = glue::glue("{analysis_cache}/data/azimuth")),
+        format = "file", resources = tiny
+    ),
 # Cell cycle annotation --------------------------------------------------------------
     tar_target(
         cell_cycle_tsv,
@@ -203,7 +213,14 @@ list(
         format = "file",
         resources = small
     ),
-
+# Doublet annotation --------------------------------------------------------------
+    tar_target(
+        scDblFinder_seurat_objects,
+        seurat_scDblFinder(cellbender_seurat_objects),
+        pattern = map(cellbender_seurat_objects),
+        format = "file",
+        resources = medium
+    ),
 
 # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
