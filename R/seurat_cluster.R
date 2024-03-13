@@ -18,44 +18,9 @@
 #' seurat_cluster(seurat_object)
 #'
 #' @export
-seurat_cluster <- function(seurat_object, res = seq(0.1, 1.5, by = 0.05), dims = 30, regress_out = NULL, remove_outliers = TRUE, ...) {
+seurat_cluster_ari <- function(seurat_object, res = seq(0.1, 1.5, by = 0.05), dims = 30, regress_out = NULL, remove_outliers = TRUE, ...) {
     set.seed(42)
 
-    choose_stable_resolution <- function(clusters_csv, res_prefix = "SCT_snn_res", plot_path = "ARI_plot.png") {
-        # Dynamically extract resolutions from column names
-        resolution_cols <- grep(res_prefix, names(clusters_csv), value = TRUE)
-        resolutions <- gsub(paste0("^", res_prefix, "\\."), "", resolution_cols) |> as.numeric()
-
-        ari_values <- numeric(length(resolutions) - 1)
-
-        for (i in seq_along(resolutions)[-length(resolutions)]) {
-            col1 <- resolution_cols[i]
-            col2 <- resolution_cols[i + 1]
-
-            # Ensure both columns exist to calculate ARI
-            ari_values[i] <- mclust::adjustedRandIndex(as.integer(clusters_csv[[col1]]), as.integer(clusters_csv[[col2]]))
-        }
-        # Identify the first resolution with a significant change
-        stable_res_index <- which(diff(ari_values) > 0.05)[1] # Adjust the condition based on your criteria
-        if (is.na(stable_res_index) || length(stable_res_index) == 0) {
-            stable_res_index <- which.max(ari_values) # Choose max ARI if no significant change
-        }
-        stable_res <- resolutions[stable_res_index]
-
-        # if plot path is not null, plot ARI values
-        if (!is.null(plot_path)) {
-            ari_data <- data.frame(Resolution = resolutions[-length(resolutions)], ARI = ari_values)
-            ggplot(ari_data, aes(x = Resolution, y = ARI)) +
-            geom_line() +
-            geom_point() +
-            geom_point(data = subset(ari_data, Resolution == stable_res), aes(x = Resolution, y = ARI), color = "red", size = 3) +
-            geom_text(data = subset(ari_data, Resolution == stable_res), aes(x = Resolution, y = ARI, label = sprintf("Res: %.2f", stable_res)), vjust = -1.5, color = "red") +
-            labs(title = glue::glue("Adjusted Rand Index Across Resolutions {sub('_ari.png', '', plot_path|> basename())}"), x = "Resolution", y = "ARI")
-            ggsave(plot_path, width = 8, height = 6)
-        }
-
-        return(stable_res)
-    }
     seurat_object <- load_seurat(seurat_object)
 
     if (isTRUE(remove_outliers)) {
@@ -84,9 +49,41 @@ seurat_cluster <- function(seurat_object, res = seq(0.1, 1.5, by = 0.05), dims =
         select("cell", "seurat_clusters", contains("SCT"), -c("nCount_SCT", "nFeature_SCT")) |>
         unique() |>
         tibble::as_tibble()
-    plot_path <- glue::glue("{analysis_cache}/clusters_out/{sample_id}_ari.png")
+    
+    resolution_cols <- grep(res_prefix, names(clusters_csv), value = TRUE)
+    resolutions <- gsub(paste0("^", res_prefix, "\\."), "", resolution_cols) |> as.numeric()
 
-    stable_resolution <- glue::glue("SCT_snn_res.{choose_stable_resolution(clusters_csv, plot_path = plot_path)}")
+    ari_values <- numeric(length(resolutions) - 1)
+
+    for (i in seq_along(resolutions)[-length(resolutions)]) {
+        col1 <- resolution_cols[i]
+        col2 <- resolution_cols[i + 1]
+
+        # Ensure both columns exist to calculate ARI
+        ari_values[i] <- mclust::adjustedRandIndex(as.integer(clusters_csv[[col1]]), as.integer(clusters_csv[[col2]]))
+    }
+    # Identify the first resolution with a significant change
+    stable_res_index <- which(diff(ari_values) > 0.05)[1] # Adjust the condition based on your criteria
+    if (is.na(stable_res_index) || length(stable_res_index) == 0) {
+        stable_res_index <- which.max(ari_values) # Choose max ARI if no significant change
+    }
+    stable_res <- resolutions[stable_res_index]
+
+    plot_path <- "{analysis_cache}/clusters_out/{sample_id}_ari_res{stable_res}.png"
+
+    # if plot path is not null, plot ARI values
+    if (!is.null(plot_path)) {
+        ari_data <- data.frame(Resolution = resolutions[-length(resolutions)], ARI = ari_values)
+        ggplot(ari_data, aes(x = Resolution, y = ARI)) +
+        geom_line() +
+        geom_point() +
+        geom_point(data = subset(ari_data, Resolution == stable_res), aes(x = Resolution, y = ARI), color = "red", size = 3) +
+        geom_text(data = subset(ari_data, Resolution == stable_res), aes(x = Resolution, y = ARI, label = sprintf("Res: %.2f", stable_res)), vjust = -1.5, color = "red") +
+        labs(title = glue::glue("Adjusted Rand Index Across Resolutions {sub('_ari.png', '', plot_path|> basename())}"), x = "Resolution", y = "ARI")
+        ggsave(plot_path, width = 8, height = 6)
+    }
+
+    stable_resolution <- glue::glue("SCT_snn_res.{stable_res}")
 
     clusters_csv$seurat_clusters <- clusters_csv[[stable_resolution]]
 
