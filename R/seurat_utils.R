@@ -64,3 +64,48 @@ load_seurat <- function(seurat_object) {
   }
   return(seurat_object)
 }
+
+
+#' Download Files from Zenodo
+#'
+#' Downloads files from Zenodo given a vector of URLs and saves them to a specified directory.
+#' This function is designed to be used in a `targets` pipeline, returning a vector of file paths
+#' where the files were saved, suitable for use with `tar_targets(format = "file")`.
+#'
+#' @param urls A character vector of URLs pointing to the files to be downloaded from Zenodo.
+#' @param dest_dir A character string specifying the directory where files should be saved.
+#'             This directory will be created if it does not exist.
+#'
+#' @return A character vector of the paths to the successfully downloaded files.
+#' @export
+#'
+#' @examples
+#' urls <- c("https://zenodo.org/records/4546926/files/idx.annoy?download=1",
+#'           "https://zenodo.org/records/4546926/files/ref.Rds?download=1")
+#' dest_dir <- "temp" # Specify your destination directory here
+#' downloaded_files <- download_zenodo_files(urls, dest_dir)
+#' # Now `downloaded_files` contains paths to the downloaded files
+download_zenodo_files <- function(urls, dest_dir) {
+  if (!dir.exists(dest_dir)) {
+    dir.create(dest_dir, recursive = TRUE)
+  }
+  
+  downloaded_files <- c() # Initialize an empty vector to store file paths
+  
+  for (url in urls) {
+    # Remove query parameters and extract the filename
+    file_name <- basename(sub("\\?.*$", "", url))
+    
+    dest_path <- file.path(dest_dir, file_name)
+    
+    response <- httr::GET(url, httr::write_disk(dest_path, overwrite = TRUE))
+    
+    if (httr::status_code(response) == 200) {
+      downloaded_files <- c(downloaded_files, dest_path)
+    } else {
+      warning("Failed to download: ", file_name)
+    }
+  }
+  
+  return(downloaded_files)
+}
