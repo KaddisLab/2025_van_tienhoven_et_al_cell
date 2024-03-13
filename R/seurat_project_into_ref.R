@@ -1,4 +1,4 @@
-#' Transfer Cell Type Annotation from Reference to Test Seurat Object
+#' Transfer Cell Type Annotation from Reference to Q Seurat Object
 #'
 #' This function applies cell type annotations from a reference Seurat object
 #' to a test Seurat object using SingleR. It supports optional normalization
