@@ -2,9 +2,6 @@ library(targets)
 library(tarchetypes)
 library(hprcc)
 
-analysis_cache <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024"
-scrnaseq_release <- "2.5.1"
-
 tar_source()
 
 tar_option_set(
@@ -154,13 +151,25 @@ list(
             vcf_path = snp_vcf,
             fai_path = "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa.fai",
             output_vcf_path = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz"),
-        resources = small, format = "file"),
+        resources = small,
+        format = "file"
+        ),
     tar_target(
-        vartrix_vcf_matrix, vcf_2_matrix(snp_vcf),
-        resources = small, format = "file"),
+        vartrix_vcf_genotype_object,
+        vcf_2_matrix(snp_vcf),
+        resources = small,
+        format = "file"
+        ),
     tar_target(
         vartrix_coverage,
         run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
+        deployment = "main",
+        pattern = map(cellranger_run_folders),
+        format = "file",
+        ),
+    tar_target(
+        vartrix_consensus,
+        run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "consensus", mapq = 30),
         deployment = "main",
         pattern = map(cellranger_run_folders),
         format = "file",
@@ -176,20 +185,20 @@ list(
         cellbender_seurat_objects,
         make_seurat_cellbender(cellbender_h5, cellranger_run_folders),
         pattern = map(cellbender_h5, cellranger_run_folders),
-        deployment = "main",
+        deployment = "main", # must run on "main" for some reason??
         format = "file"
     ),
-# Cell type annotation --------------------------------------------------------------
+# SingleR cell type annotation --------------------------------------------------------------
     # Get cell atlas from Tosti et al. 2021
     # https://doi.org/10.1053/j.gastro.2020.11.010
     # http://singlecell.charite.de/cellbrowser/pancreas/
     tar_target(
         tosti_etal_seurat_object,
         make_seurat_tosti_etal(),
-        format = "file", resources = medium
+        format = "file", resources = xlarge
     ),
     tar_target(
-        tosti_cell_type_tsv,
+        tosti_cell_type_csv,
         seurat_singleR_transfer_label(cellbender_seurat_objects, tosti_etal_seurat_object, cell_type_col = "Cluster"),
         pattern = map(cellbender_seurat_objects),
         format = "file",
@@ -207,7 +216,7 @@ list(
     ),
 # Cell cycle annotation --------------------------------------------------------------
     tar_target(
-        cell_cycle_tsv,
+        cell_cycle_csv,
         seurat_cell_cycle(cellbender_seurat_objects),
         pattern = map(cellbender_seurat_objects),
         format = "file",
@@ -215,11 +224,18 @@ list(
     ),
 # Doublet annotation --------------------------------------------------------------
     tar_target(
-        scDblFinder_seurat_objects,
+        scDblFinder_csv,
         seurat_scDblFinder(cellbender_seurat_objects),
         pattern = map(cellbender_seurat_objects),
         format = "file",
         resources = medium
+    ),
+# Reference annotation
+    tar_target(
+        ref_mapped_seurat_objects,
+        seurat_project_into_ref(query = cellbender_seurat_objects, ref = tosti_etal_seurat_object),
+        pattern = slice(cellbender_seurat_objects,c(1:4)),
+        format = "file", resources = medium
     ),
 
 # Housekeeping --------------------------------------------------------------------------

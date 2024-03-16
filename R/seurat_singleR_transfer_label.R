@@ -17,8 +17,7 @@
 #' @return The path to the CSV file containing the transferred cell type annotations
 #'         for the query Seurat object.
 #'
-#' @details The function first performs initial quality control (using an assumed
-#'          `initialQC` function) and normalization on the query Seurat object. It
+#' @details The function first performs normalization on the query Seurat object. It
 #'          optionally performs normalization on the reference Seurat object as well.
 #'          SingleR is then used to transfer cell type annotations from the reference
 #'          to the query dataset. The function is designed to work in a high-performance
@@ -49,8 +48,8 @@
 #' @importFrom glue glue
 #' @export
 seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object, cell_type_col, de_method = "wilcox", out_folder = "cell_type_out") {
-    query_seurat_object <- load_seurat(query_seurat_object) |> initialQC()
-    ref_seurat_object <- load_seurat(ref_seurat_object) |> initialQC()
+    query_seurat_object <- load_seurat(query_seurat_object)
+    ref_seurat_object <- load_seurat(ref_seurat_object)
 
     if (!isNormalized(query_seurat_object)) {
         query_seurat_object <- Seurat::NormalizeData(query_seurat_object)

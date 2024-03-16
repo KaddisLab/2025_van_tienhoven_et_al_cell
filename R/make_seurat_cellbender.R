@@ -17,7 +17,7 @@ make_seurat_cellbender <- function(cellbender_h5, cellranger_run_folder) {
         Seurat::Read10X_h5(glue::glue("{cellranger_run_folder}/outs/filtered_feature_bc_matrix.h5"))
         ) |> suppressWarnings()
 
-    # Fix orig.ident
+    # Set orig.ident
     seurat_object@meta.data$orig.ident <- sample_id
 
     # Add cellbender cols    
@@ -26,9 +26,13 @@ make_seurat_cellbender <- function(cellbender_h5, cellranger_run_folder) {
         raw_assay_name = "RAW",
         cell_bender_assay_name = "RNA") 
     
+    # Add QC metrics
+    seurat_object <- seurat_add_cell_metrics(seurat_object)
+
     # Save the Seurat object
     seurat_object_path <- glue::glue("{analysis_cache}/cellbender_seurat_objects/{sample_id}.qs")
     dir.create(dirname(seurat_object_path), recursive = TRUE, showWarnings = FALSE)
+
     qs::qsave(seurat_object, file = seurat_object_path)
 
     return(seurat_object_path)

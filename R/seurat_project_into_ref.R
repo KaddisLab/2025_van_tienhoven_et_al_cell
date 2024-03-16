@@ -7,88 +7,57 @@
 #'
 #' @param query_seurat_object a seurat object or path to the QS file for the test Seurat object.
 #' @param ref_seurat_object a seurat object or path to the QS file for the reference Seurat object.
-#' @param cell_type_col The name of the metadata column in the reference Seurat object
-#'        that contains cell type annotations.
-#' @param de_method The differential expression method to be used by SingleR. Possible
-#'        values are "wilcox", "bimod", "t", "negbinom", "poisson", or "LR".
-#'        Default is "wilcox".
-#'
-#' @return The path to the CSV file containing the transferred cell type annotations
-#'         for the test Seurat object.
-#'
-#' @details The function first performs initial quality control (using an assumed
-#'          `initialQC` function) and normalization on the test Seurat object. It
-#'          optionally performs normalization on the reference Seurat object as well.
-#'          SingleR is then used to transfer cell type annotations from the reference
-#'          to the test dataset. The function is designed to work in a high-performance
-#'          computing environment, leveraging parallel processing capabilities.
-#'
-#' @examples
-#' query_seurat_object <- "path/to/query_seurat_object.qs"
-#' ref_seurat_object <- "path/to/reference_seurat_object.qs"
-#' cell_type_col <- "cell_type"
-#' 
-#' # Transfer cell type annotation without normalizing the reference
-#' result_path <- seurat_transfer_cell_type_annotation(
-#'   query_seurat_object,
-#'   ref_seurat_object
-#'   cell_type_col,
-#'   norm_ref = FALSE,
-#'   de_method = "wilcox"
-#' )
-#' 
-#' # Check the result
-#' print(result_path)
-#'
-#' @importFrom Seurat NormalizeData GetAssayData
-#' @importFrom qs qread
-#' @importFrom BiocParallel register MulticoreParam bpparam
-#' @importFrom SingleR SingleR
-#' @importFrom tibble rownames_to_column as_tibble
-#' @importFrom glue glue
 #' @export
-seurat_project_into_ref <- function(query_seurat_object, ref_seurat_object, reduction = "umap") {
-    # Make it reproducible
+seurat_project_into_ref <- function(query_seurat_object, ref_seurat_object, reduction_model = "umap") {
+    # https://satijalab.org/seurat/articles/integration_mapping
     set.seed(42)
+    require(Seurat)
+    options(parallelly.availableCores.methods = "Slurm")
+    hprcc::init_multisession()
 
-    query_seurat_object <- load_seurat(query_seurat_object) |> initialQC()
+    query_seurat_object <- load_seurat(query_seurat_object) 
 
-    ref_seurat_object <- load_seurat(ref_seurat_object) |> initialQC()
+    ref_seurat_object <- load_seurat(ref_seurat_object) 
 
     if (!isNormalized(query_seurat_object)) {
         query_seurat_object <- Seurat::NormalizeData(query_seurat_object)
     }
 
-    if (!isNormalized(ref_seurat_object)) {
-        ref_seurat_object <- Seurat::NormalizeData(ref_seurat_object)
-    }
+    anchors <- Seurat::FindTransferAnchors(
+        reference = ref_seurat_object,
+        query = query_seurat_object,
+        reference.reduction = "pca")
 
-    # Setup parallel processing
-    hprcc::init_multisession()
-    # BiocParallel::register(
-    #     BiocParallel::MulticoreParam(workers = hprcc::slurm_allocation()$CPUs, progressbar = TRUE)
-    # )
-
-anchors <- Seurat::FindTransferAnchors(
-    reference = ref_seurat_object,
-    query = query_seurat_object,
-    dims = 1:30,
-    reference.reduction = "pca")
-
-ref_seurat_object.model <- Seurat::RunUMAP(
-    ref_seurat_object,
-    dims = 1:30,
-    reduction = "pca",
-    return.model = TRUE)
+    updated_query <- Seurat::MapQuery(
+        anchorset = anchors,
+        reference = ref_seurat_object,
+        query = query_seurat_object,
+        refdata = list(cell_type = "Cluster"),
+        reference.reduction = "pca",
+        reduction.model = reduction_model)
 
     sample_id <- query_seurat_object@meta.data$orig.ident[1]
+
     ref_id <- ref_seurat_object@project.name
+
+    plot_updated_query <- DimPlot(updated_query, group.by = "predicted.cell_type", cols = custom_palette, label = TRUE, label.size = 4, repel = TRUE, reduction = "ref.umap", shuffle = TRUE) +
+        NoLegend() + 
+        labs(title = glue::glue("{sample_id} in {ref_id} {reduction_model}")) +
+        theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
     
-    cell_type_table_path <- glue::glue("{analysis_cache}/cell_type_out/{sample_id}_{ref_id}_cell_type.csv")
+    plot_path <- glue::glue("{analysis_cache}/ref_projection_out/{sample_id}_{reduction_model}_{ref_id}.png")
+    
+    dir.create(dirname(plot_path), showWarnings = FALSE, recursive = TRUE)
+    ggsave(plot_path, plot = plot_updated_query, width = 10, height = 10, dpi = 300)
 
-    dir.create(dirname(cell_type_table_path), showWarnings = FALSE, recursive = TRUE)
+    predicted_ref_data <- updated_query[[]] |> as.data.frame() |> tibble::rownames_to_column(var = "cell") |> select("cell", matches("predicted")) |> tibble::as_tibble()
+    predicted_ref_data_path <- glue::glue("{analysis_cache}/ref_projection_out/{sample_id}_{reduction_model}_{ref_id}_predictions.csv")
+    
+    predicted_ref_data |> write.csv(predicted_ref_data_path, row.names = FALSE, quote = FALSE)
 
-    cell_type_table |> write.csv(cell_type_table_path)
+    updated_query_path <- glue::glue("{analysis_cache}/ref_projection_out/{sample_id}_{reduction_model}_{ref_id}.ps")
 
-    return(cell_type_table_path)
+    qs::qsave(updated_query, updated_query_path)
+
+    return(updated_query_path)
 }

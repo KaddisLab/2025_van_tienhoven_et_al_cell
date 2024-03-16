@@ -46,7 +46,10 @@ seurat_scDblFinder <- function(seurat_object, cluster_col = NULL, sample_column 
         seurat_object@meta.data <- SingleCellExperiment::colData(sce) |> as.data.frame()
     }
 
-    seurat_metadata <- seurat_object@meta.data |> select(-any_of(c("nCount_RNA", "nFeature_RNA", "nCount_RAW", "nFeature_RAW", "nFeature_Diff", "nCount_Diff", "ident")))
+    seurat_metadata <- seurat_object@meta.data %>% 
+        tibble::rownames_to_column("cell") %>% 
+        dplyr::select(dplyr::any_of(c("cell", dplyr::matches("scDblFinder")))) %>% 
+        dplyr::rename_with(~ stringr::str_remove(., "scDblFinder\\."), .cols = dplyr::matches("scDblFinder"))
     
     sample_id <- seurat_object[[]]$orig.ident[1]
     
