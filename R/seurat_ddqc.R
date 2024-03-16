@@ -2,12 +2,12 @@
 # Adapted from https://raw.githubusercontent.com/ayshwaryas/ddqc_R/master/R/ddqc.R
 # Citation https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
 suppressPackageStartupMessages({
-    require(Seurat)
-    require(ggplot2)
 })
 
 
 .ddqcBoxplot <- function(df.qc, metric.name, h.line.x = 0, do.log = FALSE) {
+    require(Seurat)
+    require(ggplot2)
     plt.data <- data.frame(metric = df.qc[[metric.name]], clusters = df.qc$cluster_labels)
     colnames(plt.data) <- c("metric", "clusters")
 
@@ -39,14 +39,15 @@ suppressPackageStartupMessages({
 
 
 .clusterData <- function(data, norm.factor = 10000, n.pcs = 50, k.param = 20, res = 1, random.seed = 42) {
+    require(Seurat)
     set.seed(random.seed)
-    data <- NormalizeData(data, normalization.method = "LogNormalize", scale.factor = norm.factor, verbose = FALSE)
-    data <- FindVariableFeatures(data, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
+    data <- Seurat::NormalizeData(data, normalization.method = "LogNormalize", scale.factor = norm.factor, verbose = FALSE)
+    data <- Seurat::FindVariableFeatures(data, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
     all.genes <- rownames(x = data)
-    data <- ScaleData(data, features = all.genes, verbose = FALSE)
-    data <- RunPCA(data, npcs = n.pcs, features = VariableFeatures(data), verbose = FALSE)
-    data <- FindNeighbors(data, dims = 1:n.pcs, k.param = k.param, verbose = FALSE)
-    data <- FindClusters(data, resolution = res, verbose = FALSE)
+    data <- Seurat::ScaleData(data, features = all.genes, verbose = FALSE)
+    data <- Seurat::RunPCA(data, npcs = n.pcs, features = VariableFeatures(data), verbose = FALSE)
+    data <- Seurat::FindNeighbors(data, dims = 1:n.pcs, k.param = k.param, verbose = FALSE)
+    data <- Seurat::FindClusters(data, resolution = res, verbose = FALSE)
     return(data)
 }
 
@@ -96,13 +97,14 @@ suppressPackageStartupMessages({
 #'
 #' This function filters Seurat object based on ddqc and scDoublet results
 #'
-#' @param data Seurat object
+#' @param data Seurat object or path to a Seurat object file
 #' @param ddqc_out Path to the CSV file with ddqc statistics
 #' @param scDoublet_out Path to the CSV file with scDoublet results (optional)
 #'
 #' @return Path to the filtered Seurat object saved as a Quick Save file
 #' @export
-filterData <- function(data, ddqc_out, scDoublet_out = NULL) {
+seurat_filter_qc <- function(data, ddqc_out, scDoublet_out = NULL) {
+    data <- load_seurat(data)
     df.qc <- read.csv(ddqc_out, stringsAsFactors = FALSE)
     if (!is.null(scDoublet_out)) {
         scDoublet_out <- read.csv(scDoublet_out, stringsAsFactors = FALSE)
@@ -136,7 +138,7 @@ filterData <- function(data, ddqc_out, scDoublet_out = NULL) {
 #' This function takes a Seurat object after InitialQC, and then performs ddqc on it
 #' Returns a path to the CSV file with ddqc statistics
 #'
-#' @param data Seurat object
+#' @param data Seurat object, or a path to a Seurat object file
 #' @param n.pcs number of principal components for clustering. 50 by default
 #' @param k.param k for FindNeighbors. 20 by default
 #' @param res clustering resolution. 1 by default
@@ -152,9 +154,9 @@ filterData <- function(data, ddqc_out, scDoublet_out = NULL) {
 #'
 #' @return Path to the CSV file with ddqc statistics
 #' @export
-ddqc.metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, threshold = 2, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
+seurat_ddqc_metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, threshold = 2, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
                          n.genes.lower.bound = 200, percent.mito.upper.bound = 15, random.state = 42) {
-    data <- .clusterData(data, res = res, n.pcs = n.pcs, k.param = k.param, random.seed = random.state)
+    data <- .clusterData(load_seurat(data), res = res, n.pcs = n.pcs, k.param = k.param, random.seed = random.state)
     sample_id <- data[[]]$orig.ident[1]
     df.qc <- data.frame("cluster_labels" = data$seurat_clusters, row.names = colnames(data))
     passed.qc <- vector(mode = "logical", length = length(data$seurat_clusters))
@@ -199,6 +201,7 @@ ddqc.metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, threshold = 2,
     df.qc[["passed.qc"]] <- passed.qc
 
     if (do.plots) {
+        #TODO: add cell counts to subtitle
         combined_plot <- patchwork::wrap_plots(plots, ncol = 2) &
             patchwork::plot_annotation(
                 title = paste0(sample_id, " ddqc plot"),

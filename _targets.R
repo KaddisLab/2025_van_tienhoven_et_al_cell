@@ -237,7 +237,21 @@ list(
         pattern = slice(cellbender_seurat_objects,c(1:4)),
         format = "file", resources = medium
     ),
-
+# ddqc -------------------------------------------------------------------------------
+    tar_target(
+        ddqc_csv,
+        seurat_ddqc_metrics(cellbender_seurat_objects),
+        pattern = map(cellbender_seurat_objects),
+        format = "file",
+        resources = small
+    ),
+    tar_target(
+        filtered_seurat_objects,
+        seurat_filter_qc(cellbender_seurat_objects, ddqc_csv, scDblFinder_csv),
+        pattern = map(cellbender_seurat_objects, ddqc_csv, scDblFinder_csv),
+        format = "file",
+        resources = small
+    ),
 # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
