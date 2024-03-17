@@ -201,11 +201,14 @@ seurat_ddqc_metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, thresho
     df.qc[["passed.qc"]] <- passed.qc
 
     if (do.plots) {
-        #TODO: add cell counts to subtitle
+        total_cells <- length(passed.qc)
+        kept_cells <- sum(passed.qc)
+        dropped_cells <- total_cells - kept_cells
+        percent_dropped <- round((dropped_cells / total_cells) * 100, 1)
         combined_plot <- patchwork::wrap_plots(plots, ncol = 2) &
             patchwork::plot_annotation(
                 title = paste0(sample_id, " ddqc plot"),
-                subtitle = paste(threshold, " Median Absolute Deviations per cluster; showing cells kept vs", "<span style='color:red;'>dropped</span>"),
+                subtitle = glue::glue("Filtering {threshold} Median Absolute Deviations (MADs) per cluster; {kept_cells} cells kept vs <span style='color:red;'>{dropped_cells} dropped</span> (will remove <span style='color:red;'>{percent_dropped}%</span> of {total_cells} total)"),
                 theme = theme(
                     plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
                     plot.subtitle = ggtext::element_markdown(hjust = 0, size = 10)
