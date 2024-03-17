@@ -42,7 +42,7 @@ seurat_project_into_ref <- function(query_seurat_object, ref_seurat_object, redu
 
     plot_updated_query <- DimPlot(updated_query, group.by = "predicted.cell_type", cols = custom_palette, label = TRUE, label.size = 4, repel = TRUE, reduction = "ref.umap", shuffle = TRUE) +
         NoLegend() + 
-        labs(title = glue::glue("{sample_id} in {ref_id} {reduction_model}")) +
+        labs(title = glue::glue("{sample_id} projected into {ref_id} {reduction_model}")) +
         theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
     
     plot_path <- glue::glue("{analysis_cache}/ref_projection_out/{sample_id}_{reduction_model}_{ref_id}.png")
