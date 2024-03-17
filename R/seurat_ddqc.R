@@ -1,9 +1,6 @@
 # Data driven QC (ddqc) for single cell RNA-seq data
 # Adapted from https://raw.githubusercontent.com/ayshwaryas/ddqc_R/master/R/ddqc.R
 # Citation https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
-suppressPackageStartupMessages({
-})
-
 
 .ddqcBoxplot <- function(df.qc, metric.name, h.line.x = 0, do.log = FALSE) {
     require(Seurat)
@@ -36,8 +33,6 @@ suppressPackageStartupMessages({
         scale_color_manual(values = c("black", "red"))
 }
 
-
-
 .clusterData <- function(data, norm.factor = 10000, n.pcs = 50, k.param = 20, res = 1, random.seed = 42) {
     require(Seurat)
     set.seed(random.seed)
@@ -51,9 +46,9 @@ suppressPackageStartupMessages({
     return(data)
 }
 
-
-.metricFilter <- function(data, df.qc, param = 2, metric.name, do.upper.co = FALSE, do.lower.co = FALSE,
-                          lower.bound = 10E10, upper.bound = -10E10) {
+.metricFilter <- function(
+    data, df.qc, param = 2, metric.name, do.upper.co = FALSE, do.lower.co = FALSE,
+    lower.bound = 10E10, upper.bound = -10E10) {
     passed.qc <- vector(mode = "logical", length = length(colnames(data)))
     names(passed.qc) <- colnames(data)
 
@@ -89,9 +84,6 @@ suppressPackageStartupMessages({
 
     return(df.qc)
 }
-
-
-
 
 #' Filter the Seurat object
 #'
@@ -130,8 +122,6 @@ seurat_filter_qc <- function(data, ddqc_out, scDoublet_out = NULL) {
 
     return(data_path)
 }
-
-
 
 #' Calculate which cells are passing ddqc
 #'
