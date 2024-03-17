@@ -212,7 +212,8 @@ list(
                 "https://zenodo.org/records/4546926/files/idx.annoy?download=1",
                 "https://zenodo.org/records/4546926/files/ref.Rds?download=1"),
             dest_dir = glue::glue("{analysis_cache}/data/azimuth")),
-        format = "file", resources = tiny
+        format = "file",
+        resources = tiny
     ),
 # Cell cycle annotation --------------------------------------------------------------
     tar_target(
@@ -233,9 +234,10 @@ list(
 # Reference annotation
     tar_target(
         ref_mapped_seurat_objects,
-        seurat_project_into_ref(query = cellbender_seurat_objects, ref = tosti_etal_seurat_object),
-        pattern = slice(cellbender_seurat_objects,c(1:4)),
-        format = "file", resources = medium
+        seurat_project_into_ref(query = cellbender_seurat_objects, ref = tosti_etal_seurat_object, reduction_model = "umap_harmony"),
+        pattern = map(cellbender_seurat_objects),
+        format = "file",
+        resources = medium
     ),
 # ddqc -------------------------------------------------------------------------------
     tar_target(
@@ -259,8 +261,7 @@ list(
                 sapply(c(analysis_cache, list.files(analysis_cache, full.names = TRUE, recursive = TRUE)), 
                     function(f) Sys.setFileTime(f, Sys.time())),
         deployment = "main",
-        cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(3, units = "weeks")
-        )
+        cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(3, units = "weeks"))
     )
     # ddqc  https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
 

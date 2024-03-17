@@ -145,7 +145,7 @@ seurat_filter_qc <- function(data, ddqc_out, scDoublet_out = NULL) {
 #' @return Path to the CSV file with ddqc statistics
 #' @export
 seurat_ddqc_metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, threshold = 2, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
-                         n.genes.lower.bound = 200, percent.mito.upper.bound = 15, random.state = 42) {
+                                n.genes.lower.bound = 200, percent.mito.upper.bound = 15, random.state = 42) {
     data <- .clusterData(load_seurat(data), res = res, n.pcs = n.pcs, k.param = k.param, random.seed = random.state)
     sample_id <- data[[]]$orig.ident[1]
     df.qc <- data.frame("cluster_labels" = data$seurat_clusters, row.names = colnames(data))
