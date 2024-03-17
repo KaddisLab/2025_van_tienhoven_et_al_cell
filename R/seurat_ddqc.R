@@ -1,6 +1,9 @@
 # Data driven QC (ddqc) for single cell RNA-seq data
 # Adapted from https://raw.githubusercontent.com/ayshwaryas/ddqc_R/master/R/ddqc.R
 # Citation https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
+suppressPackageStartupMessages({
+})
+
 
 .ddqcBoxplot <- function(df.qc, metric.name, h.line.x = 0, do.log = FALSE) {
     require(Seurat)
@@ -33,33 +36,35 @@
         scale_color_manual(values = c("black", "red"))
 }
 
-.clusterData <- function(data, norm.factor = 10000, n.pcs = 50, k.param = 20, res = 1, random.seed = 42) {
+
+
+.clusterData <- function(seurat_object, norm.factor = 10000, n.pcs = 50, k.param = 20, res = 1, random.seed = 42) {
     require(Seurat)
     set.seed(random.seed)
-    data <- Seurat::NormalizeData(data, normalization.method = "LogNormalize", scale.factor = norm.factor, verbose = FALSE)
-    data <- Seurat::FindVariableFeatures(data, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
-    all.genes <- rownames(x = data)
-    data <- Seurat::ScaleData(data, features = all.genes, verbose = FALSE)
-    data <- Seurat::RunPCA(data, npcs = n.pcs, features = VariableFeatures(data), verbose = FALSE)
-    data <- Seurat::FindNeighbors(data, dims = 1:n.pcs, k.param = k.param, verbose = FALSE)
-    data <- Seurat::FindClusters(data, resolution = res, verbose = FALSE)
-    return(data)
+    seurat_object <- Seurat::NormalizeData(seurat_object, normalization.method = "LogNormalize", scale.factor = norm.factor, verbose = FALSE)
+    seurat_object <- Seurat::FindVariableFeatures(seurat_object, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
+    all.genes <- rownames(x = seurat_object)
+    seurat_object <- Seurat::ScaleData(seurat_object, features = all.genes, verbose = FALSE)
+    seurat_object <- Seurat::RunPCA(seurat_object, npcs = n.pcs, features = VariableFeatures(seurat_object), verbose = FALSE)
+    seurat_object <- Seurat::FindNeighbors(seurat_object, dims = 1:n.pcs, k.param = k.param, verbose = FALSE)
+    seurat_object <- Seurat::FindClusters(seurat_object, resolution = res, verbose = FALSE)
+    return(seurat_object)
 }
 
-.metricFilter <- function(
-    data, df.qc, param = 2, metric.name, do.upper.co = FALSE, do.lower.co = FALSE,
-    lower.bound = 10E10, upper.bound = -10E10) {
-    passed.qc <- vector(mode = "logical", length = length(colnames(data)))
-    names(passed.qc) <- colnames(data)
 
-    df.qc[[metric.name]] <- data[[metric.name]][[metric.name]]
+.metricFilter <- function(seurat_object, df.qc, param = 2, metric.name, do.upper.co = FALSE, do.lower.co = FALSE,
+                        lower.bound = 10E10, upper.bound = -10E10) {
+    passed.qc <- vector(mode = "logical", length = length(colnames(seurat_object)))
+    names(passed.qc) <- colnames(seurat_object)
+
+    df.qc[[metric.name]] <- seurat_object[[metric.name]][[metric.name]]
     df.qc[[paste0(metric.name, ".upper.co")]] <- NaN
     df.qc[[paste0(metric.name, ".lower.co")]] <- NaN
     df.qc[[paste0(metric.name, ".passed.qc")]] <- FALSE
 
-    for (cl in levels(data$seurat_clusters)) {
-        idx <- data$seurat_clusters == cl
-        values <- data[, idx][[metric.name]][[metric.name]]
+    for (cl in levels(seurat_object$seurat_clusters)) {
+        idx <- seurat_object$seurat_clusters == cl
+        values <- seurat_object[, idx][[metric.name]][[metric.name]]
 
         median.v <- median(values)
         mad.v <- mad(values)
@@ -85,50 +90,55 @@
     return(df.qc)
 }
 
+
+
+
 #' Filter the Seurat object
 #'
 #' This function filters Seurat object based on ddqc and scDoublet results
 #'
-#' @param data Seurat object or path to a Seurat object file
+#' @param seurat_object Seurat object or path to a Seurat object file
 #' @param ddqc_out Path to the CSV file with ddqc statistics
 #' @param scDoublet_out Path to the CSV file with scDoublet results (optional)
 #'
 #' @return Path to the filtered Seurat object saved as a Quick Save file
 #' @export
-seurat_filter_qc <- function(data, ddqc_out, scDoublet_out = NULL) {
-    data <- load_seurat(data)
+seurat_filter_qc <- function(seurat_object, ddqc_out, scDoublet_out = NULL) {
+    seurat_object <- load_seurat(seurat_object)
     df.qc <- read.csv(ddqc_out, stringsAsFactors = FALSE)
     if (!is.null(scDoublet_out)) {
         scDoublet_out <- read.csv(scDoublet_out, stringsAsFactors = FALSE)
-        # Ensure scDoublet_out and df.qc have the same cell order as data
-        scDoublet_out <- scDoublet_out[match(colnames(data), scDoublet_out$cell), ]
-        df.qc <- df.qc[match(colnames(data), df.qc$cell), ]
+        # Ensure scDoublet_out and df.qc have the same cell order as seurat_object
+        scDoublet_out <- scDoublet_out[match(colnames(seurat_object), scDoublet_out$cell), ]
+        df.qc <- df.qc[match(colnames(seurat_object), df.qc$cell), ]
 
         keep_cells <- (scDoublet_out[["class"]] != "doublet") & df.qc$passed.qc
     } else {
-        # Ensure df.qc has the same cell order as data
-        df.qc <- df.qc[match(colnames(data), df.qc$cell), ]
+        # Ensure df.qc has the same cell order as seurat_object
+        df.qc <- df.qc[match(colnames(seurat_object), df.qc$cell), ]
 
         keep_cells <- df.qc$passed.qc
     }
 
-    data <- subset(data, cells = colnames(data)[keep_cells])
+    seurat_object <- subset(seurat_object, cells = colnames(seurat_object)[keep_cells])
 
-    sample_id <- data$orig.ident[1]
+    sample_id <- seurat_object$orig.ident[1]
 
-    data_path <- glue::glue("{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs")
-    dir.create(dirname(data_path), showWarnings = FALSE, recursive = TRUE)
-    qs::qsave(data, file = data_path)
+    seurat_object_path <- glue::glue("{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs")
+    dir.create(dirname(seurat_object_path), showWarnings = FALSE, recursive = TRUE)
+    qs::qsave(seurat_object, file = seurat_object_path)
 
-    return(data_path)
+    return(seurat_object_path)
 }
+
+
 
 #' Calculate which cells are passing ddqc
 #'
 #' This function takes a Seurat object after InitialQC, and then performs ddqc on it
 #' Returns a path to the CSV file with ddqc statistics
 #'
-#' @param data Seurat object, or a path to a Seurat object file
+#' @param seurat_object Seurat object, or a path to a Seurat object file
 #' @param n.pcs number of principal components for clustering. 50 by default
 #' @param k.param k for FindNeighbors. 20 by default
 #' @param res clustering resolution. 1 by default
@@ -144,25 +154,25 @@ seurat_filter_qc <- function(data, ddqc_out, scDoublet_out = NULL) {
 #'
 #' @return Path to the CSV file with ddqc statistics
 #' @export
-seurat_ddqc_metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, threshold = 2, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
-                                n.genes.lower.bound = 200, percent.mito.upper.bound = 15, random.state = 42) {
-    data <- .clusterData(load_seurat(data), res = res, n.pcs = n.pcs, k.param = k.param, random.seed = random.state)
-    sample_id <- data[[]]$orig.ident[1]
-    df.qc <- data.frame("cluster_labels" = data$seurat_clusters, row.names = colnames(data))
-    passed.qc <- vector(mode = "logical", length = length(data$seurat_clusters))
+seurat_ddqc_metrics <- function(seurat_object, n.pcs = 50, k.param = 20, res = 1, threshold = 2, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
+                         n.genes.lower.bound = 200, percent.mito.upper.bound = 15, random.state = 42) {
+    seurat_object <- .clusterData(load_seurat(seurat_object), res = res, n.pcs = n.pcs, k.param = k.param, random.seed = random.state)
+    sample_id <- seurat_object[[]]$orig.ident[1]
+    df.qc <- data.frame("cluster_labels" = seurat_object$seurat_clusters, row.names = colnames(seurat_object))
+    passed.qc <- vector(mode = "logical", length = length(seurat_object$seurat_clusters))
     passed.qc <- TRUE
 
     plots <- list() # Initialize an empty list to store plots
 
     if (do.counts) {
-        df.qc <- .metricFilter(data, df.qc, threshold, "nCount_RNA", do.lower.co = TRUE)
+        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nCount_RNA", do.lower.co = TRUE)
         if (do.plots) {
             plots[["nCount_RNA"]] <- .ddqcBoxplot(df.qc, "nCount_RNA")
         }
         passed.qc <- passed.qc & df.qc$nCount_RNA.passed.qc
     }
     if (do.genes) {
-        df.qc <- .metricFilter(data, df.qc, threshold, "nFeature_RNA",
+        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nFeature_RNA",
             do.lower.co = TRUE,
             lower.bound = n.genes.lower.bound
         )
@@ -172,7 +182,7 @@ seurat_ddqc_metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, thresho
         passed.qc <- passed.qc & df.qc$nFeature_RNA.passed.qc
     }
     if (do.mito) {
-        df.qc <- .metricFilter(data, df.qc, threshold, "percent_mt",
+        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "percent_mt",
             do.upper.co = TRUE,
             upper.bound = percent.mito.upper.bound
         )
@@ -182,7 +192,7 @@ seurat_ddqc_metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, thresho
         passed.qc <- passed.qc & df.qc$percent_mt.passed.qc
     }
     if (do.ribo) {
-        df.qc <- .metricFilter(data, df.qc, threshold, "percent_rb", do.upper.co = TRUE)
+        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "percent_rb", do.upper.co = TRUE)
         if (do.plots) {
             plots[["percent_rb"]] <- .ddqcBoxplot(df.qc, "percent_rb")
         }
@@ -198,7 +208,7 @@ seurat_ddqc_metrics <- function(data, n.pcs = 50, k.param = 20, res = 1, thresho
         combined_plot <- patchwork::wrap_plots(plots, ncol = 2) &
             patchwork::plot_annotation(
                 title = paste0(sample_id, " ddqc plot"),
-                subtitle = glue::glue("Filtering {threshold} Median Absolute Deviations (MADs) per cluster; {kept_cells} cells kept vs <span style='color:red;'>{dropped_cells} dropped</span> (will remove <span style='color:red;'>{percent_dropped}%</span> of {total_cells} total)"),
+                subtitle = glue::glue("Filtering {threshold} Median Absolute Deviations (MADs) per cluster; {kept_cells} cells kept vs <span style='color:red;'>{dropped_cells} dropped</span> (will remove <span style='color:red;'>{percent_dropped}%</span> of {total_cells} cells)"),
                 theme = theme(
                     plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
                     plot.subtitle = ggtext::element_markdown(hjust = 0, size = 10)
