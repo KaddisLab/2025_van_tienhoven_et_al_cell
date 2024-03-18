@@ -1,4 +1,4 @@
-#' Transfer Cell Type Annotation from Reference to Q Seurat Object
+#' Transfer Cell Type Annotation from Reference to Query Seurat Object
 #'
 #' This function applies cell type annotations from a reference Seurat object
 #' to a test Seurat object using SingleR. It supports optional normalization
@@ -7,8 +7,11 @@
 #'
 #' @param query_seurat_object a seurat object or path to the QS file for the test Seurat object.
 #' @param ref_seurat_object a seurat object or path to the QS file for the reference Seurat object.
+#' @param reduction_model the dimensionality reduction model to use for the projection.
+#' @param ref_data a list of reference data to project onto the query object.
+
 #' @export
-seurat_project_into_ref <- function(query_seurat_object, ref_seurat_object, reduction_model = "umap") {
+seurat_project_into_ref <- function(query_seurat_object, ref_seurat_object, reduction_model = "umap", ref_data = list(cell_type = "Cluster")) {
     # https://satijalab.org/seurat/articles/integration_mapping
     set.seed(42)
     require(Seurat)
@@ -32,7 +35,7 @@ seurat_project_into_ref <- function(query_seurat_object, ref_seurat_object, redu
         anchorset = anchors,
         reference = ref_seurat_object,
         query = query_seurat_object,
-        refdata = list(cell_type = "Cluster"),
+        refdata = ref_data,
         reference.reduction = "pca",
         reduction.model = reduction_model)
 

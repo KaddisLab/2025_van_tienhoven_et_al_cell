@@ -50,9 +50,9 @@ load_seurat <- function(seurat_object) {
   input_name <- deparse(substitute(seurat_object))
   if (!inherits(seurat_object, "Seurat")) {
     library("Seurat") |> suppressPackageStartupMessages()
-    if (grepl("\\.qs$", seurat_object)) {
+    if (grepl("\\.qs$", seurat_object, ignore.case = TRUE)) {
       seurat_object <- qs::qread(seurat_object)
-    } else if (grepl("\\.rds$", seurat_object)) {
+    } else if (grepl("\\.rds$", seurat_object, ignore.case = TRUE)) {
       seurat_object <- readRDS(seurat_object)
     } else {
       stop("Invalid Seurat object file format. Please provide the path to a .qs or .rds file.")
