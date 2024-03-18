@@ -3,7 +3,7 @@
 # Citation https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
 
 
-.ddqcBoxplot <- function(df.qc, metric.name, h.line.x = 0, do.log = FALSE) {
+.ddqcBoxplot <- function(df.qc, metric.name, h.line.x = 0, do.log = FALSE, scDblFinder_out) {
   require(Seurat)
   require(ggplot2)
   require(dplyr)
@@ -125,7 +125,7 @@
 #' @param scDblFinder_out Path to the CSV file with scDoublet results (optional). NULL by default. If provided, the 
 #' filter will remove doublets as well as cells flagged by ddqc.
 #'
-#' @return Path to the CSV file with ddqc statistics
+#' @return Path to the filtered seurat_object, or to the CSV file with ddqc statistics if do.filter is FALSE
 #' @export
 seurat_ddqc <- function(seurat_object, scDblFinder_out = NULL, n.pcs = 50, k.param = 20, res = 1, threshold = 2, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
                          n.genes.lower.bound = 200, percent.mito.upper.bound = 15, do.filter = TRUE) {
@@ -136,11 +136,11 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out = NULL, n.pcs = 50, k.par
         if (!is.data.frame(scDblFinder_out)) {scDblFinder_out <- read.csv(scDblFinder_out, stringsAsFactors = FALSE)}
         # Ensure scDblFinder_out and df.qc have the same cell order as seurat_object
         scDblFinder_out <- scDblFinder_out[match(colnames(seurat_object), scDblFinder_out$cell), ]
-        message("Loaded scDblFinder output", head(scDblFinder_out))
+        message("Loaded scDblFinder output for ", sample_id)
         }
     message("Running ddQC on ", sample_id)
     seurat_object <- .clusterData(seurat_object, res = res, n.pcs = n.pcs, k.param = k.param)
-    message("Clustered Seurat object")
+    message("Clustered the Seurat object")
     df.qc <- data.frame("cluster_labels" = seurat_object$seurat_clusters, row.names = colnames(seurat_object)) |> mutate(cell = colnames(seurat_object), .before = 1)
     passed.qc <- vector(mode = "logical", length = length(seurat_object$seurat_clusters))
     passed.qc <- TRUE
@@ -148,42 +148,47 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out = NULL, n.pcs = 50, k.par
     plots <- list() # Initialize an empty list to store plots
 
     if (do.counts) {
+        message("Filtering cells based on nCount_RNA")
         df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nCount_RNA", do.lower.co = TRUE)
         if (do.plots) {
-            plots[["nCount_RNA"]] <- .ddqcBoxplot(df.qc, "nCount_RNA")
+            plots[["nCount_RNA"]] <- .ddqcBoxplot(df.qc, "nCount_RNA", scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$nCount_RNA.passed.qc
     }
     if (do.genes) {
+        message("Filtering cells based on nFeature_RNA")
         df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nFeature_RNA",
             do.lower.co = TRUE,
             lower.bound = n.genes.lower.bound
         )
         if (do.plots) {
-            plots[["nFeature_RNA"]] <- .ddqcBoxplot(df.qc, "nFeature_RNA", log2(n.genes.lower.bound), TRUE)
+            plots[["nFeature_RNA"]] <- .ddqcBoxplot(df.qc, "nFeature_RNA", log2(n.genes.lower.bound), TRUE, scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$nFeature_RNA.passed.qc
     }
     if (do.mito) {
+        message("Filtering cells based on percent_mt")
         df.qc <- .metricFilter(seurat_object, df.qc, threshold, "percent_mt",
             do.upper.co = TRUE,
             upper.bound = percent.mito.upper.bound
         )
         if (do.plots) {
-            plots[["percent_mt"]] <- .ddqcBoxplot(df.qc, "percent_mt", percent.mito.upper.bound, FALSE)
+            plots[["percent_mt"]] <- .ddqcBoxplot(df.qc, "percent_mt", percent.mito.upper.bound, FALSE, scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$percent_mt.passed.qc
     }
     if (do.ribo) {
+        message("Filtering cells based on percent_rb")
         df.qc <- .metricFilter(seurat_object, df.qc, threshold, "percent_rb", do.upper.co = TRUE)
         if (do.plots) {
-            plots[["percent_rb"]] <- .ddqcBoxplot(df.qc, "percent_rb")
+            plots[["percent_rb"]] <- .ddqcBoxplot(df.qc, "percent_rb", scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$percent_rb.passed.qc
     }
     df.qc[["passed.qc"]] <- passed.qc
 
     if (do.plots) {
+        message("Generating combined plot")
         total_cells <- nrow(df.qc)
         ddqc_kept_cells <- sum(df.qc$passed.qc)
         ddqc_dropped_cells <- total_cells - ddqc_kept_cells
@@ -216,6 +221,7 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out = NULL, n.pcs = 50, k.par
     write.csv(df.qc, ddqc_table_path, row.names = FALSE, quote = FALSE)
 
     if(do.filter) {
+        message("Filtering Seurat object")
         if (!is.null(scDblFinder_out)) {
             keep_cells <- (scDblFinder_out[["class"]] != "doublet") & df.qc$passed.qc
         } else {
@@ -229,6 +235,11 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out = NULL, n.pcs = 50, k.par
         seurat_object_path <- glue::glue("{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs")
         dir.create(dirname(seurat_object_path), showWarnings = FALSE, recursive = TRUE)
         qs::qsave(seurat_object, file = seurat_object_path)
+        message("Filtered Seurat object saved to", seurat_object_path)
+        return(seurat_object_path)
+
     }
+    message("ddQC statistics saved to", ddqc_table_path)
     return(ddqc_table_path)
+
 }
