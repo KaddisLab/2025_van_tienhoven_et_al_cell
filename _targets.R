@@ -115,9 +115,24 @@ list(
             protocol = "10XV3"),
         deployment = "main"
         ),
-    tar_target(cellranger_run_folders_10xv3, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count/", nfcore_scrnaseq_multiqc_10xv3), pattern = "HPAP", full.names = TRUE), deployment = "main"),
-    tar_target(cellranger_run_folders_10xv2, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count/", nfcore_scrnaseq_multiqc_10xv2), pattern = "HPAP", full.names = TRUE), deployment = "main"),
+    tar_target(cellranger_run_folders_10xv3, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv3), pattern = "HPAP", full.names = TRUE), deployment = "main"),
+    tar_target(cellranger_run_folders_10xv2, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv2), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders, c(cellranger_run_folders_10xv3, cellranger_run_folders_10xv2), deployment = "main"),
+    # Failed QC cohort
+    tar_target(
+        cellranger_run_folders_failed_qc,
+        grep(paste0(
+            c("HPAP-021|HPAP-023|HPAP-027|"), # MultiQC v2
+            c("HPAP-038|HPAP-093"), # MultiQC v3 
+            collapse="|"), 
+            cellranger_run_folders, value = TRUE),
+        deployment = "main"),
+    # Non-diabetic cohort
+    tar_target(
+        cellranger_run_folders_nodx,
+        grep(pancdb_metadata$donor_id[pancdb_metadata$diabetes_status == "NODM" ] |> na.omit() |> paste(collapse="|"), cellranger_run_folders, value = TRUE) |>
+            setdiff(cellranger_run_folders_failed_qc),
+        deployment = "main"),
 # Download SNPs ---------------------------------------------------------------------
     tar_target(
         snp_vcf,
@@ -155,12 +170,6 @@ list(
         format = "file"
         ),
     tar_target(
-        vartrix_vcf_genotype_object,
-        vcf_2_matrix(snp_vcf),
-        resources = small,
-        format = "file"
-        ),
-    tar_target(
         vartrix_coverage,
         run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
         deployment = "main",
@@ -187,6 +196,13 @@ list(
         pattern = map(cellbender_h5, cellranger_run_folders),
         deployment = "main", # must run on "main" for some reason??
         format = "file"
+    ),
+    tar_target(
+        cellbender_qc_plots,
+        seurat_plot_cellbender(cellbender_seurat_objects, "INS"),
+        pattern = map(cellbender_seurat_objects),
+        format = "file",
+        resources = small
     ),
 # SingleR cell type annotation --------------------------------------------------------------
     # Get cell atlas from Tosti et al. 2021
@@ -215,6 +231,13 @@ list(
         format = "file",
         resources = tiny
     ),
+    tar_target(
+        azimuth_mapped_seurat_objects,
+        seurat_azimuth(cellbender_seurat_objects, azimuth_reference_path),
+        pattern = map(cellbender_seurat_objects),
+        format = "file",
+        resources = medium
+    ),
 # Cell cycle annotation --------------------------------------------------------------
     tar_target(
         cell_cycle_csv,
@@ -231,29 +254,32 @@ list(
         format = "file",
         resources = medium
     ),
-# Reference annotation
-    tar_target(
-        ref_mapped_seurat_objects,
-        seurat_project_into_ref(query = cellbender_seurat_objects, ref = tosti_etal_seurat_object, reduction_model = "umap_harmony"),
-        pattern = map(cellbender_seurat_objects),
-        format = "file",
-        resources = medium
-    ),
+# Seurat reference annotation - Tosti et al 2021
+#! performs very poorly, not used for now
+    # tar_target(
+    #     ref_mapped_seurat_objects,
+    #     seurat_project_into_ref(cellbender_seurat_objects, tosti_etal_seurat_object, reduction_model = "umap_harmony"),
+    #     pattern = map(cellbender_seurat_objects),
+    #     format = "file",
+    #     resources = large
+    # ),
 # ddqc -------------------------------------------------------------------------------
     tar_target(
-        ddqc_csv,
-        seurat_ddqc_metrics(cellbender_seurat_objects),
-        pattern = map(cellbender_seurat_objects),
+        ddqc_seurat_objects,
+        seurat_ddqc(cellbender_seurat_objects, scDblFinder_csv),
+        pattern = map(cellbender_seurat_objects, scDblFinder_csv),
         format = "file",
         resources = small
     ),
-    tar_target(
-        filtered_seurat_objects,
-        seurat_filter_qc(cellbender_seurat_objects, ddqc_csv, scDblFinder_csv),
-        pattern = map(cellbender_seurat_objects, ddqc_csv, scDblFinder_csv),
-        format = "file",
-        resources = small
-    ),
+# Clustering --------------------------------------------------------------------------
+#! Not needed for now
+    # tar_target(
+    #     seurat_cluster_ari_csv,
+    #     seurat_cluster_ari(ddqc_seurat_objects),
+    #     pattern = map(ddqc_seurat_objects),
+    #     format = "file",
+    #     resources = medium
+    # ),
 # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
@@ -263,7 +289,6 @@ list(
         deployment = "main",
         cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(3, units = "weeks"))
     )
-    # ddqc  https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02820-w
 
 )
     ## Common Considerations for Quality Control Filters for Single Cell RNA-seq Data
