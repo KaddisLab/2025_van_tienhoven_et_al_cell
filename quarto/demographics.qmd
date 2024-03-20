@@ -1,0 +1,169 @@
+---
+title: "HPAP scRNAseq Data Analysis rs3842752"
+subtitle: "Demogrpahic and Sequencing Metrics"
+author: 
+- name: "Denis O'Meally"
+  email: domeally@coh.org
+  orcid: 0000-0001-7749-9506
+institute: "Department of Diabetes & Cancer Discovery Science, <br/> Beckman Research Institute of the City of Hope"
+date: "2024-3-19" 
+date-modified: last-modified
+embed-resources: true
+theme: simplex
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+## Setup
+
+```{r }
+#| code-fold: true
+#| code-summary: "Show the code"
+library(tidyverse)
+library(targets)
+library(ggridges)
+tar_config_set(store = here::here("_targets"))
+
+tar_load(protected_cohort)
+tar_load(pancdb_metadata)
+tar_load(cellranger_run_folders_nodx)
+nodx_cohort <- cellranger_run_folders_nodx |> basename()
+pancdb_metadata$protected<-pancdb_metadata$donor_id %in% protected_cohort$sample_id
+pancdb_metadata <- pancdb_metadata |> dplyr::filter(donor_id %in% nodx_cohort & str_detect(reagent_kit, "10X"))
+```
+
+# Age distribution by cohort
+```{r }
+pancdb_metadata %>%
+  ggplot(aes(x = sample_age, fill = protected)) +
+  geom_histogram(binwidth = 5, alpha = 0.7, position = "identity") +
+  labs(x = "Sample Age", y = "Count", title = "Age Distribution by Cohort", fill = "Protected")
+```
+
+# Disease status by cohort
+```{r }
+pancdb_metadata %>%
+  ggplot(aes(x = diabetes_status, fill = protected)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Disease Status", y = "Count", title = "Disease Status by Cohort", fill = "Protected") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+# Ethnicity by cohort
+```{r }
+pancdb_metadata %>%
+  ggplot(aes(x = sample_ethnicity, fill = protected)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Ethnicity", y = "Count", title = "Ethnicity by Cohort", fill = "Protected") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+# Sex by cohort
+```{r }
+pancdb_metadata %>%
+  ggplot(aes(x = sample_sex, fill = protected)) +
+  geom_bar(position = "dodge") +
+  labs(x = "
+  Sex", y = "Count", title = "Gender by Cohort", fill = "Protected")
+```
+
+# Technology by cohort
+```{r }
+pancdb_metadata %>%
+  ggplot(aes(x = reagent_kit, fill = protected)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Technology", y = "Count", title = "Technology by Cohort", fill = "Protected") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+# Sequencing metrics
+```{r }
+plot_sequencing_metrics <- function(pancdb_metadata, metrics) {
+  # Convert metrics to numeric if they are not already
+  for(metric in metrics) {
+    pancdb_metadata[[metric]] <- as.numeric(as.character(pancdb_metadata[[metric]]))
+  }
+  
+  # Proceed with the plotting
+  pancdb_metadata %>%
+    dplyr::select(protected, all_of(metrics)) %>%
+    tidyr::pivot_longer(cols = -protected, names_to = "metric", values_to = "value") %>%
+    dplyr::mutate(metric = factor(metric, levels = metrics)) %>%
+    ggplot(aes(x = value, y = metric, fill = protected)) +
+    geom_density_ridges(alpha = 0.7, scale = 1, quantile_lines = TRUE, quantiles = 2) +
+    scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
+    labs(x = "Value", y = "Sequencing Metric", fill = "Protected") +
+    theme_classic() +
+    theme(legend.position = "bottom")
+}
+```
+
+# Sequencing Quality Metrics
+```{r }
+quality_metrics <- c(
+  "valid_barcodes",
+  "q30bases_in_barcode",
+  "q30bases_in_rna_read",
+  "q30bases_in_sample_index",
+  "q30bases_in_umi",
+  "sequencing_saturation"
+)
+plot_sequencing_metrics(pancdb_metadata, quality_metrics)
+```
+
+# Sequencing Output Metrics
+```{r }
+output_metrics <- c(
+  "expected_cells",
+  "estimated_number_of_cells",
+  "mean_reads_per_cell",
+  "median_genes_per_cell",
+  "number_of_reads",
+  "total_genes_detected",
+  "median_umi_counts_per_cell"
+)
+plot_sequencing_metrics(pancdb_metadata, output_metrics)
+```
+
+# Sequencing Alignment Metrics
+```{r }
+alignment_metrics <- c(
+  "reads_mapped_to_genome",
+  "reads_mapped_confidently_to_genome",
+  "reads_mapped_confidently_to_intergenic_regions",
+  "reads_mapped_confidently_to_intronic_regions",
+  "reads_mapped_confidently_to_exonic_regions",
+  "reads_mapped_confidently_to_transcriptome",
+  "reads_mapped_antisense_to_gene",
+  "fraction_reads_in_cells"
+)
+plot_sequencing_metrics(pancdb_metadata, alignment_metrics)
+```
+
+# Mitochondrial Content Metrics
+```{r }
+mitochondrial_metrics <- c(
+  "mito_mean_pct",
+  "mito_median_pct",
+  "mito_q25pct",
+  "mito_q75pct",
+  "mito_sd_pct"
+)
+plot_sequencing_metrics(pancdb_metadata, mitochondrial_metrics)
+```
+
+# Correlation Metrics
+```{r }
+correlation_metrics <- c(
+  "rank_cor",
+  "ncount_cor",
+  "nfeat_cor"
+)
+plot_sequencing_metrics(pancdb_metadata, correlation_metrics)
+```
