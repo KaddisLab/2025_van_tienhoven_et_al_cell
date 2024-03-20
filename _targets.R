@@ -280,6 +280,10 @@ list(
     #     format = "file",
     #     resources = medium
     # ),
+# Reports -------------------------------------------------------------------------------
+    tar_target(report_one, 
+            render_report(here::here("quarto/pancdb_metadata.qmd")), 
+            deployment = "main", format = "file"),
 # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
