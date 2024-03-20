@@ -8,8 +8,7 @@ get_pancdb_metadata <- function() {
              diabetes_status = case_when(
                stringr::str_detect(disease_status, "T1DM") ~ "T1DM",
                stringr::str_detect(disease_status, "T2DM") ~ "T2DM",
-               stringr::str_detect(disease_status, "No HX DIAB") ~ "NODM",
-               TRUE ~ NA_character_
+               TRUE ~ "NODM"
              ),
              technology = case_when(
                stringr::str_detect(reagent_kit, "V2") ~ "10XV2",
