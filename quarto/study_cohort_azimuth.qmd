@@ -1,0 +1,150 @@
+
+---
+title: "HPAP scRNAseq Data Analysis rs3842752"
+subtitle: "Seurat Azimuth: projection into Human Pancreas Atlas (HuBMAP)"
+author: 
+- name: "Denis O'Meally"
+  email: domeally@coh.org
+  orcid: 0000-0001-7749-9506
+institute: "Department of Diabetes & Cancer Discovery Science, <br/> Arthur Riggs Diabetes & Metabolism Research Institute, City of Hope"
+date: "2024-3-19" 
+date-modified: last-modified
+format:
+  html:
+    embed-resources: true
+    theme: simplex
+    code-fold: true
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+## Setup
+
+```{r }
+#| code-fold: true
+#| code-summary: "Show the code"
+suppressPackageStartupMessages({
+library(tidyverse)
+library(targets)
+library(ggplot2)
+library(Seurat)
+library(patchwork)
+
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+
+tar_load(protected_cohort)
+tar_load(pancdb_metadata)
+tar_load(cellranger_run_folders_nodx)
+nodx_cohort <- cellranger_run_folders_nodx |> basename()
+pancdb_metadata$protected<-pancdb_metadata$donor_id %in% protected_cohort$sample_id
+pancdb_metadata <- pancdb_metadata |> dplyr::filter(donor_id %in% nodx_cohort & str_detect(reagent_kit, "10X"))
+
+tar_load(azimuth_mapped_seurat_objects)
+study_cohort <- grep(paste0(nodx_cohort, collapse="|"), azimuth_mapped_seurat_objects, value = TRUE) 
+study_cohort <- data.frame(
+  qs_path = study_cohort,
+  umap_path = gsub("\\.qs", "\\.png", study_cohort),
+  donor_id = gsub(".*/(HPAP-\\d+)_azimuth\\.qs", "\\1", study_cohort))
+pancdb_metadata <- pancdb_metadata |> left_join(study_cohort, by = "donor_id")
+```
+
+# Azimuth: projection into Human Pancreas Atlas (HuBMAP)
+
+Reference Dataset(s): [Grün et al, Cell Stem Cell 2016], [Muraro, Dharmadhikari et al, Cell Systems 2016], [ Segerstolpe, Palasantza, et al, Cell Metabolism 2016], [Lawlor, George, et al, Genome Research 2017], [Baron, Veres, Wolock, Faust et al, Cell Systems 2016], [Xin et al, J. Vis. Exp 2019]
+
+[Read more...](https://azimuth.hubmapconsortium.org/references/#Human%20-%20Pancreas)
+
+# UMAPs by cohort
+
+::: {.panel-tabset}
+
+## Protected
+```{r }
+#| column: body
+#| fig-width: 7
+#| fig-height: 18
+seurat_paths <- pancdb_metadata |> dplyr::filter(protected == TRUE) |> pull(qs_path)
+# Load the images and create a list of rasterGrob objects
+plots <- lapply(seurat_paths, function(path) {
+    seurat_object <- load_seurat(path)
+    sample_id<-seurat_object$orig.ident[1]
+    DimPlot(seurat_object,
+        group.by = "predicted.annotation.l1",
+        cols = custom_palette,
+        label = TRUE,
+        label.size = 4,
+        repel = TRUE,
+        reduction = "ref.umap",
+        shuffle = TRUE) +
+        NoLegend() + 
+        labs(title = glue::glue("{sample_id}")) +
+        theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+})
+
+wrap_plots(plots, ncol = 2)
+```
+
+## Susceptible, 1
+
+```{r }
+#| column: body
+#| fig-width: 7
+#| fig-height: 18
+seurat_paths <- pancdb_metadata |> dplyr::filter(protected == FALSE) |> pull(qs_path)
+# Load the images and create a list of rasterGrob objects
+plots <- lapply(seurat_paths[1:16], function(path) {
+    seurat_object <- load_seurat(path)
+    sample_id<-seurat_object$orig.ident[1]
+    DimPlot(seurat_object,
+        group.by = "predicted.annotation.l1",
+        cols = custom_palette,
+        label = TRUE,
+        label.size = 4,
+        repel = TRUE,
+        reduction = "ref.umap",
+        shuffle = TRUE) +
+        NoLegend() + 
+        labs(title = glue::glue("{sample_id}")) +
+        theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+})
+
+wrap_plots(plots, ncol = 2)
+```
+
+## Susceptible, 2
+
+```{r }
+#| column: body
+#| fig-width: 7
+#| fig-height: 18
+seurat_paths <- pancdb_metadata |> dplyr::filter(protected == FALSE) |> pull(qs_path)
+# Load the images and create a list of rasterGrob objects
+plots <- lapply(seurat_paths[17:length(seurat_paths)], function(path) {
+    seurat_object <- load_seurat(path)
+    sample_id<-seurat_object$orig.ident[1]
+    DimPlot(seurat_object,
+        group.by = "predicted.annotation.l1",
+        cols = custom_palette,
+        label = TRUE,
+        label.size = 4,
+        repel = TRUE,
+        reduction = "ref.umap",
+        shuffle = TRUE) +
+        NoLegend() + 
+        labs(title = glue::glue("{sample_id}")) +
+        theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+})
+
+wrap_plots(plots, ncol = 2)
+```
+
+:::

@@ -1,0 +1,188 @@
+
+---
+title: "HPAP scRNAseq Data Analysis rs3842752"
+subtitle: "PancDB metadata: Demogrpahic and Sequencing Metrics"
+author: 
+- name: "Denis O'Meally"
+  email: domeally@coh.org
+  orcid: 0000-0001-7749-9506
+institute: "Department of Diabetes & Cancer Discovery Science, <br/> Arthur Riggs Diabetes & Metabolism Research Institute, City of Hope"
+date: "2024-3-19" 
+date-modified: last-modified
+format:
+  html:
+    embed-resources: true
+    theme: simplex
+    code-fold: true
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+## Setup
+
+```{r }
+#| code-fold: true
+#| code-summary: "Show the code"
+suppressPackageStartupMessages({
+library(tidyverse)
+library(targets)
+library(Seurat)
+library(scCustomize)
+library(scater)
+library(caret)
+library(SingleCellExperiment)
+})
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+
+tar_load(protected_cohort)
+tar_load(pancdb_metadata)
+tar_load(cellranger_run_folders_nodx)
+nodx_cohort <- cellranger_run_folders_nodx |> basename()
+pancdb_metadata$protected<-pancdb_metadata$donor_id %in% protected_cohort$sample_id
+pancdb_metadata <- pancdb_metadata |> dplyr::filter(donor_id %in% nodx_cohort & str_detect(reagent_kit, "10X"))
+
+tar_load(ddqc_seurat_objects)
+study_cohort <- grep(paste0(nodx_cohort, collapse="|"), ddqc_seurat_objects, value = TRUE) 
+```
+
+```{r }
+seurat_object <- load_seurat(study_cohort[1])
+
+# Define a function to safely attempt conversion from character to numeric
+safe_convert_to_numeric <- function(x) {
+  converted <- suppressWarnings(as.numeric(x))
+  if (all(is.na(converted))) {
+    # If conversion results in all NAs, return original character vector
+    return(x)
+  } else {
+    # Otherwise, return the converted numeric vector
+    return(converted)
+  }
+}
+
+# Apply this function to all character columns in your dataframe
+pancdb_metadata_processed <- pancdb_metadata %>%
+  mutate(across(where(is.character), safe_convert_to_numeric))
+
+# Function to calculate mode
+calculate_mode <- function(x) {
+  uniq_x <- unique(x)
+  uniq_x[which.max(tabulate(match(x, uniq_x)))]
+}
+
+# Assuming pancdb_metadata_processed is your DataFrame
+pancdb_metadata_processed <- pancdb_metadata_processed %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), calculate_mode(.), .)))
+
+# Preparing lists to hold names of redundant columns
+redundant_numerics <- vector("list", length = 0)
+redundant_categoricals <- vector("list", length = 0)
+
+# Numeric redundancy detection based on correlation
+numeric_cols <- select(pancdb_metadata_processed, where(is.numeric))
+clean_numeric_cols <- numeric_cols %>%
+  select(where(~ sd(., na.rm = TRUE) > 0))
+  
+if (ncol(clean_numeric_cols) > 0) {
+  cor_matrix <- cor(clean_numeric_cols, use = "pairwise.complete.obs")
+  redundant_numerics <- findCorrelation(cor_matrix, cutoff = 0.99, verbose = TRUE, exact = TRUE)
+}
+
+pancdb_metadata_processed<-pancdb_metadata_processed[, -redundant_numerics]
+
+# Categorical redundancy detection based on exact match
+categorical_cols <- select(pancdb_metadata_processed, where(~ is.factor(.) || is.character(.)))
+# Initialize an empty list to store names of redundant columns
+redundant_categoricals <- list()
+
+# Get the names of all categorical columns
+categorical_col_names <- names(categorical_cols)
+
+# Adjust the loop to compare columns based on their factorized integer representation
+for (i in 1:(length(categorical_col_names) - 1)) {
+  for (j in (i + 1):length(categorical_col_names)) {
+    # Convert columns to factors and then to integers, respecting the order of appearance
+    col_i_as_factor <- as.integer(as.factor(categorical_cols[[i]]))
+    col_j_as_factor <- as.integer(as.factor(categorical_cols[[j]]))
+    
+    # Check if the integer representations are identical, meaning categories co-vary directly
+    if (identical(col_i_as_factor, col_j_as_factor)) {
+      redundant_name <- categorical_col_names[j]
+      reference_name <- categorical_col_names[i]
+      redundant_categoricals[[redundant_name]] <- reference_name
+    }
+  }
+}
+
+# Print the names of redundant columns and their reference columns
+# Convert the list of redundant columns into a vector, if needed
+redundant_categorical_col_names <- unlist(redundant_categoricals)
+
+# Print out the redundant column names and their corresponding 'kept' column names
+print(redundant_categoricals)
+
+# Combine redundant columns from both checks
+redundant_columns <- unique(c(names(numeric_cols)[redundant_numerics], redundant_categorical_col_names))
+
+# Remove redundant columns
+pancdb_metadata_clean <- select(pancdb_metadata_processed, -all_of(redundant_columns), donor_id) |>   (\(x) x[, colSums(is.na(x)) == 0])()
+
+columns_of_interest <- c(
+  "sample_sex",
+  "sample_age",
+  "sample_ethnicity",
+  "reagent_kit",
+  "estimated_number_of_cells",
+  "mean_reads_per_cell",
+  "median_genes_per_cell",
+  "number_of_reads",
+  "sequencing_saturation",
+  "q30bases_in_barcode",
+  "q30bases_in_rna_read",
+  "q30bases_in_umi",
+  "reads_mapped_to_genome",
+  "reads_mapped_confidently_to_genome",
+  "reads_mapped_confidently_to_intergenic_regions",
+  "reads_mapped_confidently_to_intronic_regions",
+  "reads_mapped_confidently_to_exonic_regions",
+  "reads_mapped_confidently_to_transcriptome",
+  "reads_mapped_antisense_to_gene",
+  "fraction_reads_in_cells",
+  "total_genes_detected",
+  "median_umi_counts_per_cell",
+  "mito_mean_pct",
+  "mito_median_pct",
+  "mito_q25pct",
+  "mito_q75pct",
+  "mito_sd_pct",
+  "rank_cor",
+  "ncount_cor",
+  "nfeat_cor",
+  "protected",
+  "donor_id"
+)
+pancdb_metadata_clean <- pancdb_metadata_clean[, columns_of_interest] 
+```
+
+```{r }
+seurat_object <- Add_Sample_Meta(seurat_object, meta_data = pancdb_metadata_clean, join_by_seurat = "orig.ident",
+    join_by_meta = "donor_id", na_ok = TRUE)
+
+sce <- as.SingleCellExperiment(seurat_object)
+```
+
+```{r }
+sce <- logNormCounts(sce)
+sce <- runPCA(sce)
+
+r2mat <- getExplanatoryPCs(sce)
+
+getVarianceExplained(sce)
+```
