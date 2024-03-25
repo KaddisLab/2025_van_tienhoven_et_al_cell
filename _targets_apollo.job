@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=targets
 #SBATCH -c 2
-#SBATCH -p all
 #SBATCH --mem=20G
 #SBATCH --time=48:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
+#SBATCH --chdir=~/workspaces/DCD.tienhoven_scRNAseq.2024
 
 /opt/singularity/3.7.0/bin/singularity exec \
     --env OMP_NUM_THREADS=1 \
