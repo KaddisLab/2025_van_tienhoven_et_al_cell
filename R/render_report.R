@@ -22,8 +22,10 @@ render_report <- function(template) {
     # Use quarto::quarto_render() to render the document in the temp directory
     xfun::in_dir(
         session_dir, 
-        quarto::quarto_render(debug = TRUE, quiet = FALSE, 
-            input = temp_input_file, output_format = "html",
+        quarto::quarto_render(
+            debug = TRUE, quiet = FALSE, 
+            input = temp_input_file,
+            output_format = "html",
             execute_dir = session_dir
         )
     )
