@@ -2,6 +2,17 @@ analysis_cache <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024"
 
 scrnaseq_release <- "2.5.1"
 
+failed_qc_donor_ids <- paste0(
+            c("HPAP-021|HPAP-023|HPAP-027|"), # MultiQC v2
+            c("HPAP-038|HPAP-093"), # MultiQC v3 
+            collapse="|")
+
+metadata <- tar_read(pancdb_metadata)
+nodm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "NODM" ] |> na.omit() |> paste0(collapse="|")
+t1dm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "T1DM" ] |> na.omit() |> paste0(collapse="|")
+t2dm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "T2DM" ] |> na.omit() |> paste0(collapse="|")
+rm(metadata)
+
 custom_palette <- c(
   # Endocrine
   "Alpha" = "#2ECC71",              # Green
