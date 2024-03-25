@@ -40,7 +40,7 @@ seurat_azimuth <- function(query_seurat_object, azimuth_reference_path) {
     
     predicted_azimuth_data |> write.csv(predicted_azimuth_data_path, row.names = FALSE, quote = FALSE)
 
-    azimuth_path <- glue::glue("{analysis_cache}/azimuth_out/{sample_id}_azimuth.ps")
+    azimuth_path <- glue::glue("{analysis_cache}/azimuth_out/{sample_id}_azimuth.qs")
 
     qs::qsave(azimuth, azimuth_path)
 
