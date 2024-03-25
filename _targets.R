@@ -118,19 +118,16 @@ list(
     tar_target(cellranger_run_folders_10xv3, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv3), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders_10xv2, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv2), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders, c(cellranger_run_folders_10xv3, cellranger_run_folders_10xv2), deployment = "main"),
-    # Failed QC cohort
+    # Failed QC cohort #TODO id this needed?
     tar_target(
         cellranger_run_folders_failed_qc,
-        grep(paste0(
-            c("HPAP-021|HPAP-023|HPAP-027|"), # MultiQC v2
-            c("HPAP-038|HPAP-093"), # MultiQC v3 
-            collapse="|"), 
+        grep(failed_qc_donor_ids, 
             cellranger_run_folders, value = TRUE),
         deployment = "main"),
-    # Non-diabetic cohort
+    # Non-diabetic cohort #TODO id this needed?
     tar_target(
         cellranger_run_folders_nodx,
-        grep(pancdb_metadata$donor_id[pancdb_metadata$diabetes_status == "NODM" ] |> na.omit() |> paste(collapse="|"), cellranger_run_folders, value = TRUE) |>
+        grep(nodm_donor_ids, cellranger_run_folders, value = TRUE) |>
             setdiff(cellranger_run_folders_failed_qc),
         deployment = "main"),
 # Download SNPs ---------------------------------------------------------------------
@@ -271,18 +268,32 @@ list(
         format = "file",
         resources = small
     ),
+# merged & sketched seurat_object with BPcells matrices and metadata -----------------------------------------
+    tar_target(
+        annotated_seurat_bp,
+        merge_seurat_bpcells(ddqc_seurat_objects, pancdb_metadata, protected_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv),
+        format = "file"
+    ),
+    tar_target(
+        merged_seurat_bp_sketch,
+        seurat_sketch_merged_bp(annotated_seurat_bp),
+        resources = medium,
+        format = "file"
+    ),
 # Clustering --------------------------------------------------------------------------
 #! Not needed for now
-    # tar_target(
-    #     seurat_cluster_ari_csv,
-    #     seurat_cluster_ari(ddqc_seurat_objects),
-    #     pattern = map(ddqc_seurat_objects),
-    #     format = "file",
-    #     resources = medium
-    # ),
+    tar_target(
+        seurat_cluster_sketch_csv,
+        seurat_cluster_ari(merged_seurat_bp_sketch),
+        format = "file",
+        resources = medium
+    ),
 # Reports -------------------------------------------------------------------------------
     tar_target(report_one, 
             render_report(here::here("quarto/pancdb_metadata.qmd")), 
+            deployment = "main", format = "file"),
+    tar_target(report_two, 
+            render_report(here::here("quarto/study_cohort_azimuth.qmd")), 
             deployment = "main", format = "file"),
 # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
@@ -309,27 +320,12 @@ list(
     # 6. Removing ambient RNAs associated with barcodes
     #    {SoupX}, cellbender
 
-    # demultiplexing
-    # get the path of the raw matrix file for sample mixes
-    # tar_files_input(raw_matrix_paths, get_raw_matrix_path(readr::read_csv(glue::glue("{analysis_cache}/data/sample_metadata.csv"), show_col_types = FALSE)), format = "file"),
-
-    # # make a seurat object for each sample mix, including CMO tags and sample mapping
-    # tar_target(
-    #     seurat_cellplex_objects,
-    #     create_cellplex_seurat_object(raw_matrix_paths, sample_metadata),
-    #     pattern = map(raw_matrix_paths),
-    #     iteration = "list"),
-
-    # # perform  cell type annotation
-    # tar_target(seurat_celltype,
-    #     seurat_singleR_mmu(seurat_cellplex_objects),
-    #     pattern = map(seurat_cellplex_objects),
-    #     iteration = "list",
-    #     resources = medium),
-
 
 # clustering with anti-correlation
 # https://www.nature.com/articles/s41467-023-43406-9#code-availability
 
 ## Kmerator
 # https://academic.oup.com/nargab/article/3/3/lqab058/6308460
+
+## sccomp - differential cell type analysis
+# https://bioconductor.org/packages/release/bioc/vignettes/sccomp/inst/doc/introduction.html
