@@ -29,6 +29,9 @@ make_seurat_cellbender <- function(cellbender_h5, cellranger_run_folder) {
     # Add QC metrics
     seurat_object <- seurat_add_cell_metrics(seurat_object)
 
+    # Rename cells
+    seurat_object <- Seurat::RenameCells(seurat_object, add.cell.id = sample_id)
+
     # Save the Seurat object
     seurat_object_path <- glue::glue("{analysis_cache}/cellbender_seurat_objects/{sample_id}.qs")
     dir.create(dirname(seurat_object_path), recursive = TRUE, showWarnings = FALSE)
