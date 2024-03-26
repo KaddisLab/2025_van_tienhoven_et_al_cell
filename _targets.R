@@ -274,20 +274,27 @@ list(
         merge_seurat_bpcells(ddqc_seurat_objects, pancdb_metadata, protected_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv),
         format = "file"
     ),
+    tar_target(n_cells, tibble::tibble(n_cells = c(200, 500, 750, 1000, 1250, 1500, 2000)), deployment = "main", iteration = "vector"),
     tar_target(
-        merged_seurat_bp_sketch,
-        seurat_sketch_merged_bp(annotated_seurat_bp),
-        resources = medium,
-        format = "file"
+            merged_seurat_bp_sketch,
+            seurat_sketch_merged_bp(annotated_seurat_bp, n_cells),
+            pattern = map(n_cells),
+            format = "file"
     ),
+    # tar_target(
+    #     merged_seurat_bp_sketch,
+    #     seurat_sketch_merged_bp(annotated_seurat_bp, n_cells = c(200, 500, 750, 1000, 1250, 1500, 2000)),
+    #     pattern = map(n_cells),
+    #     format = "file"
+    # ),
 # Clustering --------------------------------------------------------------------------
 #! Not needed for now
-    tar_target(
-        seurat_cluster_sketch_csv,
-        seurat_cluster_ari(merged_seurat_bp_sketch),
-        format = "file",
-        resources = medium
-    ),
+    # tar_target(
+    #     seurat_cluster_sketch_csv,
+    #     seurat_cluster_ari(merged_seurat_bp_sketch),
+    #     format = "file",
+    #     resources = medium
+    # ),
 # Reports -------------------------------------------------------------------------------
     tar_target(report_one, 
             render_report(here::here("quarto/pancdb_metadata.qmd")), 
@@ -302,7 +309,7 @@ list(
                 sapply(c(analysis_cache, list.files(analysis_cache, full.names = TRUE, recursive = TRUE)), 
                     function(f) Sys.setFileTime(f, Sys.time())),
         deployment = "main",
-        cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(3, units = "weeks"))
+        cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(1, units = "weeks"))
     )
 
 )
@@ -329,3 +336,6 @@ list(
 
 ## sccomp - differential cell type analysis
 # https://bioconductor.org/packages/release/bioc/vignettes/sccomp/inst/doc/introduction.html
+
+## GPTCelltype - cell type annotation
+# https://github.com/Winnie09/GPTCelltype
