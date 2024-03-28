@@ -118,13 +118,13 @@ list(
     tar_target(cellranger_run_folders_10xv3, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv3), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders_10xv2, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv2), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders, c(cellranger_run_folders_10xv3, cellranger_run_folders_10xv2), deployment = "main"),
-    # Failed QC cohort #TODO id this needed?
+    # Failed QC cohort #TODO is this needed?
     tar_target(
         cellranger_run_folders_failed_qc,
         grep(failed_qc_donor_ids, 
             cellranger_run_folders, value = TRUE),
         deployment = "main"),
-    # Non-diabetic cohort #TODO id this needed?
+    # Non-diabetic cohort #TODO is this needed?
     tar_target(
         cellranger_run_folders_nodx,
         grep(nodm_donor_ids, cellranger_run_folders, value = TRUE) |>
@@ -268,25 +268,25 @@ list(
         format = "file",
         resources = small
     ),
-# merged & sketched seurat_object with BPcells matrices and metadata -----------------------------------------
+# merged & sketched seurat_object with BPcells matrices and metadata ----------------------------------------
     tar_target(
+        #TODO: split this out in to two targets, one for merging metadata and one for bpcells
         annotated_seurat_bp,
         merge_seurat_bpcells(ddqc_seurat_objects, pancdb_metadata, protected_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv),
         format = "file"
     ),
-    tar_target(n_cells, tibble::tibble(n_cells = c(200, 500, 750, 1000, 1250, 1500, 2000)), deployment = "main", iteration = "vector"),
+    # make a PancDB reference with 12 patients from the 77 passing qc
+    tar_target(
+        pancdb_ref,
+        make_seurat_pancdb_ref(),
+        format = "file", resources = medium
+    ),
     tar_target(
             merged_seurat_bp_sketch,
-            seurat_sketch_merged_bp(annotated_seurat_bp, n_cells),
-            pattern = map(n_cells),
+            seurat_sketch_merged_bp(annotated_seurat_bp, 750),
+            resources = medium,
             format = "file"
     ),
-    # tar_target(
-    #     merged_seurat_bp_sketch,
-    #     seurat_sketch_merged_bp(annotated_seurat_bp, n_cells = c(200, 500, 750, 1000, 1250, 1500, 2000)),
-    #     pattern = map(n_cells),
-    #     format = "file"
-    # ),
 # Clustering --------------------------------------------------------------------------
 #! Not needed for now
     # tar_target(
@@ -338,4 +338,6 @@ list(
 # https://bioconductor.org/packages/release/bioc/vignettes/sccomp/inst/doc/introduction.html
 
 ## GPTCelltype - cell type annotation
+#TODO
 # https://github.com/Winnie09/GPTCelltype
+#! Urgent

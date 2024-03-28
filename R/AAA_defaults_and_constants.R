@@ -49,3 +49,28 @@ custom_palette <- c(
   "schwann" = "#2C3E50",            # Dark blue
   "cycling" = "#FF7F50"             # Coral
 )
+
+cell_type_markers <- c(
+  "acinar" = "CPA1",
+  "stellate" = "RSG10",
+  "alpha" = "GCG",
+  "beta" = "INS",
+  "cycling" = "MKI67",
+  "delta" = "SST",
+  "ductal" = "KRT19",
+  "endothelial" = "VWF",
+  "epsilon" = "GHRL",
+  "gamma" = "PPY",
+  "immune" = "PTPRC",
+  "schwann" = "CDH19",
+  "endocrine" = "XBP1"
+)
+
+diabetes_palette <- c(
+  "NODM" = "#2a33d3", # A cool blue for 'No Diabetes'
+  "T1DM" = "#F4C542",         # A warm yellow for 'Type 1 Diabetes'
+  "T2DM" = "#D8604C"          # A warm red for 'Type 2 Diabetes'
+)
+
+
+er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS")
