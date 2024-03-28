@@ -53,7 +53,7 @@ merge_seurat_bpcells <- function(ddqc_seurat_objects, pancdb_metadata, protected
     pancdb_metadata <- pancdb_metadata |> left_join(ddqc_seurat_object_paths, by = "donor_id")
 
     seurat_paths <- pancdb_metadata |> pull(qs_path)
-    meta_data <- select(pancdb_metadata, c(donor_id, protected, batch, sample_sex, sample_age))
+    meta_data <- select(pancdb_metadata, c(donor_id, protected, diabetes_status, batch, sample_sex, sample_age, sample_ethnicity))
 
     # Initialise progress bar
     pb <- progress_bar$new(
