@@ -1,60 +1,5 @@
 
-
- p1<- Seurat::DimPlot(so,  group.by = "predicted.annotation.l1", label = TRUE, label.size = 3, reduction = "ref.umap") + NoLegend()
-
-
 tar_source()
-analysis_cache <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024"
-
-so<-load_seurat("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/analysis_cache/cellbender_seurat_objects/HPAP-023.qs")
-seurat_object<-so
-
-so <- NormalizeData(so)
-so <- ScaleData(so)
-
-Idents(so) <- "predicted.celltype.l1"
-
-p1 <- FeaturePlot(so, features = "INS", keep.scale = NULL, reduction = "ref.umap")
- ggsave("p1.png", plot = p1, width = 10, height = 10, units = "in", dpi = 300)
-
-# Define your custom color palette
-custom_palette <- c(
-  "Acinar-s" = "#E74C3C",           # Red
-  "Acinar-i" = "#E67E22",           # Orange
-  "Acinar-REG+" = "#F39C12",        # Amber
-  "Endothelial" = "#95A5A6",        # Grey
-  "Ductal" = "#9B59B6",             # Purple
-  "Activated Stellate" = "#F1C40F", # Yellow
-  "Quiescent Stellate" = "#F7DC6F", # Light Yellow
-  "Beta" = "#3498DB",               # Blue
-  "Schwann" = "#ABB2B9",            # Light Grey
-  "Delta" = "#1ABC9C",              # Teal
-  "MUC5B+ Ductal" = "#8E44AD",      # Dark Purple
-  "Macrophage" = "#34495E",         # Dark Grey
-  "Alpha" = "#2ECC71",              # Green
-  "Gamma" = "#16A085"               # Dark Teal
-)
-
-
-##ref
-seurat_object<- targets::tar_read(tosti_etal_seurat_object) |> load_seurat()
-pancreas.ref <- NormalizeData(seurat_object)
-pancreas.ref <- FindVariableFeatures(pancreas.ref)
-pancreas.ref <- ScaleData(pancreas.ref)
-pancreas.ref <- RunPCA(pancreas.ref)
-pancreas.ref <- FindNeighbors(pancreas.ref, dims = 1:30)
-pancreas.ref <- FindClusters(pancreas.ref, res = 1.5)
-pancreas.ref <- RunUMAP(pancreas.ref, dims = 1:30, return.model = TRUE)
-pancreas.ref$Cluster <- factor(pancreas.ref$Cluster, levels = names(custom_palette))
-p1 <- DimPlot(pancreas.ref, group.by = "Cluster", cols = custom_palette, label = TRUE, label.size = 6, reduction = "umap") & NoLegend()
-ggsave("p1.png", plot = p1, width = 10, height = 10, units = "in", dpi = 300)
-
-
-# After preprocessing, we integrate layers with added parameters specific to Harmony:
-obj <- IntegrateLayers(object = ref_seurat_object, method = HarmonyIntegration, orig.reduction = "pca",
-  new.reduction = 'harmony', verbose = FALSE)
-
-
 
 ###-------
 
@@ -274,53 +219,9 @@ View(data.frame(rs3842752_ref, rs3842752_alt, rs3842752_prop))
 
 
 
-df <- left_join(protected_cohort, pancdb_metadata, by = c("sample_id" = "donor_id"))
-df <- df %>%
-  mutate(disease_status_clean = case_when(
-    grepl("No Hx DIAB|No HX DIAB|No HX Diabetes", disease_status) ~ "No Hx DIAB",
-    grepl("T1DM", disease_status) ~ "T1DM",
-    grepl("T2DM", disease_status) ~ "T2DM",
-    TRUE ~ "Other"
-  ))
-
-
-# Plot for 'sample_sex'
-sample_sex_plot <- ggplot(df, aes(x = sample_sex, fill = sample_sex)) +
-  geom_bar() +
-  labs(x = "Sample Sex", y = "Count", title = "Distribution of Sample Sex") +
-  scale_fill_brewer(palette = "Set3")
-
-# Plot for 'age'
-age_plot <- ggplot(df, aes(x = sample_age)) +
-  geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
-  labs(x = "Sample Age", y = "Count", title = "Distribution of Sample Age")
-
-# Updated plot for 'disease_status_clean'
-disease_status_plot <- ggplot(df, aes(x = disease_status_clean, fill = disease_status_clean)) +
-  geom_bar() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Disease Status", y = "Count", title = "Consolidated Distribution of Disease Status") +
-  scale_fill_brewer(palette = "Set2")
-
-# Plot for 'sample_ethnicity'
-ethnicity_plot <- ggplot(df, aes(x = sample_ethnicity, fill = sample_ethnicity)) +
-  geom_bar() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Sample Ethnicity", y = "Count", title = "Distribution of Sample Ethnicity") +
-  scale_fill_brewer(palette = "Pastel1")
-
-# Update combined plot to include 'ethnicity_plot'
-combined_plot <- (sample_sex_plot | age_plot ) / 
-                 ( disease_status_plot | ethnicity_plot)
-
-# Save updated combined plot to PNG
-ggsave("combined_plots.png", combined_plot, width = 24, height = 12, dpi = 300)
-
-
-
-
 
 vcf <- readr::read_tsv(file = vartrix_vcf, comment = "##",show_col_types = FALSE)
 vcf |>
     mutate(FORMAT = "GT", Patient_1 = "0/0") |> head()
 
+ 
