@@ -117,9 +117,9 @@ This is consistent with published data (CellXGene) showing INS expression in cel
 
 ::: {layout-ncol=2}
 
-![Cell type](cellXgene_annot.png)
+![Cell type](assets/cellXgene_annot.png)
 
-![INS expression](cellXgene_INS.png)
+![INS expression](assets/cellXgene_INS.png)
 
 :::
 
