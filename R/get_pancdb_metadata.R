@@ -1,6 +1,7 @@
 get_pancdb_metadata <- function() {
     #read excel file
-    donor_metadata <- readxl::read_excel(glue::glue("{analysis_cache}/data/metadata/PancDB_Donors.xlsx"))
+    donor_metadata <- readxl::read_excel(glue::glue("{analysis_cache}/data/metadata/PancDB_Donors.xlsx")) |>
+        left_join(readxl::read_excel(glue::glue("{analysis_cache}/data/metadata/hpap_donor_types.xlsx")), by = join_by(DonorID))
     scrnaseq_metadata <- readxl::read_excel(glue::glue("{analysis_cache}/data/metadata/PancDB_scRNA-seq_metadata_2023-12-22.xlsx"))
     metadata <- left_join(donor_metadata, scrnaseq_metadata, by = "DonorID") |>
         janitor::clean_names() |>
@@ -8,6 +9,7 @@ get_pancdb_metadata <- function() {
              diabetes_status = case_when(
                stringr::str_detect(disease_status, "T1DM") ~ "T1DM",
                stringr::str_detect(disease_status, "T2DM") ~ "T2DM",
+               stringr::str_detect(ab_positive, "Yes") ~ "AABP",
                TRUE ~ "NODM"
              ),
              technology = case_when(
