@@ -270,21 +270,27 @@ list(
     ),
 # merged & sketched seurat_object with BPcells matrices and metadata ----------------------------------------
     tar_target(
-        #TODO: split this out in to two targets, one for merging metadata and one for bpcells
-        annotated_seurat_bp,
-        merge_seurat_bpcells(ddqc_seurat_objects, pancdb_metadata, protected_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv),
-        format = "file"
+        ddqc_bpcells,
+        seurat_to_bpcells(ddqc_seurat_objects),
+        format = "file",
+        pattern = map(ddqc_seurat_objects)
     ),
-    # make a PancDB reference with 12 patients from the 77 passing qc
+    # tar_target(
+    #     #TODO: split this out in to two targets, one for merging metadata and one for bpcells
+    #     annotated_seurat_bp,
+    #     merge_seurat_bpcells(ddqc_seurat_objects, pancdb_metadata, protected_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv),
+    #     format = "file"
+    # ),
+    # # make a PancDB reference with 12 patients from the 77 passing qc
+    # tar_target(
+    #     pancdb_ref,
+    #     make_seurat_pancdb_ref(),
+    #     format = "file", resources = medium
+    # ),
     tar_target(
-        pancdb_ref,
-        make_seurat_pancdb_ref(),
-        format = "file", resources = medium
-    ),
-    tar_target(
-            merged_seurat_bp_sketch,
-            seurat_sketch_merged_bp(annotated_seurat_bp, 750),
-            resources = medium,
+            merged_seurat_sketch_750,
+            seurat_merge_and_sketch(ddqc_bpcells, 750),
+            deployment = "main",
             format = "file"
     ),
 # Clustering --------------------------------------------------------------------------
@@ -341,3 +347,13 @@ list(
 #TODO
 # https://github.com/Winnie09/GPTCelltype
 #! Urgent
+# 
+# https://github.com/const-ae/lemur
+# If you have collected a single-cell RNA-seq dataset with more than one condition, lemur predicts 
+# for each cell and gene how much the expression would change if the cell had been in the other condition
+
+# https://github.com/zhanghao-njmu/SCP
+# Companion to scCustomize
+
+# Variable Gene Selection:
+# https://github.com/RuzhangZhao/mixhvg
