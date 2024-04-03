@@ -62,35 +62,35 @@ list(
         format = "file", resources = tiny
     ),
     # kb_count
-    tar_target(
-        kb_count_10xv3,
-        kb_count(technology = "10XV3",
-            index = kb_ref_hg38_std,
-            t2g = gsub(".idx", "_t2g.txt", kb_ref_hg38_std),
-            fastqs = fastq_10xv3_by_sample$fastq_paths,
-            out = glue::glue("{analysis_cache}/kb_out/{fastq_10xv3_by_sample$sample_id}"),
-            overwrite = FALSE),
-        resources = medium,
-        pattern = map(fastq_10xv3_by_sample),
-        format = "file"
-        ),
-    tar_target(
-        kb_count_10xv2,
-        kb_count(technology = "10XV2",
-            index = kb_ref_hg38_std,
-            t2g = gsub(".idx", "_t2g.txt", kb_ref_hg38_std),
-            fastqs = fastq_10xv2_by_sample$fastq_paths,
-            out = glue::glue("{analysis_cache}/kb_out/{fastq_10xv2_by_sample$sample_id}"),
-            overwrite = FALSE),
-        resources = medium,
-        pattern = map(fastq_10xv2_by_sample),
-        format = "file"
-        ),
-    tar_target(
-        kb_count_alltech,
-        c(kb_count_10xv3, kb_count_10xv2),
-        deployment = "main"
-        ),
+    # tar_target(
+    #     kb_count_10xv3,
+    #     kb_count(technology = "10XV3",
+    #         index = kb_ref_hg38_std,
+    #         t2g = gsub(".idx", "_t2g.txt", kb_ref_hg38_std),
+    #         fastqs = fastq_10xv3_by_sample$fastq_paths,
+    #         out = glue::glue("{analysis_cache}/kb_out/{fastq_10xv3_by_sample$sample_id}"),
+    #         overwrite = FALSE),
+    #     resources = medium,
+    #     pattern = map(fastq_10xv3_by_sample),
+    #     format = "file"
+    #     ),
+    # tar_target(
+    #     kb_count_10xv2,
+    #     kb_count(technology = "10XV2",
+    #         index = kb_ref_hg38_std,
+    #         t2g = gsub(".idx", "_t2g.txt", kb_ref_hg38_std),
+    #         fastqs = fastq_10xv2_by_sample$fastq_paths,
+    #         out = glue::glue("{analysis_cache}/kb_out/{fastq_10xv2_by_sample$sample_id}"),
+    #         overwrite = FALSE),
+    #     resources = medium,
+    #     pattern = map(fastq_10xv2_by_sample),
+    #     format = "file"
+    #     ),
+    # tar_target(
+    #     kb_count_alltech,
+    #     c(kb_count_10xv3, kb_count_10xv2),
+    #     deployment = "main"
+    #     ),
 # Cellranger -----------------------------------------------------------------------
     # Make nf-core sample sheet
     tar_target(sample_sheet_10xv2, hpap_fastq_to_sample_sheet(fastq_10xv2), deployment = "main"),
@@ -234,6 +234,13 @@ list(
         pattern = map(cellbender_seurat_objects),
         format = "file",
         resources = medium
+    ),
+# GPT cell type annotation --------------------------------------------------------------
+    tar_target(
+        gpt_cell_type_csv,
+        seurat_gpt_cell_type(ddqc_seurat_objects),
+        pattern = map(ddqc_seurat_objects),
+        format = "file"
     ),
 # Cell cycle annotation --------------------------------------------------------------
     tar_target(
