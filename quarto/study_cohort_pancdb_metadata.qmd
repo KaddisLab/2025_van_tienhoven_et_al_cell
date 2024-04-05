@@ -33,70 +33,91 @@ library(tidyverse)
 library(targets)
 library(ggridges)
 tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/R")
 
 tar_load(protected_cohort)
 tar_load(pancdb_metadata)
-tar_load(cellranger_run_folders_nodx)
-nodx_cohort <- cellranger_run_folders_nodx |> basename()
 pancdb_metadata$protected<-pancdb_metadata$donor_id %in% protected_cohort$sample_id
-pancdb_metadata <- pancdb_metadata |> dplyr::filter(donor_id %in% nodx_cohort & str_detect(reagent_kit, "10X"))
-```
-
-# Age distribution by cohort
-```{r }
-pancdb_metadata %>%
-  ggplot(aes(x = sample_age, fill = protected)) +
-  geom_histogram(binwidth = 5, alpha = 0.7, position = "identity") +
-  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
-  labs(x = "Sample Age", y = "Count", title = "Age Distribution by Cohort", fill = "Protected")
+pancdb_metadata <- pancdb_metadata |> dplyr::filter(str_detect(reagent_kit, "10X"))
+pancdb_metadata$diabetes_status <- factor(pancdb_metadata$diabetes_status, levels = names(diabetes_palette))
 ```
 
 # Disease status by cohort
 ```{r }
 pancdb_metadata %>%
-  ggplot(aes(x = diabetes_status, fill = protected)) +
-  geom_bar(position = "dodge") +
-  geom_text(stat = 'count', aes(label = ..count.., group = protected),
-            position = position_dodge(width = 0.9), vjust = -0.5) +
-  labs(x = "Disease Status", y = "Count", title = "Disease Status by Cohort", fill = "Protected") +
-  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      ggplot(aes(x = diabetes_status, fill = diabetes_status, alpha = protected)) +
+      geom_bar(position = "dodge") +
+      geom_text(stat = 'count', aes(label = ..count..),
+        position = position_dodge(width = 0.9), vjust = -0.5, show.legend = FALSE) +
+      scale_fill_manual(values = diabetes_palette) +
+      scale_alpha_manual(values = c(`FALSE` = 0.5, `TRUE` = 1), labels = c("Susceptable", "Protected")) +  # Set the alpha transparency for protected status
+      labs(x = "Disease Status", y = "Count", title = "Disease Status by Cohort", fill = "Disease Status") + theme_classic() 
 ```
+
+# Age distribution by cohort
+```{r }
+#| fig-height: 8
+library(ggdist)
+ggplot(pancdb_metadata, aes(x = sample_age, fill = diabetes_status, alpha = protected)) +
+  geom_dots() +
+  scale_fill_manual(values = diabetes_palette) +
+  scale_alpha_manual(values = c(`FALSE` = 0.2, `TRUE` = 0.7)) +
+  facet_wrap(~diabetes_status, ncol = 1, scales = "free_y") +
+  labs(x = "Sample Age", y = "Density", 
+       title = "Age Distribution by Diabetes Status and Protection", 
+       fill = "Diabetes Status") +
+  theme_minimal() + ylab(NULL) + guides(alpha = FALSE) +
+  theme(legend.position = "bottom", strip.text = element_text(size = 8)) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+```
+
 
 # Ethnicity by cohort
 ```{r }
+#| fig-height: 8
 pancdb_metadata %>%
-  ggplot(aes(x = sample_ethnicity, fill = protected)) +
-  geom_bar(position = "dodge") +
-  geom_text(stat = 'count', aes(label = ..count.., group = protected),
-            position = position_dodge(width = 0.9), vjust = -0.5) +
-  labs(x = "Ethnicity", y = "Count", title = "Ethnicity by Cohort", fill = "Protected") +
-  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  ggplot(aes(x = sample_ethnicity, fill = sample_ethnicity, alpha = protected)) +
+    facet_wrap(~diabetes_status, ncol = 1) +
+    geom_dots(dotsize = 0.2, binwidth = 0.6, overflow = "compress", layout = "hex") +
+  scale_fill_brewer(palette = "Set2") +  # Choosing a color palette for ethnicity
+  scale_alpha_manual(values = c(`FALSE` = 0.4, `TRUE` = 1)) +  # Set the alpha transparency for protected status
+  labs(x = "Ethnicity", y = "Count", title = "Ethnicity by Cohort", fill = "Ethnicity") +
+  theme_minimal() + ylab(NULL) + guides(alpha = FALSE) +
+  theme(legend.position = "bottom", strip.text = element_text(size = 8)) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
 ```
 
 # Sex by cohort
 ```{r }
+#| fig-height: 8
+
 pancdb_metadata %>%
-  ggplot(aes(x = sample_sex, fill = protected)) +
-  geom_bar(position = "dodge") +
-  geom_text(stat = 'count', aes(label = ..count.., group = protected),
-            position = position_dodge(width = 0.9), vjust = -0.5) +
-  labs(x = "Sex", y = "Count", title = "Sex by Cohort", fill = "Protected") +
-  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  ggplot(aes(x = sample_sex, fill = sample_sex, alpha = protected)) +
+    facet_wrap(~diabetes_status, ncol = 1) +
+    geom_dots(dotsize = 0.2, binwidth = 0.4, overflow = "compress", layout = "hex") +
+  scale_fill_brewer(palette = "Set1") +  # Choosing a color palette for sex
+  scale_alpha_manual(values = c(`FALSE` = 0.4, `TRUE` = 1)) +  # Set the alpha transparency for protected status
+  labs(x = "Sex", y = "Count", title = "Sex by Cohort", fill = "Sex") +
+  theme_minimal() + ylab(NULL) + guides(alpha = FALSE) +
+  theme(legend.position = "bottom", strip.text = element_text(size = 8)) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
 ```
 
 # Technology by cohort
 ```{r }
+#| fig-height: 8
 pancdb_metadata %>%
-  ggplot(aes(x = reagent_kit, fill = protected)) +
-  geom_bar(position = "dodge") +
-  geom_text(stat = 'count', aes(label = ..count.., group = protected),
-            position = position_dodge(width = 0.9), vjust = -0.5) +
-  labs(x = "Technology", y = "Count", title = "Technology by Cohort", fill = "Protected") +
-  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  ggplot(aes(x = reagent_kit, fill = reagent_kit, alpha = protected)) +
+    facet_wrap(~diabetes_status, ncol = 1) +
+    geom_dots(dotsize = 0.2, binwidth = 0.5, overflow = "compress", layout = "hex") +
+  scale_fill_brewer(palette = "Set3") +  # Choosing a color palette for sex
+  scale_alpha_manual(values = c(`FALSE` = 0.4, `TRUE` = 1)) +  # Set the alpha transparency for protected status
+  labs(x = "Chemistry", y = "Count", title = "Chemistry by Cohort", fill = "Chemistry") +
+  theme_minimal() + ylab(NULL) + guides(alpha = FALSE) +
+  theme(legend.position = "bottom", strip.text = element_text(size = 8)) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
 ```
 
 ```{r }
@@ -138,11 +159,17 @@ plot_pancdb_metrics(pancdb_metadata, quality_metrics)
 output_metrics <- c(
   "expected_cells",
   "estimated_number_of_cells",
-  "mean_reads_per_cell",
   "median_genes_per_cell",
-  "number_of_reads",
   "total_genes_detected",
   "median_umi_counts_per_cell"
+)
+plot_pancdb_metrics(pancdb_metadata, output_metrics)
+```
+
+```{r }
+output_metrics <- c(
+  "number_of_reads",
+  "mean_reads_per_cell"
 )
 plot_pancdb_metrics(pancdb_metadata, output_metrics)
 ```

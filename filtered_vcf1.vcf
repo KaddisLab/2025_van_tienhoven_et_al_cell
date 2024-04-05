@@ -1,0 +1,7 @@
+#CHROM   POS ID          REF   ALT    QUAL FILTER INFO         FORMAT Patient_1
+chr1     11008 rs575272151 C     G       100 PASS   AF=0.0880591 GT     0/0      
+chr1     11012 rs544419019 C     G       100 PASS   AF=0.0880591 GT     0/0      
+chr1     13116 rs62635286  T     G       100 PASS   AF=0.0970447 GT     0/0      
+chr1     13118 rs200579949 A     G       100 PASS   AF=0.0970447 GT     0/0      
+chr1     13273 rs531730856 G     C       100 PASS   AF=0.0950479 GT     0/0      
+chr1     14464 rs546169444 A     T       100 PASS   AF=0.0958466 GT     0/0      

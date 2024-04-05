@@ -236,12 +236,13 @@ list(
         resources = medium
     ),
 # GPT cell type annotation --------------------------------------------------------------
-    tar_target(
-        gpt_cell_type_csv,
-        seurat_gpt_cell_type(ddqc_seurat_objects),
-        pattern = map(ddqc_seurat_objects),
-        format = "file"
-    ),
+    #* Already run *#
+        # tar_target(
+        #     gpt_cell_type_csv,
+        #     seurat_gpt_cell_type(ddqc_seurat_objects),
+        #     pattern = map(ddqc_seurat_objects),
+        #     format = "file"
+        # ),
 # Cell cycle annotation --------------------------------------------------------------
     tar_target(
         cell_cycle_csv,
@@ -258,7 +259,7 @@ list(
         format = "file",
         resources = medium
     ),
-# Seurat reference annotation - Tosti et al 2021
+# Project into reference annotation - Tosti et al 2021
 #! performs very poorly, not used for now
     # tar_target(
     #     ref_mapped_seurat_objects,
@@ -275,9 +276,9 @@ list(
         format = "file",
         resources = small
     ),
-# merged & sketched seurat_object with BPcells matrices and metadata ----------------------------------------
+# Convert seurat_objects to BPcells matrices -------------------------------------------
     tar_target(
-        ddqc_bpcells,
+        ddqc_bpcells_all,
         seurat_to_bpcells(ddqc_seurat_objects),
         format = "file",
         pattern = map(ddqc_seurat_objects)
@@ -292,22 +293,26 @@ list(
     # tar_target(
     #     pancdb_ref,
     #     make_seurat_pancdb_ref(),
-    #     format = "file", resources = medium
+    #     format = "file",
+    #resources = medium
     # ),
+    
+    # Drop failed samples before merge -----------------------------------------------------------------------------
+    tar_target(ddqc_bpcells, grep(failed_qc_donor_ids, ddqc_bpcells_all, value = TRUE, invert = TRUE), format = "file_fast", iteration = "vector", deployment = "main"),
+    # Merge and sketch 
     tar_target(
             merged_seurat_sketch_750,
             seurat_merge_and_sketch(ddqc_bpcells, 750),
-            deployment = "main",
+            resources = xlarge,
             format = "file"
     ),
 # Clustering --------------------------------------------------------------------------
-#! Not needed for now
-    # tar_target(
-    #     seurat_cluster_sketch_csv,
-    #     seurat_cluster_ari(merged_seurat_bp_sketch),
-    #     format = "file",
-    #     resources = medium
-    # ),
+    tar_target(
+        seurat_cluster_sketch_csv,
+        seurat_cluster_ari(merged_seurat_sketch_750),
+        format = "file",
+        resources = medium
+    ),
 # Reports -------------------------------------------------------------------------------
     tar_target(report_one, 
             render_report(here::here("quarto/pancdb_metadata.qmd")), 
@@ -339,6 +344,14 @@ list(
     #    {DropletQC}
     # 6. Removing ambient RNAs associated with barcodes
     #    {SoupX}, cellbender
+#TODO: genotype viz. canadian study (rs...53)
+#TODO: genotype viz. INS promoter (rs...689)
+#TODO: kallisto quantification
+#TODO: maybe https://velocyto.org/velocyto.py/tutorial/cli.html#run10x-run-on-10x-chromium-samples
+#TODO: vartrix genotyping of donors
+#TODO: vartrix genotyping of cells
+#TODO: stress score (XPB1 un/spliced)
+#TODO: https://github.com/horsedayday/eQTLsingle
 
 
 # clustering with anti-correlation
@@ -351,9 +364,7 @@ list(
 # https://bioconductor.org/packages/release/bioc/vignettes/sccomp/inst/doc/introduction.html
 
 ## GPTCelltype - cell type annotation
-#TODO
 # https://github.com/Winnie09/GPTCelltype
-#! Urgent
 # 
 # https://github.com/const-ae/lemur
 # If you have collected a single-cell RNA-seq dataset with more than one condition, lemur predicts 

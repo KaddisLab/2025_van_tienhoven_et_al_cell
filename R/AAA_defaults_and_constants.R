@@ -9,6 +9,7 @@ failed_qc_donor_ids <- paste0(
 
 metadata <- tar_read(pancdb_metadata)
 nodm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "NODM" ] |> na.omit() |> paste0(collapse="|")
+aabp_donor_ids <- metadata$donor_id[metadata$diabetes_status == "AABP" ] |> na.omit() |> paste0(collapse="|")
 t1dm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "T1DM" ] |> na.omit() |> paste0(collapse="|")
 t2dm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "T2DM" ] |> na.omit() |> paste0(collapse="|")
 rm(metadata)
@@ -67,9 +68,10 @@ cell_type_markers <- c(
 )
 
 diabetes_palette <- c(
-  "NODM" = "#2a33d3", # A cool blue for 'No Diabetes'
-  "T1DM" = "#F4C542",         # A warm yellow for 'Type 1 Diabetes'
-  "T2DM" = "#D8604C"          # A warm red for 'Type 2 Diabetes'
+  "NODM" = "#3fa36b",    # A cool blue for 'No Diabetes'
+  "AABP" = "#F4C542",    # A vibrant green for 'Autoantibody Positive'
+  "T1DM" = "#9353b3",    # A warm yellow for 'Type 1 Diabetes'
+  "T2DM" = "#D8604C"    # A warm red for 'Type 2 Diabetes'
 )
 
 

@@ -43,7 +43,7 @@ tar_config_set(store = "/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/_t
 tar_source("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/R")
 
 tar_load(c(protected_cohort, pancdb_metadata))
-# all_samples_seurat_object<-"/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/merged_seurat_bp_sketch_integrated_20240327.qs" |> load_seurat()
+# all_samples_seurat_object <- glue::glue("{analysis_cache}/data/merged_seurat_bp_sketch_integrated_20240327.qs") |> load_seurat()
 # sample_metadata <- pancdb_metadata |>
 #     dplyr::mutate(protected = donor_id %in% protected_cohort$sample_id, batch = as.integer(as.factor(reagent_kit))) |>
 #     dplyr::filter(str_detect(reagent_kit, "10X") & !str_detect(donor_id, failed_qc_donor_ids)) |>
@@ -54,8 +54,8 @@ tar_load(c(protected_cohort, pancdb_metadata))
 # #--- NODM ----
 # Idents(all_samples_seurat_object) <- "diabetes_status"
 # seurat_object <- subset(all_samples_seurat_object, idents = "NODM") |> JoinLayers()
-# qs::qsave(seurat_object, "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/NODM_seurat_object.qs")
-seurat_object <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/NODM_seurat_object.qs" |> load_seurat()
+# qs::qsave(seurat_object,  glue::glue("{analysis_cache}/data/NODM_seurat_object.qs"))
+seurat_object <-  glue::glue("{analysis_cache}/data/NODM_seurat_object.qs") |> load_seurat()
 ```
 
 # 1. Nascent INS mRNA is similar in beta-cells of S/P vs. S/S islet donors
