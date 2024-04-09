@@ -69,7 +69,7 @@ seurat_cluster_ari <- function(
     }
     stable_res <- resolutions[stable_res_index]
 
-    sample_id <- seurat_object@meta.data$orig.ident[1]
+    sample_id <- seurat_object@project.name
     # if TRUE, plot ARI values
     if ((do.plot)) {
         plot_path <- glue::glue("{analysis_cache}/clusters_out/{sample_id}_ari_res{stable_res}.png")
