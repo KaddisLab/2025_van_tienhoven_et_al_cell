@@ -32,16 +32,23 @@
 seurat_to_bpcells <- function(seurat_object) {
 
     seurat_object <- load_seurat(seurat_object)
-    
     sample_id <- seurat_object[["orig.ident"]][1, ]
+    metadata <- seurat_object[[]] |> 
+        dplyr::select(
+            dplyr::any_of(
+            c("orig.ident", "nCount_RNA", "nFeature_RNA", "nCount_RAW", "nFeature_RAW",
+                "nFeature_Diff", "nCount_Diff", "percent_mt", "percent_rb", "percent_hb",
+                "percent_pl", "percent_xist", "percent_chrY")))
 
     bp_dir <- glue::glue("{analysis_cache}/bpcells_out/{sample_id}")
+    message("Seurat object for ", sample_id, " is ", format(object.size(seurat_object), units = "Mb", digits = 2), " in memory")
 
     # Convert counts to BPCells / load the BPCells folder
     if (!dir.exists(bp_dir)) {
         BPCells::write_matrix_dir(mat = seurat_object[["RNA"]]$counts, dir = bp_dir, compress = TRUE)
     }
-    seurat_object[["RNA"]]$counts <- BPCells::open_matrix_dir(dir = bp_dir)
+    seurat_object <- Seurat::CreateSeuratObject(counts = BPCells::open_matrix_dir(dir = bp_dir), meta.data = metadata, project = sample_id)
+    message("BPCells object for ", sample_id, " is ", format(object.size(seurat_object), units = "Gb", digits = 2), " in memory")
 
     seurat_object_path <- glue::glue("{analysis_cache}/bpcells_out/{sample_id}.qs")
 
