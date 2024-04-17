@@ -187,21 +187,40 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20
 
     if (do.plots) {
         message("Generating combined plot")
-        df <- merge(df.qc, scDblFinder_out, by = "cell")
+
+        # Data merging and basic calculations
+        df <- dplyr::inner_join(df.qc, scDblFinder_out, by = "cell")
         total_cells <- nrow(df)
         ddqc_kept_cells <- sum(df$passed.qc)
         ddqc_dropped_cells <- total_cells - ddqc_kept_cells
         ddqc_percent_dropped <- round((ddqc_dropped_cells / total_cells) * 100, 1)
-        n_doublets <- sum(df[["class"]] == "doublet")
+        n_doublets <- sum(df$class == "doublet")
         percent_doublets <- round((n_doublets / total_cells) * 100, 1)
         total_remaining <- total_cells - ddqc_dropped_cells - n_doublets
         percent_remaining <- round((total_remaining / total_cells) * 100, 1)
-        qc_fail <- df |> dplyr::filter(!passed.qc) |> pull(cell)
-        doublets <- df |> dplyr::filter(class == "doublet") |> pull(cell)
+
+        # Identify and categorize cells
+        qc_fail <- df %>%
+            dplyr::filter(!passed.qc) %>%
+            dplyr::pull(cell)
+        doublets <- df %>%
+            dplyr::filter(class == "doublet") %>%
+            dplyr::pull(cell)
         both <- intersect(qc_fail, doublets)
         qc_fail <- setdiff(qc_fail, both)
         doublets <- setdiff(doublets, both)
+
+        # Assign status based on conditions
+        df$status <- with(df, ifelse(cell %in% qc_fail, "QC Fail",
+            ifelse(cell %in% doublets, "Doublets",
+                ifelse(cell %in% both, "Both", "Passed QC")
+            )
+        ))
+
         cells_to_highlight <- list("QC Fail" = qc_fail, "Doublets" = doublets, "Both" = both)
+
+        # Cell highlight plot configuration
+        # Assuming the `plots[["umap"]]` assignment starts here
         plots[["umap"]] <- scCustomize::Cell_Highlight_Plot(
             seurat_object = seurat_object,
             label = TRUE,
@@ -209,25 +228,36 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20
             repel = TRUE,
             cells_highlight = cells_to_highlight,
             highlight_color = c("QC Fail" = "red", "Doublets" = "blue", "Both" = "purple"),
-            background_color = "gray") + NoLegend() + 
-            labs(title = "UMAP", subtitle = "Gene expression space") +
-            theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), plot.title = element_text(face = "plain"))
-        plots[["reads_vs_genes"]] <- ggplot(df, aes(x = nFeature_RNA, y = nCount_RNA, color = ifelse(passed.qc == FALSE, "red", ifelse(class == "doublet", "blue", "black")))) +
-            geom_point(alpha = ifelse(df$passed.qc == TRUE & df$class != "doublet", 0.2, 1)) +
-            labs(title = "nCount_RNA vs nFeature_RNA",
-                x = "log(nFeature_RNA)", y = "log(nCount_RNA)", color = "Quality") +
-            scale_color_manual(values = c("black", "red", "blue"),
-                    labels = c("Passed QC", "Failed QC", "Doublet"), guide = "none") +
-            scale_x_log10() +
-            scale_y_log10() +
-            theme_classic()
-        combined_plot <- patchwork::wrap_plots(plots, ncol = 2) &
+            background_color = "gray"
+        ) +
+            ggplot2::labs(title = "UMAP", subtitle = "Gene expression space") +
+            ggplot2::theme_classic() +
+            NoLegend() +
+            ggplot2::theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), plot.title = element_text(face = "plain"))
+
+
+        # Scatter plot configuration
+        plots[["reads_vs_genes"]] <- ggplot2::ggplot(df, aes(x = nFeature_RNA, y = nCount_RNA, color = status)) +
+            ggplot2::geom_point(alpha = ifelse(df$passed.qc & df$class != "doublet", 0.2, 1)) +
+            ggplot2::labs(title = "nCount_RNA vs nFeature_RNA", x = "log(nFeature_RNA)", y = "log(nCount_RNA)", color = "Quality") +
+            ggplot2::scale_color_manual(values = c("Passed QC" = "black", "QC Fail" = "red", "Doublets" = "blue", "Both" = "purple")) +
+            ggplot2::scale_x_log10() +
+            ggplot2::scale_y_log10() +
+            ggplot2::theme_classic() +
+            NoLegend()
+
+        # Combining plots
+        combined_plot <- patchwork::wrap_plots(plots, ncol = 2) +
             patchwork::plot_annotation(
                 title = glue::glue("{sample_id} ddQC plot"),
                 subtitle = glue::glue("Filtering {total_cells} cells; <span style='color:red;'>{ddqc_dropped_cells} ({ddqc_percent_dropped}%)</span> cells over {threshold} MADs and <span style='color:blue;'>{n_doublets} ({percent_doublets}%)</span> doublets removed. {total_remaining} ({percent_remaining}%) cells remaining."),
-                theme = theme(
+                theme = ggplot2::theme(
                     plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
-                    plot.subtitle = ggtext::element_markdown(hjust = 0, size = 10)))
+                    plot.subtitle = ggtext::element_markdown(hjust = 0, size = 10)
+                )
+            )
+
+        # Save plot to file
         combined_plot_path <- glue::glue("{analysis_cache}/ddqc_out/{sample_id}_ddqc.png")
         dir.create(dirname(combined_plot_path), showWarnings = FALSE, recursive = TRUE)
         ggsave(filename = combined_plot_path, plot = combined_plot, width = 10, height = 12)
