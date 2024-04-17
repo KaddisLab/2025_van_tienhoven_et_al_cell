@@ -19,7 +19,7 @@
 #' @source https://bioconductor.org/books/release/SingleRBook/
 #' @author Denis O'Meally, Yu-Husan Fu
 #' @export
-seurat_gpt_cell_type <- function(seurat_object, group.by = "seurat_clusters", tissue = "human pancreas", out_folder = "gpt_cell_type_out") {
+seurat_gpt_cell_type <- function(seurat_object, assay = "RNA", group.by = "seurat_clusters", tissue = "human pancreas", out_folder = "gpt_cell_type_out") {
 
     seurat_object <- load_seurat(seurat_object)
 
@@ -28,7 +28,7 @@ seurat_gpt_cell_type <- function(seurat_object, group.by = "seurat_clusters", ti
         stop(glue::glue("The group.by column `{group.by}` is not in the Seurat object metadata."))
     }
 
-    Seurat::DefaultAssay(seurat_object) <- "RNA"
+    Seurat::DefaultAssay(seurat_object) <- assay
     Seurat::Idents(seurat_object) <- group.by
 
     all_markers <- Seurat::FindAllMarkers(seurat_object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
@@ -42,9 +42,9 @@ seurat_gpt_cell_type <- function(seurat_object, group.by = "seurat_clusters", ti
         tibble::rownames_to_column(var = "cell") |>
         dplyr::select(cell, !!!group.by, gpt_cell_type) 
     
-    sample_id <- seurat_object[[]]$orig.ident[1]
+    project_name <- Seurat::Project(seurat_object) 
 
-    cell_type_path <- glue::glue("{analysis_cache}/{out_folder}/{sample_id}.csv")
+    cell_type_path <- glue::glue("{analysis_cache}/{out_folder}/{project_name}.csv")
     dir.create(dirname(cell_type_path), showWarnings = FALSE, recursive = TRUE)
 
     cell_type_table |> write.csv(cell_type_path, row.names = FALSE, quote = FALSE)
