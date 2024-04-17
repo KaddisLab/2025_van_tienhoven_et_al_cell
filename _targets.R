@@ -12,7 +12,7 @@ tar_option_set(
 
 list(
     # check fastq md5sums
-    #tar_target(fastq_md5sums, read_md5sums(here::here(glue::glue("{analysis_cache}/data/hpapdata"))), resources = small),
+    #tar_target(fastq_md5sums, read_md5sums(here::here(glue::glue("{analysis_cache}/data/hpapdata/fastq"))), resources = small),
     #TODO vectorise this function and make groups of 20 or more files to avoid overhead of calling md5sum for each file
     #TODO look at tar_rep() for this...
     #tar_target(md5sums_check, check_md5sum(fastq_md5sums), map(fastq_md5sums), resources = tiny),
@@ -21,7 +21,7 @@ list(
     # get fastq files --------------------------------------------------------
     tar_target(
         fastq_10x,
-        grep("SSq2", list.files(path = glue::glue("{analysis_cache}/data/hpapdata"), pattern = "R[12](_001)?(_fastq-data)?\\.fastq\\.gz$", full.names = TRUE,  recursive = TRUE),
+        grep("SSq2", list.files(path = glue::glue("{analysis_cache}/data/hpapdata/fastq"), pattern = "R[12](_001)?(_fastq-data)?\\.fastq\\.gz$", full.names = TRUE,  recursive = TRUE),
             value = TRUE, invert = TRUE, perl = TRUE),
         deployment = "main"),
     tar_target(
@@ -34,63 +34,56 @@ list(
         deployment = "main"),
     tar_target(
         fastq_ss2,
-        list.files(path = glue::glue("{analysis_cache}/data/hpapdata"), pattern = "_scRNA_SSq2.*\\.fastq\\.gz$", full.names = TRUE, recursive = TRUE),
+        list.files(path = glue::glue("{analysis_cache}/data/hpapdata/fastq"), pattern = "_scRNA_SSq2.*\\.fastq\\.gz$", full.names = TRUE, recursive = TRUE),
         deployment = "main"),
     tar_target(
         fastq_ss3,
-        list.files(path = glue::glue("{analysis_cache}/data/hpapdata"), pattern = "_scRNA_\\d{5}_.*\\.fastq\\.gz$", full.names = TRUE, recursive = TRUE),
+        list.files(path = glue::glue("{analysis_cache}/data/hpapdata/fastq"), pattern = "_scRNA_\\d{5}_.*\\.fastq\\.gz$", full.names = TRUE, recursive = TRUE),
         deployment = "main"),
 
 # kallisto-bustools ---------------------------------------------------------------------
+# Using cellranger reference genome as index
     # Group fastqs by sample
     tar_target(fastq_10xv3_by_sample, arrange_by_sample_10x(fastq_10xv3), deployment = "main"),
     tar_target(fastq_10xv2_by_sample, arrange_by_sample_10x(fastq_10xv2), deployment = "main"),
     tar_target(fastq_ss2_by_sample, arrange_by_sample_ssq(fastq_ss2), deployment = "main"),
     tar_target(fastq_ss3_by_sample, arrange_by_sample_ssq(fastq_ss3), deployment = "main"),
-    # fetch kallisto reference
-    tar_target(
-        kb_ref_hg38_std,
-        kb_ref(species = "human", index = glue::glue("{analysis_cache}/data/kb_ref/hg38_std.idx"), t2g = glue::glue("{analysis_cache}/data/kb_ref/hg38_std_t2g.txt"), overwrite = TRUE),
-        format = "file", resources = tiny
-    ),
-    # fetch kallisto reference - nac
-    tar_target(
-        kb_ref_hg38_nac,
-        kb_ref(
-            species = "human",  workflow = "nac", index = glue::glue("{analysis_cache}/data/kb_ref/hg38_nac.idx"), t2g = glue::glue("{analysis_cache}/data/kb_ref/hg38_nac_t2g.txt"),
-            c1 = glue::glue("{analysis_cache}/data/kb_ref/hg38_nac_cdna.txt"), c2 = glue::glue("{analysis_cache}/data/kb_ref/hg38_nac_nascent.txt"), overwrite = TRUE),
-        format = "file", resources = tiny
-    ),
-    # kb_count
+    # run kb count
     # tar_target(
     #     kb_count_10xv3,
-    #     kb_count(technology = "10XV3",
-    #         index = kb_ref_hg38_std,
-    #         t2g = gsub(".idx", "_t2g.txt", kb_ref_hg38_std),
+    #     kb_count(technology = "10XV3", tcc = TRUE, 
+    #         index = "/ref_genomes/cellranger/human/kb_cr_ref/nac_transcriptome.idx",
+    #         t2g = "/ref_genomes/cellranger/human/kb_cr_ref/nac_t2g.txt",
+    #         c1 = "/ref_genomes/cellranger/human/kb_cr_ref/nac_cdna_t2c.txt",
+    #         c2 = "/ref_genomes/cellranger/human/kb_cr_ref/nac_nascent_t2c.txt",
+    #         workflow = "nac",
     #         fastqs = fastq_10xv3_by_sample$fastq_paths,
     #         out = glue::glue("{analysis_cache}/kb_out/{fastq_10xv3_by_sample$sample_id}"),
-    #         overwrite = FALSE),
-    #     resources = medium,
-    #     pattern = map(fastq_10xv3_by_sample),
-    #     format = "file"
+    #         overwrite = TRUE, verbose = TRUE), 
+    #     resources = large,
+    #     pattern = map(fastq_10xv3_by_sample), 
+    #     format = "file_fast"
     #     ),
-    # tar_target(
-    #     kb_count_10xv2,
-    #     kb_count(technology = "10XV2",
-    #         index = kb_ref_hg38_std,
-    #         t2g = gsub(".idx", "_t2g.txt", kb_ref_hg38_std),
-    #         fastqs = fastq_10xv2_by_sample$fastq_paths,
-    #         out = glue::glue("{analysis_cache}/kb_out/{fastq_10xv2_by_sample$sample_id}"),
-    #         overwrite = FALSE),
-    #     resources = medium,
-    #     pattern = map(fastq_10xv2_by_sample),
-    #     format = "file"
-    #     ),
-    # tar_target(
-    #     kb_count_alltech,
-    #     c(kb_count_10xv3, kb_count_10xv2),
-    #     deployment = "main"
-    #     ),
+    tar_target(
+        kb_count_10xv2,
+        kb_count(technology = "10XV2", tcc = TRUE, 
+            index = "/ref_genomes/cellranger/human/kb_cr_ref/nac_transcriptome.idx",
+            t2g = "/ref_genomes/cellranger/human/kb_cr_ref/nac_t2g.txt",
+            c1 = "/ref_genomes/cellranger/human/kb_cr_ref/nac_cdna_t2c.txt",
+            c2 = "/ref_genomes/cellranger/human/kb_cr_ref/nac_nascent_t2c.txt",
+            workflow = "nac",
+            fastqs = fastq_10xv2_by_sample$fastq_paths,
+            out = glue::glue("{analysis_cache}/kb_out/{fastq_10xv2_by_sample$sample_id}"),
+            overwrite = TRUE, verbose = TRUE), 
+        resources = large,
+        pattern = slice(map(fastq_10xv2_by_sample),1),
+        format = "file_fast"
+        ),
+    tar_target(
+        kb_count_alltech,
+        c(kb_count_10xv3, kb_count_10xv2),
+        deployment = "main"
+        ),
 # Cellranger -----------------------------------------------------------------------
     # Make nf-core sample sheet
     tar_target(sample_sheet_10xv2, hpap_fastq_to_sample_sheet(fastq_10xv2), deployment = "main"),
@@ -118,19 +111,7 @@ list(
     tar_target(cellranger_run_folders_10xv3, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv3), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders_10xv2, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv2), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders, c(cellranger_run_folders_10xv3, cellranger_run_folders_10xv2), deployment = "main"),
-    # Failed QC cohort #TODO is this needed?
-    tar_target(
-        cellranger_run_folders_failed_qc,
-        grep(failed_qc_donor_ids, 
-            cellranger_run_folders, value = TRUE),
-        deployment = "main"),
-    # Non-diabetic cohort #TODO is this needed?
-    tar_target(
-        cellranger_run_folders_nodx,
-        grep(nodm_donor_ids, cellranger_run_folders, value = TRUE) |>
-            setdiff(cellranger_run_folders_failed_qc),
-        deployment = "main"),
-# Download SNPs ---------------------------------------------------------------------
+    # Download SNPs ---------------------------------------------------------------------
     tar_target(
         snp_vcf,
         {destfile <- glue::glue("{analysis_cache}/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz")
@@ -140,7 +121,7 @@ list(
                 mode = "wb")
             return(destfile)},
         deployment = "main",
-        format = "file"
+        format = "file_fast"
     ),
     # CellSNP-lite ---------------------------------------------------------------------
     tar_target(
@@ -150,10 +131,11 @@ list(
             region_vcf = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz"),
         pattern = map(cellranger_run_folders),
         deployment = "main"
-    ),
+    ), 
     # parse sample genotypes
     tar_target(protected_cohort, get_cellsnp_lite_genotypes("11\t2159843", "rs3842752"), deployment = "main"),
     tar_target(rs3842753_cohort, get_cellsnp_lite_genotypes("11\t2159830", "rs3842753"), deployment = "main"),
+    tar_target(rs689_cohort, get_cellsnp_lite_genotypes("11\t2160994", "rs689"), deployment = "main"),
     tar_target(rs13266634_cohort, get_cellsnp_lite_genotypes("8\t117172544", "rs13266634"), deployment = "main"),
     # VarTrix ---------------------------------------------------------------------
     # prep reference snps
@@ -164,41 +146,41 @@ list(
             fai_path = "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa.fai",
             output_vcf_path = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz"),
         resources = small,
-        format = "file"
+        format = "file_fast"
         ),
     tar_target(
         vartrix_coverage,
         run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
         deployment = "main",
         pattern = map(cellranger_run_folders),
-        format = "file",
+        format = "file_fast",
         ),
     tar_target(
         vartrix_consensus,
         run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "consensus", mapq = 30),
         deployment = "main",
         pattern = map(cellranger_run_folders),
-        format = "file",
+        format = "file_fast",
         ),
 # Cellbender using CellRanger counts ------------------------------------------------------------
     tar_target(cellbender_h5,
         run_cellbender(cellranger_run_folder = cellranger_run_folders),
         pattern = map(cellranger_run_folders),
         deployment = "main",
-        format = "file",
+        format = "file_fast",
     ),
     tar_target(
         cellbender_seurat_objects,
         make_seurat_cellbender(cellbender_h5, cellranger_run_folders),
         pattern = map(cellbender_h5, cellranger_run_folders),
         deployment = "main", # must run on "main" for some reason??
-        format = "file"
+        format = "file_fast"
     ),
     tar_target(
         cellbender_qc_plots,
         seurat_plot_cellbender(cellbender_seurat_objects, "INS"),
         pattern = map(cellbender_seurat_objects),
-        format = "file",
+        format = "file_fast",
         resources = small
     ),
 # SingleR cell type annotation --------------------------------------------------------------
@@ -208,13 +190,13 @@ list(
     tar_target(
         tosti_etal_seurat_object,
         make_seurat_tosti_etal(),
-        format = "file", resources = xlarge
+        format = "file_fast", resources = xlarge
     ),
     tar_target(
         tosti_cell_type_csv,
         seurat_singleR_transfer_label(cellbender_seurat_objects, tosti_etal_seurat_object, cell_type_col = "Cluster"),
         pattern = map(cellbender_seurat_objects),
-        format = "file",
+        format = "file_fast",
         resources = small
     ),
     # Azimuth - human pancreas --------------------------------------------------------
@@ -225,30 +207,22 @@ list(
                 "https://zenodo.org/records/4546926/files/idx.annoy?download=1",
                 "https://zenodo.org/records/4546926/files/ref.Rds?download=1"),
             dest_dir = glue::glue("{analysis_cache}/data/azimuth")),
-        format = "file",
+        format = "file_fast",
         resources = tiny
     ),
     tar_target(
         azimuth_mapped_seurat_objects,
         seurat_azimuth(cellbender_seurat_objects, azimuth_reference_path),
         pattern = map(cellbender_seurat_objects),
-        format = "file",
+        format = "file_fast",
         resources = medium
     ),
-# GPT cell type annotation --------------------------------------------------------------
-    #* Already run *#
-        # tar_target(
-        #     gpt_cell_type_csv,
-        #     seurat_gpt_cell_type(ddqc_seurat_objects),
-        #     pattern = map(ddqc_seurat_objects),
-        #     format = "file"
-        # ),
 # Cell cycle annotation --------------------------------------------------------------
     tar_target(
         cell_cycle_csv,
         seurat_cell_cycle(cellbender_seurat_objects),
         pattern = map(cellbender_seurat_objects),
-        format = "file",
+        format = "file_fast",
         resources = small
     ),
 # Doublet annotation --------------------------------------------------------------
@@ -256,7 +230,7 @@ list(
         scDblFinder_csv,
         seurat_scDblFinder(cellbender_seurat_objects),
         pattern = map(cellbender_seurat_objects),
-        format = "file",
+        format = "file_fast",
         resources = medium
     ),
 # Project into reference annotation - Tosti et al 2021
@@ -265,61 +239,90 @@ list(
     #     ref_mapped_seurat_objects,
     #     seurat_project_into_ref(cellbender_seurat_objects, tosti_etal_seurat_object, reduction_model = "umap_harmony"),
     #     pattern = map(cellbender_seurat_objects),
-    #     format = "file",
+    #     format = "file_fast",
     #     resources = large
     # ),
 # ddqc -------------------------------------------------------------------------------
     tar_target(
         ddqc_seurat_objects,
+        #TODO update this from Nadia's project
         seurat_ddqc(cellbender_seurat_objects, scDblFinder_csv),
         pattern = map(cellbender_seurat_objects, scDblFinder_csv),
-        format = "file",
+        format = "file_fast",
         resources = small
     ),
 # Convert seurat_objects to BPcells matrices -------------------------------------------
     tar_target(
         ddqc_bpcells_all,
         seurat_to_bpcells(ddqc_seurat_objects),
-        format = "file",
+        format = "file_fast",
         pattern = map(ddqc_seurat_objects)
     ),
     # tar_target(
     #     #TODO: split this out in to two targets, one for merging metadata and one for bpcells
     #     annotated_seurat_bp,
     #     merge_seurat_bpcells(ddqc_seurat_objects, pancdb_metadata, protected_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv),
-    #     format = "file"
+    #     format = "file_fast"
     # ),
     # # make a PancDB reference with 12 patients from the 77 passing qc
     # tar_target(
     #     pancdb_ref,
     #     make_seurat_pancdb_ref(),
-    #     format = "file",
+    #     format = "file_fast",
     #resources = medium
     # ),
     
-    # Drop failed samples before merge -----------------------------------------------------------------------------
+    # Drop failed samples before merge/clustering/DEG ------------------------------------
     tar_target(ddqc_bpcells, grep(failed_qc_donor_ids, ddqc_bpcells_all, value = TRUE, invert = TRUE), format = "file_fast", iteration = "vector", deployment = "main"),
-    # Merge and sketch 
+    # Sketch 
     tar_target(
-            merged_seurat_sketch_750,
-            seurat_merge_and_sketch(ddqc_bpcells, 750),
-            resources = xlarge,
-            format = "file"
+            seurat_sketch_750,
+            seurat_sketch(ddqc_bpcells, 750),
+            format = "file_fast",
+            pattern = map(ddqc_bpcells)
+    ),
+    # Merge
+    tar_target(
+        merged_seurat_sketch_750,
+        seurat_merge(seurat_sketch_750, "merged_sketch_750"),
+        format = "file_fast",
+        resources = large
+    ),
+    # Integrate
+        tar_target(
+            integrated_seurat_sketch_750,
+            seurat_sketch_harmony(merged_seurat_sketch_750, batch = "batch", pancdb_metadata),
+            format = "file_fast",
+            resources = large
+        ),
+# Clustering --------------------------------------------------------------------------
+    tar_target(
+        merged_cluster_sketch_csv,
+        seurat_cluster_ari(merged_seurat_sketch_750, assay = "sketch"),
+        format = "file_fast",
+        resources = large_mem
     ),
 # Clustering --------------------------------------------------------------------------
     tar_target(
-        seurat_cluster_sketch_csv,
-        seurat_cluster_ari(merged_seurat_sketch_750),
-        format = "file",
-        resources = medium
+        integrated_cluster_sketch_csv,
+        seurat_cluster_ari(integrated_seurat_sketch_750, assay = "sketch"),
+        format = "file_fast",
+        resources = large_mem
     ),
+# GPT cell type annotation --------------------------------------------------------------
+    # tar_target(
+    #     gpt_cell_type_merged_sketch_750_csv,
+    #     seurat_gpt_cell_type(merged_seurat_sketch_750, "sketch", ),
+    #     format = "file_fast"
+    # ),
+
 # Reports -------------------------------------------------------------------------------
     tar_target(report_one, 
             render_report(here::here("quarto/pancdb_metadata.qmd")), 
-            deployment = "main", format = "file"),
+            deployment = "main", format = "file_fast"),
     tar_target(report_two, 
             render_report(here::here("quarto/study_cohort_azimuth.qmd")), 
-            deployment = "main", format = "file"),
+            deployment = "main", format = "file_fast"),
 # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
@@ -352,6 +355,7 @@ list(
 #TODO: vartrix genotyping of cells
 #TODO: stress score (XPB1 un/spliced)
 #TODO: https://github.com/horsedayday/eQTLsingle
+#TODO: sccomp
 
 
 # clustering with anti-correlation
@@ -375,3 +379,15 @@ list(
 
 # Variable Gene Selection:
 # https://github.com/RuzhangZhao/mixhvg
+
+# Genomic Plots
+# https://www.bioconductor.org/packages/release/bioc/vignettes/GenomicPlot/inst/doc/GenomicPlot_vignettes.html#Introduction
+
+
+# Splicing graphs
+# https://www.bioconductor.org/packages/release/bioc/vignettes/SplicingGraphs/inst/doc/SplicingGraphs.pdf
+
+# Splicing analysis
+# MARVEL
+# ** https://www.bioconductor.org/packages/release/bioc/vignettes/SGSeq/inst/doc/SGSeq.html
+
