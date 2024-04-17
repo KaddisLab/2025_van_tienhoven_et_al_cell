@@ -73,9 +73,9 @@ nextflow run \\
 ", .trim = FALSE),
             file = glue::glue("{run_path}/run_{ref_genome}.sh")
         )
-        # submit to the cluster & return the path of the run script
+        # submit to the cluster & return
         system(glue::glue("sbatch {run_path}/run_{ref_genome}.sh"), wait = FALSE)
-        return(glue::glue("{run_path}/run_{ref_genome}.sh"))
+        return(NULL)
     } else {
         # If there's no multiqc report but there's a run script, just return the run script path
         # with a message about what to do next
@@ -83,6 +83,6 @@ nextflow run \\
 Check the SLURM job queue or navigate to
 {run_path}
 and submit the `run_{ref_genome}.sh` script to resume the run."))
-        return(glue::glue("{run_path}/run_{ref_genome}.sh"))
+        return(NULL)
     }
 }

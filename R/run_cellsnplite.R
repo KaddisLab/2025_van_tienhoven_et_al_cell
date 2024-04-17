@@ -73,7 +73,7 @@ cellsnp-lite -s '{bam_path}' \\
         )
         # submit to the cluster & return the path of the run script
         system(glue::glue("sbatch {run_path}/run_cellsnp-lite.sh && sleep 0.1"), wait = FALSE)
-        return(glue::glue("{run_path}/run_cellsnp-lite.sh"))
+        return(NULL)
     } else {
         # If there's no cellsnp output but there's a run script, just return the run script path
         # with a message about what to do next
@@ -81,7 +81,7 @@ cellsnp-lite -s '{bam_path}' \\
 Check the SLURM job queue or navigate to
 {run_path}
 and submit the `run_cellsnp-lite.sh` script to resume the run."))
-        return(glue::glue("{run_path}/run_cellsnp-lite.sh"))
+        return(NULL)
     }
 }
 
@@ -113,18 +113,21 @@ and submit the `run_cellsnp-lite.sh` script to resume the run."))
 #' @importFrom stringr str_extract
 #' @importFrom glue glue
 #' @importFrom tibble tibble
-get_cellsnp_lite_genotypes <- function(pattern, locus, minMAF = 0.05, minCOUNT = 10) {
+get_cellsnp_lite_genotypes <- function(pattern, locus, minMAF = 0.05, minCOUNT = 1000) {
         system(glue::glue("find {analysis_cache}/cellsnplite_out -type f -name '*.base.vcf' -exec grep -Hn '{pattern}' {{}} +"), intern = TRUE) %>%
         tibble(vcf_output = .) %>%
         tidyr::separate(vcf_output, into = c("File", "MatchedLine"), sep = ":", extra = "merge") %>%
         mutate(
             sample_id = stringr::str_extract(File, "HPAP-\\d+"),
+            ref = stringr::str_extract(MatchedLine, "(?<=\\t)[AGCT]+(?=\\t)"),
+            alt = stringr::str_extract(MatchedLine, "(?<=\\t[AGCT]\\t)[AGCT]+"),
             ad = as.numeric(stringr::str_extract(MatchedLine, "(?<=AD=)\\d+")),
             dp = as.numeric(stringr::str_extract(MatchedLine, "(?<=DP=)\\d+")),
             maf = round(ad/dp, 2),
             oth = as.numeric(stringr::str_extract(MatchedLine, "(?<=OTH=)\\d+")),
+            gt = if_else(maf >= 0.7, paste0(alt, alt),  if_else(maf >= 0.3, paste0(ref, alt), paste0(ref, ref))),
             locus = locus) |>
-        select(sample_id, ad, dp, oth, maf, locus) |>
+        select(sample_id, ad, dp, oth, maf, ref, alt, gt, locus) |>
         dplyr::filter(maf >= minMAF, dp >= minCOUNT) |>
         mutate(numeric_part = as.numeric(stringr::str_extract(sample_id, "\\d+"))) %>%
         arrange(numeric_part) %>%

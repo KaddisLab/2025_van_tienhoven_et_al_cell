@@ -51,9 +51,9 @@ run_cellbender <- function(cellranger_run_folder, additional_args = "") {
         cat(script_content, file = glue::glue("{run_path}/run_cellbender.sh"))
         # Submit to the cluster & return the path of the run script
         system(glue::glue("sbatch {run_path}/run_cellbender.sh && sleep 0.1"), wait = FALSE)
-        return(glue::glue("{run_path}/run_cellbender.sh"))
+        return(NULL)
     } else {
         print(glue::glue("The CellBender run for \"{sample_id}\" has already been submitted. Check the SLURM job queue or navigate to {run_path} and submit the `run_cellbender.sh` script to resume the run."))
-        return(glue::glue("{run_path}/run_cellbender.sh"))
+        return(NULL)
     }
 }
