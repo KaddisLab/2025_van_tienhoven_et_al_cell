@@ -124,10 +124,18 @@ kb_count <- function(index, t2g, technology, fastqs, tmp = NULL, keep_tmp = FALS
                      dry_run = FALSE, loom = FALSE, h5ad = FALSE) {
 
   # if kb_info.json exits, return its path
-    if (file.exists(glue::glue("{out}/kb_info.json"))) {
-        return(glue::glue("{out}/kb_info.json"))
-    }
+  # else zap the output directory if overwrite = TRUE
+  if (file.exists(glue::glue("{out}/kb_info.json"))) {
+      return(glue::glue("{out}/kb_info.json"))
+  } else {
+      if (dir.exists(out)) {
+          if (overwrite) unlink(out, recursive = TRUE)
+          if (!overwrite) stop("Output directory already exists. Set overwrite = TRUE to overwrite.")
+      }
+  }
+  dir.create(out, recursive = TRUE)
 
+  # Resources
   if (nzchar(Sys.getenv("SLURM_JOB_ID"))) {
     alloc <- hprcc::slurm_allocation()
     memory = glue::glue("{alloc$Memory_GB - 10}G")
@@ -138,7 +146,7 @@ kb_count <- function(index, t2g, technology, fastqs, tmp = NULL, keep_tmp = FALS
   if (!is.null(tmp)) args <- c(args, "--tmp", shQuote(tmp))
   if (keep_tmp) args <- c(args, "--keep-tmp")
   if (verbose) args <- c(args, "--verbose")
-  if (verbose) log <- "2>&1 | tee kb_count.log"
+  if (verbose) log <- glue::glue(" | tee {out}/kb_count.log")
   if (!is.null(out)) args <- c(args, "-o", shQuote(out))
   if (!is.null(whitelist)) args <- c(args, "-w", shQuote(whitelist))
   args <- c(args, "-t", as.character(threads), "-m", shQuote(memory))
@@ -154,9 +162,10 @@ kb_count <- function(index, t2g, technology, fastqs, tmp = NULL, keep_tmp = FALS
   if (h5ad) args <- c(args, "--h5ad")
  
   # which kb
-  kb <- Sys.which("kb")  
+  #kb <- Sys.which("kb")
+  kb<-"/home/domeally/miniconda3/bin/kb"
   # Constructing the command string for verbose output
-  cmd_str <- paste(kb, paste(c(args,log), collapse = " "))
+  cmd_str <- paste(kb, paste(c(args, log), collapse = " "))
 
   # If verbose is TRUE, echo the command
   if (verbose) {
@@ -166,8 +175,13 @@ kb_count <- function(index, t2g, technology, fastqs, tmp = NULL, keep_tmp = FALS
   # Execute the command
   result <- system2(kb, args, stdout = TRUE, stderr = TRUE)
   Log_message(result)
-  return(glue::glue("{out}/kb_info.json"))
-}
+  # Check for a result and return
+  if (file.exists(glue::glue("{out}/kb_info.json"))) {
+        return(glue::glue("{out}/kb_info.json"))
+  } else {
+        return(NULL) 
+  }
+  
 
 #--------------------------------------------------------------------------------
 #' Display package and citation information for kb
@@ -183,12 +197,21 @@ kb_info <- function() {
   return(result)
 }
 
-Log_message <- function (message_str, log = TRUE, log_dir = "logs") {
-    job_id <- Sys.getenv("SLURM_JOB_ID")
-    dir.create(here::here(log_dir), showWarnings = FALSE)
-    log_file <- glue::glue("{log_dir}/job_{job_id}.log")
+Log_message <- function(message_str, log = TRUE, log_dir = "logs") {
+
+    # Get the SLURM job ID, or set to 'NA' if not under SLURM control
+    job_id <- Sys.getenv("SLURM_JOB_ID", unset = "NA")
+
+    log_dir_path <- here::here(log_dir)
+    if (!dir.exists(log_dir_path)) {
+        dir.create(log_dir_path, recursive = TRUE, showWarnings = FALSE)
+    }
+
+    log_file <- glue::glue("{log_dir_path}/job_{job_id}.log")
+
     message(message_str)
+
     if (isTRUE(log)) {
-        write(message_str, file = log_file, append = TRUE)
+        writeLines(message_str, con = file(log_file, open = "a"))
     }
 }
