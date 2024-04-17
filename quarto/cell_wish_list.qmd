@@ -31,110 +31,255 @@ knitr::opts_chunk$set(
 #| code-summary: "Show the code"
 #| cache: false
 suppressPackageStartupMessages({
-library(tidyverse)
-library(targets)
-library(ggplot2)
-library(Seurat)
-library(patchwork)
-library(scCustomize)
+    library(tidyverse)
+    library(targets)
+    library(ggplot2)
+    library(Seurat)
+    library(patchwork)
+    library(scCustomize)
+    library(ggpubr)
+    library(ComplexUpset)
+    library(ggrepel)
+    library(gt)
+    library(Nebulosa)
 })
 
 tar_config_set(store = "/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/R")
 
-tar_load(c(protected_cohort, pancdb_metadata))
+tar_load(c(pancdb_metadata, merged_seurat_sketch_750, integrated_seurat_sketch_750, protected_cohort, rs3842753_cohort, rs689_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv, merged_cluster_sketch_csv, integrated_cluster_sketch_csv))
+
 # all_samples_seurat_object <- glue::glue("{analysis_cache}/data/merged_seurat_bp_sketch_integrated_20240327.qs") |> load_seurat()
-# sample_metadata <- pancdb_metadata |>
-#     dplyr::mutate(protected = donor_id %in% protected_cohort$sample_id, batch = as.integer(as.factor(reagent_kit))) |>
-#     dplyr::filter(str_detect(reagent_kit, "10X") & !str_detect(donor_id, failed_qc_donor_ids)) |>
-#     select(c(donor_id, diabetes_status ,protected, batch, sample_sex, sample_age))
-# meta_data<-select(sample_metadata, -c(protected, batch, sample_sex, sample_age))
-# all_samples_seurat_object <- Add_Sample_Meta(seurat_object = all_samples_seurat_object, meta_data = meta_data, join_by_seurat = "orig.ident",
-#     join_by_meta = "donor_id")
+# all_samples_seurat_object <- merged_seurat_sketch_750 |> load_seurat()
+# all_samples_seurat_object <- integrated_seurat_sketch_750 |> load_seurat()
+
+# # Sample metadata -------------------------------------------------------------------------------
+# pancdb_metadata$protected <- pancdb_metadata$donor_id %in% protected_cohort$sample_id
+
+# meta_data <- pancdb_metadata |>
+#     dplyr::filter(str_detect(reagent_kit, "10X")) |>
+#     dplyr::select(c(sample_id = "donor_id", "sample_sex", "sample_age", "sample_ethnicity", "ab_positive", "diabetes_status", "reagent_kit", "protected")) |>
+#     dplyr::mutate(batch = as.integer(as.factor(reagent_kit))) |>
+#     dplyr::select(-reagent_kit)
+# # Function to perform the merge and add the genotype column
+# merge_cohort <- function(metadata, cohort, new_col_name) {
+#     genotype_key <- cohort %>%
+#         select(sample_id, ref, gt)
+
+#     metadata <- metadata %>%
+#         left_join(genotype_key, by = c("sample_id" = "sample_id")) %>%
+#         mutate(!!new_col_name := if_else(is.na(gt), paste0(genotype_key$ref[1], genotype_key$ref[1]), gt)) %>%
+#         select(-gt, -ref)
+
+#     return(metadata)
+# }
+
+# # Apply the function to each cohort
+# meta_data <- merge_cohort(meta_data, protected_cohort, "rs3842752_genotype")
+# meta_data <- merge_cohort(meta_data, rs3842753_cohort, "rs3842753_genotype")
+# meta_data <- merge_cohort(meta_data, rs689_cohort, "rs689_genotype")
+
+# all_samples_seurat_object <- scCustomize::Add_Sample_Meta(seurat_object = all_samples_seurat_object, meta_data = meta_data, join_by_seurat = "orig.ident", join_by_meta = "sample_id")
+# # ----------------------------------------------------------------------------------------------------
+# # Cell annotations
+# azimuth_data <- sub("\\.qs", "\\.csv", azimuth_mapped_seurat_objects) |> readr::read_csv(show_col_types = FALSE, progress = FALSE)
+# gpt_cell_type_data <- "/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/analysis_cache/gpt_cell_type_out/merged_sketch_750.csv" |> readr::read_csv(show_col_types = FALSE, progress = FALSE)
+# tosti_cell_type_data <- tosti_cell_type_csv |> readr::read_csv(show_col_types = FALSE, progress = FALSE)
+# merged_clusters_sketch <- merged_cluster_sketch_csv |>
+#     readr::read_csv(show_col_types = FALSE, progress = FALSE)
+# # dplyr::rename(merged_clusters_sketch = "seurat_clusters")
+# # integrated_clusters_sketch <- integrated_cluster_sketch_csv |>
+# #     readr::read_csv(show_col_types = FALSE, progress = FALSE) |>
+# #     dplyr::rename(integrated_clusters_sketch = "seurat_clusters")
+
+# cell_metadata <- azimuth_data |>
+#     left_join(cell_cycle_data, by = "cell") |>
+#     left_join(gpt_cell_type_data, by = "cell") |>
+#     left_join(tosti_cell_type_data, by = "cell") |>
+#     left_join(merged_clusters_sketch, by = "cell") |>
+#     left_join(integrated_clusters_sketch, by = "cell") |>
+#     select(c(cell, gpt_cell_type_sketch = "gpt_cell_type", azimuth_cell_type = "predicted.annotation.l1", tosti_cell_type = "labels", cell_cycle_phase = "Phase", seurat_clusters)) |>
+#     column_to_rownames(var = "cell")
+# all_samples_seurat_object <- Seurat::AddMetaData(all_samples_seurat_object, cell_metadata)
+# # ----------------------------------------------------------------------------------------------------
+
 # #--- NODM ----
 # Idents(all_samples_seurat_object) <- "diabetes_status"
-# seurat_object <- subset(all_samples_seurat_object, idents = "NODM") |> JoinLayers()
-# qs::qsave(seurat_object,  glue::glue("{analysis_cache}/data/NODM_seurat_object.qs"))
-seurat_object <-  glue::glue("{analysis_cache}/data/NODM_seurat_object.qs") |> load_seurat()
+# seurat_object_NODM <- subset(all_samples_seurat_object, idents = "NODM") |> JoinLayers()
+# seurat_object_NODM <- seurat_object_NODM |>
+#     NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000) %>%
+#     FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>%
+#     ScaleData() %>%
+#     RunPCA(features = VariableFeatures(object = .)) %>%
+#     RunUMAP(dims = 1:20)
+# # -------- AVE OBJECTS --------------------------------
+# qs::qsave(all_samples_seurat_object, glue::glue("{analysis_cache}/data/all_samples_seurat_object.qs"))
+# qs::qsave(seurat_object_NODM, glue::glue("{analysis_cache}/data/NODM_seurat_object.qs"))
+seurat_object <- glue::glue("{analysis_cache}/data/NODM_seurat_object.qs") |> load_seurat()
 ```
 
-# 1. Nascent INS mRNA is similar in beta-cells of S/P vs. S/S islet donors
-
-*Confirmed!* This disproves the prevailing hypothesis that VNTR polymorphism in the promoter region of the INS gene explains genetic allele specific expression and protection from T1D (Pugliese; Polychronakos Nat Genet 1997)
-
-::: {.callout-warning appearance="simple"}
-
-## Not Quite!
-
-Kallisto analysis still underway...
-
-Yet to calculate the ratio of nascent INS/XBP1 mRNA to total INS mRNA in beta-cells of S/P vs. S/S islet donors.
-
-:::
-
-### INS mRNA is similar in beta-cells of S/P vs. S/S islet donors
-
-```{r }
-library(ggpubr)
-
-Beta_cells <- subset(seurat_object, subset = tosti_cell_type == "Beta")
-
-data <- FetchData(Beta_cells, vars = c("INS", "protected"))
-
-ggplot(data, aes(x = as.factor(protected), y = INS, fill = as.factor(protected))) +
-  geom_jitter(width = 0.2, alpha = 0.1, size = 0.1) +
-  geom_boxplot() +
-  labs(x = "Protected", y = "Expression of INS", title = "INS Expression in Beta Cells") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "grey"),
-                    labels = c("TRUE" = "S/P", "FALSE" = "S/S")) +
-  theme(legend.position = "none") +
-  stat_compare_means(aes(group = protected), method = "wilcox.test", label = "p.signif", label.x.npc = "center", label.y.npc = "top")
-```
-
-Note the "leaky" expression of INS:
-
-```{r }
-FeaturePlot(seurat_object, features = "INS") +theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
-DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = custom_palette) + NoLegend() + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
-```
-
+### Cell types
 Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S0016-5085(20)35399-3/fulltext)
-
-```{r}
-Idents(seurat_object) <- "tosti_cell_type"
-
-VlnPlot_scCustom(seurat_object, features = "INS", split.by = "protected", raster = FALSE) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(title = "Expression of INS in S/P vs. S/S islet donors") +
-    scale_fill_manual(
-                    values = c(`TRUE` = "red", `FALSE` = "grey"),
-                    labels = c(`TRUE` = "S/P", `FALSE` = "S/S"))
-```
-
-This is consistent with published data (CellXGene) showing INS expression in cells other than beta-cells:
-
-::: {layout-ncol=2}
-
-![Cell type](assets/cellXgene_annot.png)
-
-![INS expression](assets/cellXgene_INS.png)
-
-:::
-
-Cell type annotation has a significant impact on the interpretation of INS expression:
 
 ```{r}
 #| fig-cap: "Tosti et al cell types"
 scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "tosti_cell_type") & labs(title = "Tosti et al 2021")
 ```
+
+Alternate approaches including ChatGPT & marker genes still being evaluated
+
+### Donor genotypes by diabetes status
+
 ```{r}
-#| fig-cap: "HuBMAP cell types"
-scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "azimuth_label") & labs(title = "HuBMAP")
+#| eval: true
+meta_data <- seurat_object[[]] |>
+    select(c("orig.ident", "sample_sex", "sample_age", "sample_ethnicity", "ab_positive", "diabetes_status", "protected", "batch", "rs3842752_genotype", "rs3842753_genotype", "rs689_genotype")) |>
+    unique()
+
+meta_data_long <- meta_data %>%
+    pivot_longer(
+        cols = starts_with("rs"),
+        names_to = "SNP",
+        values_to = "genotype"
+    ) %>%
+    # Count occurrences for each combination of variables
+    group_by(SNP, genotype, diabetes_status) %>%
+    summarise(n = n(), .groups = "drop")
+ggplot(meta_data_long, aes(x = genotype, y = n, fill = diabetes_status)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
+    geom_text(aes(label = n), vjust = -0.5, position = position_dodge(width = 0.7), size = 3) +
+    facet_wrap(~SNP, scales = "free_x", nrow = 2) +
+    scale_fill_manual(values = diabetes_palette) +
+    theme_classic() +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom"
+    ) +
+    labs(x = "Genotype", y = "Count", fill = "Diabetes Status")
+```
+
+# 1. INS expression is similar in beta-cells of AA vs. TT islet donors (_rs689_)
+
+```{r}
+# seurat_object$tosti_cell_type.protected <- paste(seurat_object$tosti_cell_type, seurat_object$protected, sep = "_")
+# Idents(seurat_object) <- "tosti_cell_type.protected"
+# beta.de <- FindMarkers(seurat_object, ident.1 = "Beta_TRUE", ident.2 = "Beta_FALSE", verbose = FALSE)
+# head(beta.de, n = 40)
+
+rs689_pseudo_seurat_object <- AggregateExpression(seurat_object, assays = "RNA", return.seurat = T, group.by = c("rs689_genotype", "orig.ident", "tosti_cell_type"))
+rs689_pseudo_seurat_object$tosti_cell_type.rs689 <- paste(rs689_pseudo_seurat_object$tosti_cell_type, rs689_pseudo_seurat_object$rs689_genotype, sep = "_")
+Idents(rs689_pseudo_seurat_object) <- "tosti_cell_type.rs689"
+bulk.beta.de <- FindMarkers(rs689_pseudo_seurat_object, ident.1 = "Beta_AA", ident.2 = "Beta_TT", verbose = FALSE)
+
+bulk.beta.de$gene <- rownames(bulk.beta.de)
+
+ggplot(bulk.beta.de, aes(x = avg_log2FC, y = -log10(p_val))) +
+    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
+    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
+    labs(
+        x = "Average Log2 Fold Change",
+        y = "-log10(Unadjusted p-value)",
+        title = "Beta-cell Differential Expression",
+        subtitle = "Comparison of AA v TT"
+    ) +
+    geom_text_repel(
+        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
+        size = 3.5, # Slightly larger text size for readability
+        box.padding = 0.35, # Adjust padding around text to avoid overlap
+        point.padding = 0.5, # Adjust distance from points to text
+        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
+        color = "blue", # Change text color to blue for better visibility against the background
+        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
+        nudge_y = 0.05, # Nudge text up a bit for vertical separation
+        direction = "y" # Optimize text placement primarily in the vertical direction
+    ) +
+    theme(
+        plot.title = element_text(face = "bold"), # Bold title for emphasis
+        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
+        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
+        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
+        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
+    )
+
+```
+
+
+✓ *Confirmed!* This disproves the prevailing hypothesis that VNTR polymorphism in the promoter region of the INS gene explains genetic allele specific expression and protection from T1D (Pugliese; Polychronakos Nat Genet 1997)
+
+b) Wang et al: rs3842753 C allele associates with increased INS expression in single b cells and b-like cells
+```{r}
+seurat_object$tosti_cell_type.rs3842753 <- paste(seurat_object$tosti_cell_type, seurat_object$rs3842753_genotype, sep = "_")
+Idents(seurat_object) <- "tosti_cell_type.rs3842753"
+beta.de <- FindMarkers(seurat_object, ident.1 = "Beta_TT", ident.2 = "Beta_TG", verbose = FALSE)
+head(beta.de, n = 40)
+
+rs3842753_pseudo_seurat_object <- AggregateExpression(seurat_object, assays = "RNA", return.seurat = T, group.by = c("rs3842753_genotype", "orig.ident", "tosti_cell_type"))
+rs3842753_pseudo_seurat_object$tosti_cell_type.rs3842753 <- paste(rs3842753_pseudo_seurat_object$tosti_cell_type, rs3842753_pseudo_seurat_object$rs3842753_genotype, sep = "_")
+Idents(rs3842753_pseudo_seurat_object) <- "tosti_cell_type.rs3842753"
+bulk.beta.de <- FindMarkers(rs3842753_pseudo_seurat_object, ident.1 = "Beta_TT", ident.2 = "Beta_TG", verbose = FALSE)
+
+bulk.beta.de$gene <- rownames(bulk.beta.de)
+
+ggplot(bulk.beta.de, aes(x = avg_log2FC, y = -log10(p_val))) +
+    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
+    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
+    labs(
+        x = "Average Log2 Fold Change",
+        y = "-log10(Unadjusted p-value)",
+        title = "Beta-cell Differential Expression",
+        subtitle = "Comparison of TT v TG"
+    ) +
+    geom_text_repel(
+        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
+        size = 3.5, # Slightly larger text size for readability
+        box.padding = 0.35, # Adjust padding around text to avoid overlap
+        point.padding = 0.5, # Adjust distance from points to text
+        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
+        color = "blue", # Change text color to blue for better visibility against the background
+        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
+        nudge_y = 0.05, # Nudge text up a bit for vertical separation
+        direction = "y" # Optimize text placement primarily in the vertical direction
+    ) +
+    theme(
+        plot.title = element_text(face = "bold"), # Bold title for emphasis
+        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
+        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
+        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
+        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
+    )
+
+```
+
+```{r}
+Beta_cells <- subset(seurat_object, subset = tosti_cell_type == "Beta")
+# Fetch data
+data <- FetchData(seurat_object, vars = c("tosti_cell_type", "INS", "rs3842753_genotype")) |> dplyr::filter(tosti_cell_type == "Beta")
+
+# Assuming 'data' is your dataframe with 'INS', 'protected' columns, and 'protected' is a factor
+ggplot(data, aes(x = as.factor(rs3842753_genotype), y = INS, fill = as.factor(rs3842753_genotype))) +
+    geom_jitter(width = 0.2, alpha = 0.1, size = 0.1) +
+    geom_boxplot() +
+    labs(x = "rs3842753 allele", y = "Expression of INS", title = "INS Expression in Beta Cells") +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_fill_manual(
+        values = c("TT" = "red", "TG" = "grey"),
+        labels = c("TRUE" = "T/T", "FALSE" = "T/G")
+    ) +
+    theme(legend.position = "none") +
+    stat_compare_means(aes(group = rs3842753_genotype), method = "wilcox.test", label = "p.signif", label.x.npc = "center", label.y.npc = "top") +
+    stat_summary(aes(label = sprintf("%.2f", ..y..)), fun = mean, geom = "text", vjust = -1.5, hjust = 1.5, size = 4, colour = "blue")
 ```
 
 # 2. Spliced INS mRNA is decreased in S/P vs. S/S beta-cells 
+
+::: {.callout-warning appearance="simple"}
+
+## Kallisto analysis still going...
+
+Counts are underway, yet to calculate the ratio of nascent INS/XBP1 mRNA to total INS mRNA in beta-cells of S/P vs. S/S islet donors.
+
+:::
 
 Yes: Great; No: Check in islets with XBPs (XBPs is the prototypic product of XBP digested by IRE1a activated because of ER stress; i.o.w., XBPs marks an ER-stressed (beta-)cell)
 
@@ -148,27 +293,32 @@ a. Check for candidate genes: we expect genes like IRE1 (ERN1), ATF6, XBP1, PERK
 
 ::: {.callout-note}
 
-Here we are looking at global trends: plotting expression of the ER stress genes-of-interest in beta-cells of S/P vs. S/S donors, *per cell*. No multiple testing correction is applied, nor grouping by donor.
+Here we are plotting expression of the ER stress genes-of-interest in beta cells of S/P vs. S/S across donors (peeudobulk). In most cases, higher expression of stress markers is observed in the "Protected" group, however none is significant.
 
 :::
 
 ```{r}
-data <- FetchData(Beta_cells, vars = c("protected", er_genes_of_interest))
+protected_pseudo_seurat_object <- AggregateExpression(seurat_object, assays = "RNA", return.seurat = T, group.by = c("protected", "orig.ident", "tosti_cell_type"))
+
+data <- FetchData(protected_pseudo_seurat_object, vars = c("tosti_cell_type", "protected", er_genes_of_interest)) |>
+    dplyr::filter(tosti_cell_type == "Beta")
 data_long <- pivot_longer(data, cols = all_of(er_genes_of_interest), names_to = "Gene", values_to = "Expression")
 # Plot
 ggplot(data_long, aes(x = as.factor(protected), y = Expression, fill = as.factor(protected))) +
-  geom_jitter(width = 0.2, alpha = 0.1, size = 0.1) +
-  geom_boxplot(alpha = 0.5) +
-  labs(x = "Protected", y = "Expression", title = "ER Stress Gene Expression in Beta Cells") +
-  facet_wrap(~Gene, scales = "free_y") + # Separate plot for each gene
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "grey"),
-                    labels = c("TRUE" = "S/P", "FALSE" = "S/S")) +
-  theme(legend.position = "none") +
-  stat_compare_means(aes(group = protected), method = "wilcox.test", p.adjust.method = "BH", label = "p.signif", label.x.npc = "center", label.y.npc = "center") +
-  stat_summary(fun = mean, geom = "point", shape = 16, size = 3, color = "black", fill = "blue") + # Add mean dots
-  stat_summary(aes(label = sprintf("%.2f", ..y..)), fun = mean, geom = "text", vjust = -1.5, hjust = 1.5, size = 4, colour = "blue") # Add labels for means
+    geom_jitter(width = 0.2, alpha = 0.35, size = 0.5) +
+    geom_boxplot(alpha = 0.5) +
+    labs(x = "Protected", y = "Expression", title = "ER Stress Gene Expression in Beta Cells") +
+    facet_wrap(~Gene, scales = "free_y") + # Separate plot for each gene
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_fill_manual(
+        values = c("TRUE" = "red", "FALSE" = "grey"),
+        labels = c("TRUE" = "S/P", "FALSE" = "S/S")
+    ) +
+    theme(legend.position = "none") +
+    stat_compare_means(aes(group = protected), method = "wilcox.test", p.adjust.method = "BH", label = "p.signif", label.x.npc = "center", label.y.npc = "center") +
+    stat_summary(fun = mean, geom = "point", shape = 16, size = 3, color = "black", fill = "blue") + # Add mean dots
+    stat_summary(aes(label = sprintf("%.2f", ..y..)), fun = mean, geom = "text", vjust = -1.5, hjust = 1.5, size = 4, colour = "blue") # Add labels for means
 
 ```
 
@@ -176,87 +326,88 @@ b. Check for altered genes (volcano plot) of S/S vs. S/P beta-cells
 
 ::: {.callout-note}
 
-Here we formally test for differential expression, with BH multiple testing correction, pseudo-bulked by cell type and donor.
+Here we formally test for differential expression, pseudo-bulked by cell type and donor.
 
 :::
 
 ```{r }
-library(ggrepel)
+protected_pseudo_seurat_object$tosti_cell_type.protected <- paste(protected_pseudo_seurat_object$tosti_cell_type, protected_pseudo_seurat_object$protected, sep = "_")
+Idents(protected_pseudo_seurat_object) <- "tosti_cell_type.protected"
+bulk.beta.de <- FindMarkers(protected_pseudo_seurat_object, ident.1 = "Beta_TRUE", ident.2 = "Beta_FALSE", verbose = FALSE)
 
-# pseudo_bulk <- AggregateExpression(seurat_object, return.seurat = TRUE, slot = "counts", assays = "RNA", group.by = c("tosti_cell_type", "orig.ident", "protected"))
-# qs::qsave(pseudo_bulk, "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/pseudo_bulk.qs")
-pseudo_bulk <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/pseudo_bulk.qs" |> load_seurat()
-Idents(pseudo_bulk) <- "protected"
-de_markers <- FindMarkers(pseudo_bulk, ident.1 = "TRUE", ident.2 = "FALSE", slot = "counts", test.use = "wilcox", verbose = TRUE)
-de_markers$gene <- rownames(de_markers)
+bulk.beta.de$gene <- rownames(bulk.beta.de)
 
-# Assuming 'de_markers' is prepared with 'gene' column as rownames
-ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
-  geom_point(size = 0.5, alpha = 0.5) +  # Adjust point size and opacity for better visualization
-  theme_bw(base_size = 14) +  # Use theme_bw with a base font size for better readability
-  labs(
-    x = "Average Log2 Fold Change",
-    y = "-log10(Unadjusted p-value)",
-    title = "Beta-cell Differential Expression",
-    subtitle = "Comparison of S/S v S/P"
-  ) +
-  geom_text_repel(
-    aes(label = ifelse(p_val_adj < 0.1, gene, "")),  # Label significant genes based on adjusted p-value
-    size = 3.5,  # Slightly larger text size for readability
-    box.padding = 0.35,  # Adjust padding around text to avoid overlap
-    point.padding = 0.5,  # Adjust distance from points to text
-    min.segment.length = 0.1,  # Minimize the segment length for a cleaner look
-    color = "blue",  # Change text color to blue for better visibility against the background
-    nudge_x = 0.05,  # Nudge text a bit to the right for clearer separation from points
-    nudge_y = 0.05,  # Nudge text up a bit for vertical separation
-    direction = "y"  # Optimize text placement primarily in the vertical direction
-  ) +
-  theme(
-    plot.title = element_text(face = "bold"),  # Bold title for emphasis
-    plot.subtitle = element_text(face = "italic"),  # Italic subtitle for stylistic differentiation
-    axis.title.x = element_text(vjust = -0.2),  # Adjust x-axis title position for closer proximity to axis
-    axis.title.y = element_text(vjust = 1.5),  # Adjust y-axis title position for optimal spacing
-    legend.position = "none"  # Hide legend (not applicable here but good practice for cleaner plots)
-  )
-
+ggplot(bulk.beta.de, aes(x = avg_log2FC, y = -log10(p_val))) +
+    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
+    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
+    labs(
+        x = "Average Log2 Fold Change",
+        y = "-log10(Unadjusted p-value)",
+        title = "Beta-cell Differential Expression",
+        subtitle = "Comparison of Protected v Susceptable"
+    ) +
+    geom_text_repel(
+        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
+        size = 3.5, # Slightly larger text size for readability
+        box.padding = 0.35, # Adjust padding around text to avoid overlap
+        point.padding = 0.5, # Adjust distance from points to text
+        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
+        color = "blue", # Change text color to blue for better visibility against the background
+        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
+        nudge_y = 0.05, # Nudge text up a bit for vertical separation
+        direction = "y" # Optimize text placement primarily in the vertical direction
+    ) +
+    theme(
+        plot.title = element_text(face = "bold"), # Bold title for emphasis
+        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
+        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
+        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
+        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
+    )
 ```
+
+::: {.callout-note}
+
+No genes were significanlty differentially expressed between S/S and S/P beta-cells in the current analysis.
+:::
 
 ```{r}
 library(gt)
-de_markers_sorted <- de_markers %>%
-  arrange(p_val, desc(abs(avg_log2FC))) |>
- select(gene, everything()) |> head(n = 20)
+de_markers_sorted <- bulk.beta.de %>%
+    arrange(p_val, desc(abs(avg_log2FC))) |>
+    select(gene, everything()) |>
+    head(n = 20)
 
 de_markers_sorted %>%
-  gt() %>%
-  tab_header(
-    title = "Top 20 Differential Expression Markers",
-    subtitle = "Sorted by p-value and absolute logFC"
-  ) %>%
-  cols_label(
-    p_val = "P-value",
-    avg_log2FC = "Average Log2 Fold Change",
-    pct.1 = "Percent detected Protected",
-    pct.2 = "Percent detected Susceptable",
-    p_val_adj = "Adjusted P-value",
-    gene = "Gene"
-  ) %>%
-  fmt_number(
-    columns = c("p_val", "avg_log2FC", "p_val_adj"),
-    decimals = 4
-  ) %>%
-  fmt_percent(
-    columns = c("pct.1", "pct.2"),
-    decimals = 2
-  ) %>%
-  tab_options(
-    table.width = pct(100),
-    data_row.padding = px(5)
-  ) %>%
-  cols_align(
-    align = "center",
-    columns = everything()
-  )
+    gt() %>%
+    tab_header(
+        title = "Top 20 Differential Expression Markers",
+        subtitle = "Sorted by p-value and absolute logFC"
+    ) %>%
+    cols_label(
+        p_val = "P-value",
+        avg_log2FC = "Average Log2 Fold Change",
+        pct.1 = "Percent detected Protected",
+        pct.2 = "Percent detected Susceptable",
+        p_val_adj = "Adjusted P-value",
+        gene = "Gene"
+    ) %>%
+    fmt_number(
+        columns = c("p_val", "avg_log2FC", "p_val_adj"),
+        decimals = 4
+    ) %>%
+    fmt_percent(
+        columns = c("pct.1", "pct.2"),
+        decimals = 2
+    ) %>%
+    tab_options(
+        table.width = pct(100),
+        data_row.padding = px(5)
+    ) %>%
+    cols_align(
+        align = "center",
+        columns = everything()
+    )
 
 ```
 
@@ -271,20 +422,22 @@ No pathway with significant enrichment was found in the current analysis.
 #| eval: false
 require(clusterProfiler)
 require(enrichplot)
-clusterProfiler::GSEA(de_markers, TERM2GENE = cell_types, scoreType = "pos")
-    enriched_plot <- if (nrow(enriched_cell_types@result) == 0) grid::textGrob('No enriched cell types found') else barplot(enriched_cell_types, showCategory=10) 
+cluster_profiler_out <- clusterProfiler::GSEA(de_markers, TERM2GENE = cell_types, scoreType = "pos")
+enriched_plot <- if (nrow(enriched_cell_types@result) == 0) grid::textGrob("No enriched cell types found") else barplot(enriched_cell_types, showCategory = 10)
 
 ```
 
 ```{r }
 #| eval: false
 # rejoin the layers in the sketched assay this is required to perform differential expression
-        joined_seurat_object<-seurat_object
-        joined_seurat_object[["sketch"]] <- JoinLayers(seurat_object[["sketch"]])
-        Idents(joined_seurat_object) <- "tosti_cell_type"
-        beta_markers <- FindMarkers(object = joined_seurat_object, ident.1 = "Beta")
-        beta_markers|>filter(p_val_adj < 0.05)|>head(30)
-        beta_markers_protected<-FindMarkers(joined_seurat_object, ident.1 = "TRUE", group.by = 'protected', subset.ident = "Beta")
+joined_seurat_object <- seurat_object
+joined_seurat_object[["sketch"]] <- JoinLayers(seurat_object[["sketch"]])
+Idents(joined_seurat_object) <- "tosti_cell_type"
+beta_markers <- FindMarkers(object = joined_seurat_object, ident.1 = "Beta")
+beta_markers |>
+    filter(p_val_adj < 0.05) |>
+    head(30)
+beta_markers_protected <- FindMarkers(joined_seurat_object, ident.1 = "TRUE", group.by = "protected", subset.ident = "Beta")
 ```
 
 # 4. Bonus: Beta-cells are more stressed than alpha cells
@@ -301,10 +454,31 @@ DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = custom
 
 ```{r }
 #| fig-width: 10
-#| fig-height: 30
+#| fig-height: 10
 #| column: page
-FeaturePlot(seurat_object, features = er_genes_of_interest, split.by = "protected", keep.scale = "feature") + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+# FeaturePlot(seurat_object, features = er_genes_of_interest, split.by = "protected", keep.scale = "feature") + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+seurat_object_protected <- subset(seurat_object, subset = protected == "TRUE")
+seurat_object_susceptable <- subset(seurat_object, subset = protected == "FALSE")
+pplot <- plot_density(seurat_object_protected, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+splot <- plot_density(seurat_object_susceptable, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
+
+::: {.panel-tabset}
+
+### Protected
+
+```{r}
+pplot
+```
+
+### Susceptable
+
+```{r}
+splot
+```
+
+:::
+
 
 # 5. Extra Bonus: T1D islets are more stressed than T2D islets and non-diabetic islets
 
@@ -333,6 +507,16 @@ Single-cell multi-omics analysis of human pancreatic islets reveals novel cellul
 
 Could also use an [alternate reference](https://ega-archive.org/studies/EGAS000010046)
 
-**We have not considered AAB+ donors separately**
-
 :::
+
+INS SNPs of interest
+
+| HGVS                                            | dbSNP       | gnomAD frequency |
+|-------------------------------------------------|-------------|------------------|
+| NM_000207.3(INS):c.187+11T>C                    | rs5506      | 0.93263          |
+| NM_000207.3(INS):c.-17-6T>A                     | rs689       | 0.59334          |
+| NM_000207.3(INS):c.*22A>C                       | rs3842753   | 0.59307          |
+| NM_000207.3(INS):c.*9C>T                        | rs3842752   | 0.16663          |
+| NM_000207.3(INS):c.-18+4_-18+5insTTGC           | rs3842740   | 0.07357          |
+| NM_000207.3(INS):c.36G>A (p.Ala12=)             | rs3842744   | 0.01335          |
+| NM_000207.3(INS):c.-9C>T                        | rs5505      | 0.00878          |
