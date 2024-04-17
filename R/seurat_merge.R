@@ -1,6 +1,6 @@
-#' Merge Multiple Seurat Objects
+#' Merge RNA assay from Multiple Seurat Objects
 #'
-#' Merges multiple Seurat objects into one, applying a specified project name to the merged object.
+#' Merges RNA assays from multiple Seurat objects into one, applying a specified project name to the merged object.
 #' Each object is loaded and merged in sequence. Memory usage is reported after each merge.
 #'
 #' @param seurat_object A character vector of paths to Seurat object files to be merged.
@@ -18,33 +18,42 @@
 #' project_name <- "MyMergedProject"
 #' merged_path <- seurat_merge(seurat_paths, project_name)
 #' }
-seurat_merge <- function(seurat_object, project_name) {
-    format_gb <- function(bytes) {
-        gb <- bytes / 2^30
-        formatted_gb <- sprintf("%.2f Gb", gb)
-        return(formatted_gb)
+seurat_merge <- function(seurat_objects, project_name) {
+    options(parallelly.availableCores.methods = "Slurm")
+    hprcc::init_multisession()
+
+    message("Loading objects to list...")
+    # Parallel loading of Seurat objects
+    seurat_list <- future.apply::future_lapply(seurat_objects, function(obj_path) {
+        loaded_object <- load_seurat(obj_path)
+        return(loaded_object)
+    }, future.seed = 42)
+    gc()
+    # Extract sample IDs and set them as names of the list elements
+    names(seurat_list) <- sapply(seurat_list, function(obj) {
+        sample_id <- obj[["orig.ident"]][1, ]
+        return(sample_id)
+    })
+
+    message("Loaded ", length(seurat_list), " objects")
+    message("List size: ", format(object.size(seurat_list), units = "Gb"))
+    message("Merging objects...")
+    object <- merge(seurat_list[[1]], seurat_list[-1])
+    rm(seurat_list)
+    gc()
+    message("Merged size: ", format(object.size(object), units = "Gb"))
+    #Join all layers in object
+    for (assay in names(object@assays)) {
+        Seurat::DefaultAssay(object) <- assay
+        message("Joining ", assay, " layer...")
+        object <- SeuratObject::JoinLayers(object)
     }
-    if (length(seurat_object) > 1) {
-        message("Loading objects...")
-        object <- load_seurat(seurat_object[1])
-        sample_id <- object[["orig.ident"]][1, ]
-        message("Loaded ", sample_id)
-        for (i in 2:length(seurat_object)) {
-            new_object <- load_seurat(seurat_object[i])
-            sample_id <- new_object[["orig.ident"]][1, ]
-            object <- merge(object, new_object)
-            rm(new_object)
-            gc()
-            message("Merged ", sample_id, " | ", i, " of ", length(seurat_object), " | ", format_gb(lobstr::mem_used()))
-        }
-    } else {
-        message("Loading Seurat object...")
-        object <- load_seurat(seurat_object)
-    }
-    object <- SeuratObject::JoinLayers(object)
+
     Seurat::Project(object) <- project_name
     object_path <- glue::glue("{analysis_cache}/seurat_merged/{project_name}.qs")
     dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)
+    message("Saving Seurat object...")
     qs::qsave(object, file = object_path)
+    message("Done.")
     return(object_path)
 }
