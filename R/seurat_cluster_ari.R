@@ -31,20 +31,27 @@
 #' @export
 seurat_cluster_ari <- function(
     seurat_object,
+    assay = "RNA",
     res = seq(0.1, 1.5, by = 0.05),
+    reduction = "pca",
     dims = 30,
     regress_out = NULL,
     do.plot = TRUE, ...) {
     set.seed(42)
 
+    options(parallelly.availableCores.methods = "Slurm")
+    hprcc::init_multisession()
+    future::plan("multisession", workers = 4)
+
     seurat_object <- load_seurat(seurat_object)
+    Seurat::DefaultAssay(seurat_object) <- assay
 
     # Run the standard workflow for visualization and clustering -------------------
     # https://satijalab.org/seurat/articles/pbmc3k_tutorial.html
     seurat_object <- seurat_object |>
         Seurat::SCTransform(vars.to.regress = regress_out) |>
         Seurat::RunPCA() |>
-        Seurat::FindNeighbors(reduction = "pca", dims = 1:dims) |>
+        Seurat::FindNeighbors(reduction = reduction, dims = 1:dims) |>
         Seurat::FindClusters(resolution = res, method = "igraph")
 
     clusters_csv <- seurat_object[[]] |>
@@ -72,7 +79,7 @@ seurat_cluster_ari <- function(
     sample_id <- seurat_object@project.name
     # if TRUE, plot ARI values
     if ((do.plot)) {
-        plot_path <- glue::glue("{analysis_cache}/clusters_out/{sample_id}_ari_res{stable_res}.png")
+        plot_path <- glue::glue("{analysis_cache}/clusters_out/{sample_id}_{assay}_ari_res{stable_res}.png")
         dir.create(dirname(plot_path), showWarnings = FALSE, recursive = TRUE)
         ari_data <- data.frame(Resolution = resolutions[-length(resolutions)], ARI = ari_values)
         ggplot(ari_data, aes(x = Resolution, y = ARI)) +
@@ -86,7 +93,7 @@ seurat_cluster_ari <- function(
 
     stable_resolution <- glue::glue("SCT_snn_res.{stable_res}")
 
-    clusters_csv_path = glue::glue("{analysis_cache}/clusters_out/{sample_id}_clusters.csv")
+    clusters_csv_path = glue::glue("{analysis_cache}/clusters_out/{sample_id}_{assay}_clusters.csv")
     dir.create(dirname(clusters_csv_path), showWarnings = FALSE, recursive = TRUE)
 
     clusters_csv$seurat_clusters <- clusters_csv[[stable_resolution]]
