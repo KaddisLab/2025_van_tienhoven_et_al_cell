@@ -113,76 +113,69 @@ kb_ref <- function(index, t2g, fasta = NULL, gtf = NULL, feature = NULL, tmp = N
 #' @return Invisible NULL. The function is called for its side effects.
 #' @examples
 #' \dontrun{
-#' kb_count(index = "path/to/index", t2g = "path/to/t2g", technology = "10xv3", 
-#'          fastqs = c("fastq1.fastq.gz", "fastq2.fastq.gz"))
+#' kb_count(
+#'     index = "path/to/index", t2g = "path/to/t2g", technology = "10xv3",
+#'     fastqs = c("fastq1.fastq.gz", "fastq2.fastq.gz")
+#' )
 #' }
 #' @export
-kb_count <- function(index, t2g, technology, fastqs, tmp = NULL, keep_tmp = FALSE, 
-                     verbose = FALSE, out = NULL, whitelist = NULL, threads = NULL, 
-                     memory = NULL, workflow = NULL, mm = FALSE, tcc = FALSE, 
-                     filter = "bustools", c1 = NULL, c2 = NULL, overwrite = FALSE, 
+kb_count <- function(index, t2g, technology, fastqs, tmp = NULL, keep_tmp = FALSE,
+                     verbose = FALSE, out = NULL, whitelist = NULL, threads = NULL,
+                     memory = NULL, workflow = NULL, mm = FALSE, tcc = FALSE,
+                     filter = "bustools", c1 = NULL, c2 = NULL, overwrite = FALSE,
                      dry_run = FALSE, loom = FALSE, h5ad = FALSE) {
+    # else zap the output directory if overwrite = TRUE
+    if (file.exists(glue::glue("{out}/output.bus")) && overwrite) unlink(out, recursive = TRUE)
+    dir.create(out, recursive = TRUE)
 
-  # if kb_info.json exits, return its path
-  # else zap the output directory if overwrite = TRUE
-  if (file.exists(glue::glue("{out}/kb_info.json"))) {
-      return(glue::glue("{out}/kb_info.json"))
-  } else {
-      if (dir.exists(out)) {
-          if (overwrite) unlink(out, recursive = TRUE)
-          if (!overwrite) stop("Output directory already exists. Set overwrite = TRUE to overwrite.")
-      }
-  }
-  dir.create(out, recursive = TRUE)
+    # Resources
+    if (nzchar(Sys.getenv("SLURM_JOB_ID"))) {
+        alloc <- hprcc::slurm_allocation()
+        memory = glue::glue("{alloc$Memory_GB - 10}G")
+        threads = alloc$CPUs
+    }
 
-  # Resources
-  if (nzchar(Sys.getenv("SLURM_JOB_ID"))) {
-    alloc <- hprcc::slurm_allocation()
-    memory = glue::glue("{alloc$Memory_GB - 10}G")
-    threads = alloc$CPUs}
-  
-  args <- c("count", "-i", shQuote(index), "-g", shQuote(t2g), "-x", shQuote(technology), fastqs)
-  
-  if (!is.null(tmp)) args <- c(args, "--tmp", shQuote(tmp))
-  if (keep_tmp) args <- c(args, "--keep-tmp")
-  if (verbose) args <- c(args, "--verbose")
-  if (verbose) log <- glue::glue(" | tee {out}/kb_count.log")
-  if (!is.null(out)) args <- c(args, "-o", shQuote(out))
-  if (!is.null(whitelist)) args <- c(args, "-w", shQuote(whitelist))
-  args <- c(args, "-t", as.character(threads), "-m", shQuote(memory))
-  if (!is.null(workflow)) args <- c(args, "--workflow", shQuote(workflow))
-  if (mm) args <- c(args, "--mm")
-  if (tcc) args <- c(args, "--tcc")
-  if (!is.null(filter)) args <- c(args, "--filter", shQuote(filter))
-  if (!is.null(c1)) args <- c(args, "-c1", shQuote(c1))
-  if (!is.null(c2)) args <- c(args, "-c2", shQuote(c2))
-  if (overwrite) args <- c(args, "--overwrite")
-  if (dry_run) args <- c(args, "--dry-run")
-  if (loom) args <- c(args, "--loom")
-  if (h5ad) args <- c(args, "--h5ad")
- 
-  # which kb
-  #kb <- Sys.which("kb")
-  kb<-"/home/domeally/miniconda3/bin/kb"
-  # Constructing the command string for verbose output
-  cmd_str <- paste(kb, paste(c(args, log), collapse = " "))
+    args <- c("count", "-i", shQuote(index), "-g", shQuote(t2g), "-x", shQuote(technology), fastqs)
 
-  # If verbose is TRUE, echo the command
-  if (verbose) {
-    message("Executing system command: ", cmd_str)
-  }
-  
-  # Execute the command
-  result <- system2(kb, args, stdout = TRUE, stderr = TRUE)
-  Log_message(result)
-  # Check for a result and return
-  if (file.exists(glue::glue("{out}/kb_info.json"))) {
-        return(glue::glue("{out}/kb_info.json"))
-  } else {
-        return(NULL) 
-  }
-  
+    if (!is.null(tmp)) args <- c(args, "--tmp", shQuote(tmp))
+    if (keep_tmp) args <- c(args, "--keep-tmp")
+    if (verbose) args <- c(args, "--verbose")
+    if (verbose) log <- glue::glue(" | tee {out}/kb_count.log")
+    if (!is.null(out)) args <- c(args, "-o", shQuote(out))
+    if (!is.null(whitelist)) args <- c(args, "-w", shQuote(whitelist))
+    args <- c(args, "-t", as.character(threads), "-m", shQuote(memory))
+    if (!is.null(workflow)) args <- c(args, "--workflow", shQuote(workflow))
+    if (mm) args <- c(args, "--mm")
+    if (tcc) args <- c(args, "--tcc")
+    if (!is.null(filter)) args <- c(args, "--filter", shQuote(filter))
+    if (!is.null(c1)) args <- c(args, "-c1", shQuote(c1))
+    if (!is.null(c2)) args <- c(args, "-c2", shQuote(c2))
+    if (overwrite) args <- c(args, "--overwrite")
+    if (dry_run) args <- c(args, "--dry-run")
+    if (loom) args <- c(args, "--loom")
+    if (h5ad) args <- c(args, "--h5ad")
 
+    # which kb
+    # kb <- Sys.which("kb")
+    kb <- "/home/domeally/miniconda3/bin/kb"
+    # Constructing the command string for verbose output
+    cmd_str <- paste(kb, paste(c(args, log), collapse = " "))
+
+    # If verbose is TRUE, echo the command
+    if (verbose) {
+        message("Executing system command: ", cmd_str)
+    }
+
+    # Execute the command
+    result <- system2(kb, args, stdout = TRUE, stderr = TRUE)
+    Log_message(result)
+    # Check for a result and return
+    if (file.exists(glue::glue("{out}/output.bus"))) {
+        return(glue::glue("{out}/output.bus"))
+    } else {
+        return(NULL)
+    }
+}
 #--------------------------------------------------------------------------------
 #' Display package and citation information for kb
 #'
@@ -214,4 +207,69 @@ Log_message <- function(message_str, log = TRUE, log_dir = "logs") {
     if (isTRUE(log)) {
         writeLines(message_str, con = file(log_file, open = "a"))
     }
+}
+
+#' Read matrix along with barcode and gene names
+#'
+#' This function takes in a directory and name and reads the mtx file, genes,
+#' and barcodes from the output of `bustools` to return a sparse matrix with
+#' column names and row names.
+#'
+#' @param dir Directory with the bustools count outputs.
+#' @param name The files in the output directory should be "name".mtx, "name".genes.txt,
+#' and "name".barcodes.txt.
+#' @param tcc Logical, whether the matrix of interest is a TCC matrix. Defaults
+#' to \code{FALSE}.
+#' @return A dgCMatrix with barcodes as column names and genes as row names.
+#' @importFrom Matrix readMM
+#' @importFrom methods as
+#' @export
+#' @examples
+#' # Internal toy data used for unit testing
+#' toy_path <- system.file("testdata", package = "BUSpaRse")
+#' m <- read_count_output(toy_path, name = "genes", tcc = FALSE)
+read_count_output <- function(dir, name, tcc = FALSE) {
+    dir <- normalizePath(dir, mustWork = TRUE)
+    m <- Matrix::readMM(paste0(dir, "/", name, ".mtx"))
+    m <- Matrix::t(m)
+    m <- as(m, "CsparseMatrix")
+    # The matrix read has cells in rows
+    con_genes <- if (tcc) file(glue::glue("{dir}/{(sub('\\\\..*$', '', name))}.ec.txt")) else file(glue::glue("{dir}/{name}.genes.txt"))
+    con_bcs <- if (tcc) file(glue::glue("{dir}/{(sub('\\\\..*$', '', name))}.barcodes.txt")) else file(glue::glue("{dir}/{name}.barcodes.txt"))
+    genes <- readLines(con_genes)
+    barcodes <- readLines(con_bcs)
+    colnames(m) <- barcodes
+    rownames(m) <- genes
+    close(con_genes)
+    close(con_bcs)
+    return(m)
+}
+
+#' Read intronic and exonic matrices into R
+#'
+#' @param spliced_dir Directory with `mtx` file for UMI counts of spliced
+#' transcripts.
+#' @param unspliced_dir Directory with `mtx` file for UMI counts of unspliced
+#' transcripts.
+#' @param spliced_name The files in the splicedd directory should be
+#' <spliced_name>.mtx, <spliced_name>.genes.txt, and
+#' <spliced_name>.barcodes.txt.
+#' @param unspliced_name The files in the unsplicedd directory should be
+#' <unspliced_name>.mtx, <unspliced_name>.genes.txt, and
+#' <unspliced_name>.barcodes.txt.
+#' @return A list of two dgCMatrix with barcodes as column names and genes as
+#' row names. The elements of the list will be `spliced` and `unspliced`.
+#' @export
+#' @examples
+#' # Internal toy data used for unit testing
+#' toy_path <- system.file("testdata", package = "BUSpaRse")
+#' m <- read_velocity_output(toy_path, toy_path,
+#'     spliced_name = "genes",
+#'     unspliced_name = "genes"
+#' )
+read_velocity_output <- function(spliced_dir, unspliced_dir, spliced_name,
+                                 unspliced_name, tcc = FALSE) {
+    spliced <- read_count_output(spliced_dir, spliced_name, tcc)
+    unspliced <- read_count_output(unspliced_dir, unspliced_name, tcc)
+    list(spliced = spliced, unspliced = unspliced)
 }
