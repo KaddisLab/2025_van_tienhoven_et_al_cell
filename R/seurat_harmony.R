@@ -37,6 +37,7 @@ seurat_sketch_harmony <- function(seurat_object, batch = "batch", pancdb_metadat
     )
     seurat_object <- Seurat::RunUMAP(seurat_object, dims = 1:30, reduction = "harmony", reduction.name = "umap_harmony", return.model = TRUE)
     seurat_object <- JoinLayers(seurat_object)
+    Project(seurat_object) <- glue::glue("harmony_{batch}_{project_name}")
     #--------------------------------------------------------------------------------
     # Save results
     seurat_object_path <- (glue::glue("{analysis_cache}/harmony_out/harmony_{batch}_{project_name}.qs"))
