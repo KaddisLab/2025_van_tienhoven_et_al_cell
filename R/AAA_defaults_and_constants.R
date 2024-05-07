@@ -37,6 +37,7 @@ custom_palette <- c(
   
   # Immune
   "Macrophage" = "#34495E",         # Dark Grey
+  "macrophage" = "#34495E",         # Dark Grey
   "immune" = "#34495E",             # Pink
   
   # Other

@@ -19,14 +19,19 @@
 #' @source https://bioconductor.org/books/release/SingleRBook/
 #' @author Denis O'Meally, Yu-Husan Fu
 #' @export
-seurat_gpt_cell_type <- function(seurat_object, assay = "RNA", group.by = "seurat_clusters", tissue = "human pancreas", out_folder = "gpt_cell_type_out") {
+seurat_gpt_cell_type <- function(seurat_object, assay = "RNA", group.by = "seurat_clusters", clusters_table, tissue = "human pancreas", out_folder = "gpt_cell_type_out") {
 
     seurat_object <- load_seurat(seurat_object)
+    clusters_table <- readr::read_csv(clusters_table, show_col_types = FALSE)
 
     # check the group.by column is in the metadata table
-    if (!(group.by %in% colnames(seurat_object[[]]))) {
-        stop(glue::glue("The group.by column `{group.by}` is not in the Seurat object metadata."))
+    if (!group.by %in% colnames(clusters_table)) {
+        stop(glue::glue("The group.by column `{group.by}` is not in the clusters_table."))
     }
+
+    clusters <- clusters_table |> dplyr::select(cell, !!!group.by) |> as.data.frame() |> tibble::column_to_rownames(var = "cell")
+
+    seurat_object <- Seurat::AddMetaData(seurat_object, clusters)
 
     Seurat::DefaultAssay(seurat_object) <- assay
     Seurat::Idents(seurat_object) <- group.by
@@ -38,7 +43,8 @@ seurat_gpt_cell_type <- function(seurat_object, assay = "RNA", group.by = "seura
     seurat_object@meta.data$gpt_cell_type <- cell_types[as.character(Idents(seurat_object))]
 
     # rename
-    cell_type_table <- seurat_object@meta.data |> 
+    cell_type_table <- seurat_object@meta.data |>
+        dplyr::select(-cell)|>
         tibble::rownames_to_column(var = "cell") |>
         dplyr::select(cell, !!!group.by, gpt_cell_type) 
     

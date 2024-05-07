@@ -79,10 +79,10 @@ vartrix_linux --bam '{bam_path}' \\
 
         # Submit to the cluster & return the path of the run script
         system(glue::glue("sleep 0.1 && sbatch {run_path}/run_vartrix.sh"), wait = FALSE)
-        return(glue::glue("{run_path}/run_vartrix.sh"))
+        return(NULL)
     } else {
         print(glue::glue("The VarTrix run for \"{sample_id}\" has already been submitted. Check the SLURM job queue or navigate to {run_path} and submit the `run_vartrix.sh` script to resume the run."))
-        return(glue::glue("{run_path}/run_vartrix.sh"))
+        return(NULL)
     }
 }
 
@@ -101,6 +101,11 @@ vartrix_linux --bam '{bam_path}' \\
 #' @import stats setNames
 #' @import base system shQuote
 filter_and_trim_vcf <- function(vcf_path, fai_path, gr_filter = NULL, output_vcf_path) {
+
+    if (file.exists(output_vcf_path)) {
+        message(glue::glue("VCF already processed and saved to: {vcf_path} \nDelete this file to rerun..."))
+        return(output_vcf_path)
+    }
   # Read .fai file
   fai <- read.table(fai_path, stringsAsFactors = FALSE, col.names = c("chromosome", "length", "start", "basesPerLine", "bytesPerLine"))
   chrom_lengths <- setNames(fai$length, fai$chromosome)

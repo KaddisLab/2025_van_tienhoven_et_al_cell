@@ -41,7 +41,7 @@ seurat_cluster_ari <- function(
 
     options(parallelly.availableCores.methods = "Slurm")
     hprcc::init_multisession()
-    future::plan("multisession", workers = 4)
+    future::plan("multisession", workers = 6)
 
     seurat_object <- load_seurat(seurat_object)
     Seurat::DefaultAssay(seurat_object) <- assay

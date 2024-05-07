@@ -1,19 +1,8 @@
 
 ---
-title: "HPAP scRNAseq Data Analysis rs3842752"
-subtitle: "PancDB metadata: Demogrpahic and Sequencing Metrics"
-author: 
-- name: "Denis O'Meally"
-  email: domeally@coh.org
-  orcid: 0000-0001-7749-9506
-institute: "Department of Diabetes & Cancer Discovery Science, <br/> Arthur Riggs Diabetes & Metabolism Research Institute, City of Hope"
+title: "HPAP donor metadata"
 date: "2024-3-19" 
 date-modified: last-modified
-format:
-  html:
-    embed-resources: true
-    theme: simplex
-    code-fold: true
 ---
 
 ```{r, include = FALSE}
@@ -23,8 +12,6 @@ knitr::opts_chunk$set(
     message = FALSE
 )
 ```
-
-## Setup
 
 ```{r }
 #| code-fold: true
@@ -42,7 +29,7 @@ pancdb_metadata <- pancdb_metadata |> dplyr::filter(str_detect(reagent_kit, "10X
 pancdb_metadata$diabetes_status <- factor(pancdb_metadata$diabetes_status, levels = names(diabetes_palette))
 ```
 
-# Disease status by cohort
+## Disease status by cohort
 ```{r }
 pancdb_metadata %>%
       ggplot(aes(x = diabetes_status, fill = diabetes_status, alpha = protected)) +
@@ -54,7 +41,7 @@ pancdb_metadata %>%
       labs(x = "Disease Status", y = "Count", title = "Disease Status by Cohort", fill = "Disease Status") + theme_classic() 
 ```
 
-# Age distribution by cohort
+## Age distribution by cohort
 ```{r }
 #| fig-height: 8
 library(ggdist)
@@ -73,7 +60,7 @@ ggplot(pancdb_metadata, aes(x = sample_age, fill = diabetes_status, alpha = prot
 ```
 
 
-# Ethnicity by cohort
+## Ethnicity by cohort
 ```{r }
 #| fig-height: 8
 pancdb_metadata %>%
@@ -88,7 +75,7 @@ pancdb_metadata %>%
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
 ```
 
-# Sex by cohort
+## Sex by cohort
 ```{r }
 #| fig-height: 8
 
@@ -104,7 +91,7 @@ pancdb_metadata %>%
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
 ```
 
-# Technology by cohort
+## Technology by cohort
 ```{r }
 #| fig-height: 8
 pancdb_metadata %>%
@@ -141,7 +128,7 @@ plot_pancdb_metrics <- function(pancdb_metadata, metrics) {
 }
 ```
 
-# Sequencing Quality Metrics
+## Sequencing Quality Metrics
 ```{r }
 quality_metrics <- c(
   "valid_barcodes",
@@ -154,7 +141,7 @@ quality_metrics <- c(
 plot_pancdb_metrics(pancdb_metadata, quality_metrics)
 ```
 
-# Sequencing Output Metrics
+## Sequencing Output Metrics
 ```{r }
 output_metrics <- c(
   "expected_cells",
@@ -174,7 +161,7 @@ output_metrics <- c(
 plot_pancdb_metrics(pancdb_metadata, output_metrics)
 ```
 
-# Sequencing Alignment Metrics
+## Sequencing Alignment Metrics
 ```{r }
 alignment_metrics <- c(
   "reads_mapped_to_genome",
@@ -189,7 +176,7 @@ alignment_metrics <- c(
 plot_pancdb_metrics(pancdb_metadata, alignment_metrics)
 ```
 
-# Mitochondrial Content Metrics
+## Mitochondrial Content Metrics
 ```{r }
 mitochondrial_metrics <- c(
   "mito_mean_pct",

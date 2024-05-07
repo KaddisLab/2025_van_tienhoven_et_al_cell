@@ -1,0 +1,12 @@
+---
+title: "Insulin SNPs"
+date: "2024-4-25" 
+date-modified: last-modified
+---
+
+```{r}
+snp_ids <- c("rs5506", "rs689", "rs3842753", "rs3842752", "rs3842740", "rs3842744", "rs5505")
+rsnps::ncbi_snp_query(snp_ids) |>
+    dplyr::select(-maf_population) |>
+    gt::gt()
+```
