@@ -29,23 +29,30 @@
 #' @importFrom qs qsave
 #' @importFrom tibble rownames_to_column
 #' @importFrom dplyr select contains
-seurat_CHOIR <- function(seurat_object, assay, batch = NULL, meta_data) {
+seurat_CHOIR <- function(seurat_object, assay, batch = NULL, meta_data = NULL) {
     # https://www.choirclustering.com/articles/CHOIR.html
     require(CHOIR)
 
-    options(parallelly.availableCores.methods = "Slurm")
-    hprcc::init_multisession()
+    if (nzchar(Sys.getenv("SLURM_JOB_ID"))) {
+        hprcc::init_multisession()
+        cpus <- hprcc::slurm_allocation()$CPUs
+    } else {
+        cpus <- future::availableCores()
+    }
 
-    cpus <- hprcc::slurm_allocation()$CPUs
     message("CPUs allocated: ", cpus)
-
-    if (!is.null(batch)) batch_method <- "Harmony" else NULL
 
     seurat_object <- load_seurat(seurat_object)
 
-    seurat_object <- scCustomize::Add_Sample_Meta(seurat_object = seurat_object, meta_data = meta_data, "orig.ident", "sample_name")
-
-    message("Sample metadata added to Seurat object.")
+    if (!is.null(batch)) {
+        if (is.null(meta_data)) stop("Batch correction requires sample metadata.")
+        batch_method <- "Harmony"
+        seurat_object <- scCustomize::Add_Sample_Meta(seurat_object = seurat_object, meta_data = meta_data, "orig.ident", "sample_name")
+        message("Sample metadata added to Seurat object; batch correction will be performed.")
+    } else {
+        batch_method <- "none"
+        message("No batch correction will be performed.")
+    }
 
     message("Starting CHOIR analysis...")
         seurat_object <- CHOIR::CHOIR(
