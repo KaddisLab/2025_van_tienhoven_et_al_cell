@@ -44,7 +44,7 @@ gptcelltype <- function(input, tissuename=NULL, model='gpt-4', topgenenumber = 1
   }
   
   if (!API.flag){
-   message = paste0('Identify cell types of ',tissuename,' cells using the following markers separately for each\n row. Only provide the cell type name. Do not show numbers before the name.\n Some can be a mixture of multiple cell types. ',  "\n", paste0(names(input), ':',unlist(input),collapse = "\n"))
+   message = paste0('Identify cell types of ', tissuename, ' cells using the following markers separately for each\n row. Only provide the cell type name. Do not show numbers before the name.\n Some can be a mixture of multiple cell types. ',  "\n", paste0(names(input), ':',unlist(input),collapse = "\n"))
     
     return(message)
     
@@ -64,8 +64,8 @@ gptcelltype <- function(input, tissuename=NULL, model='gpt-4', topgenenumber = 1
         k <- openai::create_chat_completion(
           temperature = 0.1,  
           model = model,
-          message = list(list("role" = "user", "content" = paste0('Identify cell types of ',tissuename,' cells using the following markers separately for each\n row. Only provide the cell type name. Do not show numbers before the name. Do not put "cells" or "cell" after the name.\n Some can be a mixture of multiple cell types. Indicate if stressed state.\n',paste(input[id],collapse = '\n'))))
-#          message = list(list("role" = "user", "content" = paste0('Identify cell types of ',tissuename,' cells using the following markers separately for each\n row. Only provide the cell type name. Do not show numbers before the name. \n Some can be a mixture of multiple cell types.\n',paste(input[id],collapse = '\n'))))
+#          message = list(list("role" = "user", "content" = paste0('Identify cell types of ',tissuename,' cells using the following markers separately for each\n row. Only provide the cell type name. Do not show numbers before the name. Do not put "cells" or "cell" after the name.\n Some can be a mixture of multiple cell types. Indicate if stressed state.\n',paste(input[id],collapse = '\n'))))
+          message = list(list("role" = "user", "content" = paste0('Identify cell types of ',tissuename,' cells using the following markers separately for each\n row. Only provide the cell type name. Do not show numbers before the name. \n Some can be a mixture of multiple cell types.\n',paste(input[id],collapse = '\n'))))
         )
         res <- strsplit(k$choices[,'message.content'],'\n')[[1]]
         if (length(res)==length(id))
