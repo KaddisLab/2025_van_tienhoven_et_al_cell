@@ -20,36 +20,43 @@ custom_palette <- c(
   "alpha" = "#2ECC71",              # Green
   "Beta" = "#3498DB",               # Blue
   "beta" = "#3498DB",               # Blue
+  "beta_like" = "#bf34db",               # Blue
   "Delta" = "#1ABC9C",              # Teal
   "delta" = "#1ABC9C",              # Teal
   "Gamma" = "#16A085",              # Dark Teal
   "gamma" = "#16A085",              # Dark Teal
+  "PP_Gamma" = "#16A085",              # Dark Teal
   "epsilon" = "#27AE60",            # Emerald
+  "Epsilon" = "#27AE60",            # Emerald
   
   # Exocrine
   "Acinar-s" = "#E74C3C",           # Red
   "Acinar-i" = "#E67E22",           # Orange
   "Acinar-REG+" = "#F39C12",        # Amber
   "acinar" = "#E74C3C",             # Red
+  "Acinar" = "#E74C3C",             # Red
   "Ductal" = "#9B59B6",             # Purple
   "ductal" = "#9B59B6",             # Purple
   "MUC5B+ Ductal" = "#8E44AD",      # Dark Purple
   
   # Immune
-  "Macrophage" = "#34495E",         # Dark Grey
-  "macrophage" = "#34495E",         # Dark Grey
-  "immune" = "#34495E",             # Pink
+  "Macrophage" = "brown",         # Dark Grey
+  "macrophage" = "brown",         # Dark Grey
+  "immune" = "brown",             # Pink
+  "Immune" = "brown",             # Pink
   
   # Other
-  "Endothelial" = "#95A5A6",        # Grey
-  "endothelial" = "#95A5A6",        # Grey
+  "Endothelial" = "#314c4e",        # 
+  "endothelial" = "#314c4e",        # 
   "Activated Stellate" = "#F1C40F", # Yellow
+  "Stellates_Mesenchymal" = "#F1C40F", # Yellow
   "activated_stellate" = "#F1C40F", # Yellow
   "Quiescent Stellate" = "#FDFD96", # Light Yellow
   "quiescent_stellate" = "#FDFD96", # Light Yellow
   "Schwann" = "#2C3E50",            # Dark blue
   "schwann" = "#2C3E50",            # Dark blue
-  "cycling" = "#FF7F50"             # Coral
+  "cycling" <- "#FF7F50",
+  "Unknown" <- "cornsilk2" 
 )
 
 cell_type_markers <- c(
@@ -57,6 +64,8 @@ cell_type_markers <- c(
   "stellate" = "RSG10",
   "alpha" = "GCG",
   "beta" = "INS",
+  "beta" = "MAFA",
+  "endocrine" = "PDX1",
   "cycling" = "MKI67",
   "delta" = "SST",
   "ductal" = "KRT19",
@@ -65,7 +74,7 @@ cell_type_markers <- c(
   "gamma" = "PPY",
   "immune" = "PTPRC",
   "schwann" = "CDH19",
-  "endocrine" = "XBP1"
+  "stress" = "XBP1"
 )
 
 diabetes_palette <- c(
@@ -76,4 +85,5 @@ diabetes_palette <- c(
 )
 
 
-er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS")
+er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS", "ATF3", "ATF4", "TXNIP")
+# XBP1spliced (XBP1s)
