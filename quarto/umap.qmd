@@ -1,0 +1,55 @@
+
+---
+title: "UMAP"
+date: "2024-5-8" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(targets)
+    library(ggplot2)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_annotated)
+seurat_object <- load_seurat(seurat_object_annotated)
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+```
+
+## UMAP
+
+```{r}
+#| fig-cap: "Tosti et al cell types"
+#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-height: 10
+#| fig-width: 10
+seurat_object <- seurat_object |>
+    NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000, verbose = FALSE) %>%
+    FindVariableFeatures(verbose = FALSE) %>%
+    ScaleData(verbose = FALSE) %>%
+    RunPCA(verbose = FALSE) %>%
+    RunUMAP(reduction = "pca", dims = 1:30, n.components = 2L, verbose = FALSE)
+
+DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = custom_palette) +
+    NoLegend() +
+    labs(title = "Tosti et al cell types") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+

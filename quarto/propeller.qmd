@@ -1,0 +1,187 @@
+
+---
+title: "Cell proportions"
+date: "2024-5-8" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(sccomp)
+    library(tidyseurat)
+    library(targets)
+    library(speckle)
+library(limma)
+library(ggplot2)
+library(gt)
+library(dplyr)
+library(tidyr)
+library(downloadthis)
+library(patchwork)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_annotated)
+seurat_object <- load_seurat(seurat_object_annotated)
+```
+
+## Propeller
+
+Plots of cell type proportions for protected and susceptible individuals.
+
+```{r}
+cell_info <- seurat_object[[]] |>
+    dplyr::filter(orig.ident != "HPAP-019") |>
+    dplyr::filter(diabetes_status == "NODM") 
+propeller(clusters = cell_info$tosti_cell_type, sample = cell_info$orig.ident,
+group = cell_info$protected)
+
+protected <- cell_info |> dplyr::filter(protected == TRUE) 
+susceptible <- cell_info |> dplyr::filter(protected == FALSE)
+
+# plot protected
+plot_protected<-plotCellTypeProps(
+    clusters = protected$tosti_cell_type,
+    sample = protected$orig.ident) +
+    scale_fill_manual(values = custom_palette) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+# plot susceptible
+plot_susceptible<-plotCellTypeProps(
+    clusters = susceptible$tosti_cell_type,
+    sample = susceptible$orig.ident) +
+    scale_fill_manual(values = custom_palette) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) + NoLegend()
+
+plot_protected
+
+plot_susceptible
+```
+
+## sccomp 
+
+Test for differential cell-type proportions between protected and susceptible individuals.
+
+```{r }
+sccomp_result <-
+    seurat_object |>
+    dplyr::mutate(protected = as.factor(c(protected))) |>
+    dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(orig.ident != "HPAP-019") |> # enriched for b-cells
+    sccomp::sccomp_estimate(
+        formula_composition = ~ protected,
+        formula_variability = ~ protected,
+        .sample = orig.ident,
+        .cell_group = tosti_cell_type,
+        bimodal_mean_variability_association = TRUE,
+        variational_inference = FALSE,
+        cores = cpus
+    ) |>
+    sccomp::sccomp_remove_outliers(cores = cpus) |> # Optional
+    sccomp::sccomp_test()
+
+plots <- sccomp_result |> plot()
+```
+
+```{r}
+#| fig-cap: "A plot of estimates of differential composition (c_) on the x-axis and differential variability (v_) on the y-axis. The error bars represent 95% credible intervals. The dashed lines represent the minimal effect that the hypothesis test is based on. An effect is labelled as significant if bigger than the minimal effect according to the 95% credible interval."
+plots$credible_intervals_1D
+```
+
+```{r}
+#| eval: FALSE
+#| code-fold: true
+#| fig-cap: "We can plot the relationship between abundance and variability. As we can see below, they are positively correlated, you also appreciate that this relationship is by model for single cell RNA sequencing data."
+plots$credible_intervals_2D
+```
+
+```{r}
+#| fig-cap: "A plot of cell type proportion, faceted by *protected*. \n The blue boxplots represent the posterior predictive check. If the model is likely to be descriptively adequate to the data, the blue box plot should roughly overlay with the black box plot, which represents the observed data. The colour coding represents the significant associations for composition and/or variability."
+plots$boxplot
+```
+
+## Cell type counts
+
+```{r}
+# Summarize the data by sample and cell type
+cell_type_counts_per_sample <- cell_info %>%
+  group_by(orig.ident, tosti_cell_type) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  pivot_wider(names_from = tosti_cell_type, values_from = count, values_fill = list(count = 0))
+
+# Join and process as previously outlined
+cell_info_unique <- cell_info %>%
+  select(orig.ident, protected) %>%
+  distinct()
+
+cell_type_counts_per_sample <- cell_type_counts_per_sample %>%
+  left_join(cell_info_unique, by = "orig.ident")
+
+cell_type_counts_per_sample$protected <- ifelse(cell_type_counts_per_sample$protected, "Protected", "Susceptible")
+
+# Add a total column
+cell_type_counts_per_sample <- cell_type_counts_per_sample %>%
+  rowwise() %>%
+  mutate(Total = sum(c_across(-c(orig.ident, protected)), na.rm = TRUE)) %>%
+  ungroup()
+
+cell_type_counts_per_sample|>
+ download_this(
+    output_name = "cell_type_counts_per_sample",
+    output_extension = ".csv",
+    button_label = "Download data",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+```
+
+```{r}
+# Create the gt table
+cell_type_counts_per_sample %>%
+  group_by(protected) %>%
+  gt(groupname_col = "protected") %>%
+  tab_header(
+    title = "Cell Type Counts per Sample",
+    subtitle = "Grouped by Protection Status"
+  ) %>%
+  cols_label(
+    orig.ident = "Sample ID",
+    protected = "Protection Status"
+  ) %>%
+  tab_options(
+    heading.background.color = "#D3D3D3",
+    row_group.background.color = "gray",
+    table.font.size = px(10)  # Make the font size smaller
+  ) %>%
+  cols_align(
+    align = "center",
+    columns = everything()
+  ) %>%
+  cols_width(
+    orig.ident ~ px(200)  # Make the first column wider
+  ) %>%
+  fmt_number(
+    columns = c(-orig.ident, -protected),
+    decimals = 0
+  ) %>%
+  summary_rows(
+    groups = TRUE,
+    columns = c(-orig.ident, -protected),
+    fns = list(Total = ~sum(.x, na.rm = TRUE))
+  )
+```

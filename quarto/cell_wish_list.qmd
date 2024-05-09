@@ -93,6 +93,8 @@ seurat_object <- glue::glue("{analysis_cache}/data/NODM_seurat_object.qs") |> lo
 
 ```{r}
 #| fig-cap: "Tosti et al cell types"
+#| fig-height: 10
+#| fig-width: 5
 scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "tosti_cell_type") & labs(title = "Tosti et al 2021")
 ```
 
@@ -101,7 +103,9 @@ Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S00
 ### Azimuth
 
 ```{r}
-#| fig-cap: "Tosti et al cell types"
+#| fig-cap: "Azimuth cell types"
+#| fig-height: 10
+#| fig-width: 5
 scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "azimuth_cell_type") & labs(title = "Azimuth")
 ```
 
@@ -110,7 +114,9 @@ Cell types from [Azimuth, Human Pancreas Reference Explorer](https://azimuth.hub
 ### GPT cell type
 
 ```{r}
-#| fig-cap: "Tosti et al cell types"
+#| fig-cap: "GPT cell types"
+#| fig-height: 10
+#| fig-width: 5
 scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "gpt_cell_type_sketch") & labs(title = "GPT")
 ```
 

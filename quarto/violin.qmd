@@ -1,0 +1,64 @@
+
+---
+title: "Violin plots"
+date: "2024-5-8" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+```{r }
+#| code-fold: true
+#| code-summary: "Show the code"
+#| cache: false
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(targets)
+    library(ggplot2)
+    library(Seurat)
+    library(patchwork)
+    library(scCustomize)
+    library(ggpubr)
+})
+
+tar_config_set(store = "/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+
+tar_load(seurat_object_annotated)
+
+seurat_object <- load_seurat(seurat_object_annotated)
+```
+
+## Cell types
+
+::: {.panel-tabset}
+
+### Tosti
+
+```{r}
+#| fig-cap: "Tosti et al cell types"
+#| fig-height: 12
+#| fig-width: 4
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "tosti_cell_type") & labs(title = "Tosti et al 2021")
+```
+
+Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S0016-5085(20)35399-3/fulltext)
+
+### HPAP
+
+```{r}
+#| fig-cap: "HPAP cell types"
+#| fig-height: 12
+#| fig-width: 4
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "hpap_celltype") & labs(title = "HPAP")
+```
+
+Cell types from [HPAP](https://hpap.pmacs.upenn.edu/explore/download?matrix), as used in the recent [ML paper](https://www.cell.com/cell-reports-medicine/fulltext/S2666-3791(24)00204-0).
+
+::: 

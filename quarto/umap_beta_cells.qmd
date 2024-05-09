@@ -1,0 +1,116 @@
+
+---
+title: "UMAP beta cells"
+date: "2024-5-8" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(Nebulosa)
+    library(targets)
+    library(ggplot2)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_annotated)
+seurat_object <- load_seurat(seurat_object_annotated)
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+```
+
+## UMAP beta cell subclusters
+
+```{r}
+#| fig-cap: "Beta cells UMAP"
+#| fig-alt: "UMAP beta cells"
+#| fig-height: 8
+#| fig-width: 10
+
+all_clusters <- length(unique(seurat_object[[]]$hpap_clusters))
+seurat_object <- seurat_object |>
+    dplyr::filter(tosti_cell_type == "Beta") |>
+    NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000, verbose = FALSE) %>%
+    FindVariableFeatures(verbose = FALSE) %>%
+    ScaleData(verbose = FALSE) %>%
+    RunPCA(verbose = FALSE) %>%
+    FindNeighbors(dims = 1:30, verbose = FALSE) %>%
+    FindClusters(resolution = 0.5, verbose = FALSE) %>%
+    RunUMAP(reduction = "pca", dims = 1:30, n.components = 3L, verbose = FALSE)
+
+num_clusters <- length(unique(seurat_object[[]]$hpap_clusters))
+
+DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE) +
+    labs(title = "Beta cell subclusters") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+## Beta cells by protected status
+
+```{r}
+#| fig-height: 8
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "protected", label = FALSE) +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## Beta cells by ER genes
+
+```{r }
+#| fig-width: 8
+#| fig-height: 28
+FeaturePlot(seurat_object, features = er_genes_of_interest, split.by = "protected", keep.scale = "feature") + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) + labs(title = "Protected status")
+```
+
+### Density plots
+
+```{r }
+#| fig-cap: "Beta cell subclusters"
+#| column: margin
+DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE) + NoLegend() + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+seurat_object_protected <- subset(seurat_object, subset = protected == "TRUE")
+seurat_object_susceptable <- subset(seurat_object, subset = protected == "FALSE")
+pplot <- plot_density(seurat_object_protected, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
+splot <- plot_density(seurat_object_susceptable, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
+```
+
+::: {.panel-tabset}
+
+### Protected
+
+```{r}
+pplot
+```
+
+### Susceptable
+
+```{r}
+splot
+```
+
+:::
+
+## Marker genes
+
