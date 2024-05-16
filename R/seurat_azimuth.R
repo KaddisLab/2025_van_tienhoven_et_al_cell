@@ -25,7 +25,7 @@ seurat_azimuth <- function(query_seurat_object, azimuth_reference_path) {
 
     sample_id <- query_seurat_object@meta.data$orig.ident[1]
 
-    plot_azimuth <- DimPlot(azimuth, group.by = "predicted.annotation.l1", cols = custom_palette, label = TRUE, label.size = 4, repel = TRUE, reduction = "ref.umap", shuffle = TRUE) +
+    plot_azimuth <- DimPlot(azimuth, group.by = "predicted.annotation.l1", cols = cell_type_palette, label = TRUE, label.size = 4, repel = TRUE, reduction = "ref.umap", shuffle = TRUE) +
         NoLegend() + 
         labs(title = glue::glue("{sample_id} projected into Azimuth ref")) +
         theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())

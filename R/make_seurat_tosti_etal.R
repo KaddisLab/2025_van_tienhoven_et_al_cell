@@ -45,7 +45,7 @@ make_seurat_tosti_etal <- function() {
     # Add the UMAP coordinates to the Seurat object
     seurat_object[["umap_tosti_etal"]] <- Seurat::CreateDimReducObject(embeddings = umap_coords, key = "UMAP_")
     # make a UMAP plot
-    plot_umap_tosti_etal <- Seurat::DimPlot(seurat_object, group.by = "Cluster", reduction = "umap_tosti_etal", cols = custom_palette, label = TRUE, repel = TRUE, label.size = 4, shuffle = TRUE) & NoLegend() & labs(title = "UMAP Tosti et al.") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+    plot_umap_tosti_etal <- Seurat::DimPlot(seurat_object, group.by = "Cluster", reduction = "umap_tosti_etal", cols = cell_type_palette, label = TRUE, repel = TRUE, label.size = 4, shuffle = TRUE) & NoLegend() & labs(title = "UMAP Tosti et al.") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
     ggsave(glue::glue("{analysis_cache}/data/tosti_etal/tosti_etal_UMAP_coords.png", plot = plot_umap_tosti_etal, width = 10, height = 10, dpi = 300))
 
     # Run PCA
@@ -66,7 +66,7 @@ make_seurat_tosti_etal <- function() {
         Seurat::FindClusters(res = 2, cluster.name = "harmony_clusters") |>
         Seurat::RunUMAP(dims = 1:30, reduction = "harmony", reduction.name = "umap_harmony", return.model = TRUE, repulsion.strength = 5) 
         
-    plot_umap_ref <- DimPlot(seurat_object, group.by = "Cluster", cols = custom_palette, label = TRUE, label.size = 6, repel = TRUE, reduction = "umap_harmony", shuffle = TRUE) & NoLegend() & labs(title = "UMAP reference") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+    plot_umap_ref <- DimPlot(seurat_object, group.by = "Cluster", cols = cell_type_palette, label = TRUE, label.size = 6, repel = TRUE, reduction = "umap_harmony", shuffle = TRUE) & NoLegend() & labs(title = "UMAP reference") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
     ggsave(glue::glue("{analysis_cache}/data/tosti_etal/tosti_etal_UMAP_harmony_coords.png"), plot = plot_umap_ref, width = 10, height = 10, dpi = 300)
 
     ridge_plot <- RidgePlot(seurat_object, features = c("INS", "CTCF", "PPY", "SST", "CDH19", "FLT1", "CD74", "SPARCL1", "SLC4A4"), group.by = "Cluster", ncol = 3, log = TRUE, y.max = 200) + ggplot2::theme(aspect.ratio = 1)

@@ -27,29 +27,178 @@ tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_annotated)
-seurat_object <- load_seurat(seurat_object_annotated)
-seurat_object <- seurat_object |>
+tar_load(seurat_object_annotated_full)
+seurat_object <- load_seurat(seurat_object_annotated_full)
+seurat_object_NODM <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
 ```
 
-## UMAP
+::: {.callout-important}
+## Subsampled analysis  ("sketch-based")
+
+The figures here represent a subsample of 750 cells per donor, selected to preserve variation across cell states. This is done to speed up the analysis. The full set is forthcoming. 
+:::
+
+
+## Non-diabetic donors
+
+::: {.panel-tabset}
+
+### Cell type
 
 ```{r}
-#| fig-cap: "Tosti et al cell types"
+#| fig-cap: "Tosti et al cell types, NODM"
 #| fig-alt: "UMAP of Tosti et al cell types"
 #| fig-height: 10
 #| fig-width: 10
-seurat_object <- seurat_object |>
-    NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000, verbose = FALSE) %>%
-    FindVariableFeatures(verbose = FALSE) %>%
-    ScaleData(verbose = FALSE) %>%
-    RunPCA(verbose = FALSE) %>%
-    RunUMAP(reduction = "pca", dims = 1:30, n.components = 2L, verbose = FALSE)
 
-DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = custom_palette) +
+DimPlot(seurat_object_NODM, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap_harmony") +
     NoLegend() +
     labs(title = "Tosti et al cell types") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
+### Protected status
+
+```{r}
+#| fig-cap: "Protected status, NODM; red = susceptable, blue = protected"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Protected status") +
+    theme(legend.position = c(0.8, 0.9), # Adjust these values as needed
+    axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Donor
+```{r}
+#| fig-cap: "Protected status, NODM; red = susceptable, blue = protected"
+#| fig-height: 10
+#| fig-width: 10
+
+donor_palette <- generate_palette(seurat_object[[]]$orig.ident |> unique() |> length())
+
+DimPlot(seurat_object_NODM, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "umap_harmony", shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Protected status") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Sex
+```{r}
+#| fig-cap: "Sex, NODM; pink = female, lightblue  = male"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Sex") +
+    theme(
+        axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), legend.position = c(0.8, 0.9) # Adjust these values as needed
+    )
+```
+
+### Age
+```{r}
+#| fig-cap: "Age, NODM"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "umap_harmony") +
+    labs(title = "Age") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
+```
+
+::::
+
+## All donors
+
+::: {.panel-tabset}
+
+### Cell type
+```{r}
+#| fig-cap: "Tosti et al cell types, all donors"
+#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap_harmony") +
+    NoLegend() +
+    labs(title = "Tosti et al cell types") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Protected status
+
+```{r}
+#| fig-cap: "Protected status, all donors; red = susceptable, blue = protected"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Protected status") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Donor
+
+```{r}
+#| fig-cap: "Donor"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Donor ID") +
+    NoLegend() +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Diabetes status
+
+```{r}
+#| fig-cap: "Diabetes status, all donors"
+#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "diabetes_status", label = FALSE, cols = diabetes_palette, reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Diabetes status") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Sex
+```{r}
+#| fig-cap: "Sex, all donors; pink = female, lightblue = male"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Sex") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Age
+
+```{r}
+#| fig-cap: "Age, NODM"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "umap_harmony") +
+    labs(title = "Age") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
+```
+
+::::

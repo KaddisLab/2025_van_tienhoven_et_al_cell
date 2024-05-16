@@ -173,8 +173,8 @@ list(
             cellranger_run_folder = cellranger_run_folders,
             region_vcf = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz"
         ),
-        pattern = map(cellranger_run_folders),
-        deployment = "main"
+        deployment = "main",
+        pattern = map(cellranger_run_folders)
     ),
     # parse sample genotypes
     tar_target(protected_cohort, get_cellsnp_lite_genotypes("11\t2159843", "rs3842752"), deployment = "main"),
@@ -196,30 +196,33 @@ list(
     tar_target(
         vartrix_coverage,
         run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
-        deployment = "main",
         pattern = map(cellranger_run_folders),
         format = "file_fast",
     ),
     tar_target(
         vartrix_consensus,
         run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "consensus", mapq = 30),
-        deployment = "main",
         pattern = map(cellranger_run_folders),
         format = "file_fast",
     ),
+    # Add sample genotypes to metadata
+    tar_target(
+        pancdb_metadata_gt,
+        merge_cellSNPlite_genotypes_with_sample_metadata(pancdb_metadata, protected_cohort, rs3842753_cohort, rs689_cohort),
+        deployment = "main"
+    ),
     # Cellbender using CellRanger counts ------------------------------------------------------------
     tar_target(cellbender_h5,
-        run_cellbender(cellranger_run_folder = cellranger_run_folders),
+        run_cellbender(cellranger_run_folders),
         pattern = map(cellranger_run_folders),
-        deployment = "main",
         format = "file_fast",
     ),
     tar_target(
         cellbender_seurat_objects,
-        make_seurat_cellbender(cellbender_h5, cellranger_run_folders),
+        make_seurat_cellbender(cellbender_h5, cellranger_run_folders, pancdb_metadata_gt),
         pattern = map(cellbender_h5, cellranger_run_folders),
-        #deployment = "main", # must run on "main" for some reason??
-        format = "file_fast"
+        format = "file_fast",
+        description = "Makes Seurat objects with CellBender and CellRanger data; adds cell QC metrics and renames cells using sample identifiers."
     ),
     tar_target(
         cellbender_qc_plots,
@@ -241,6 +244,25 @@ list(
         tosti_cell_type_csv,
         seurat_singleR_transfer_label(cellbender_seurat_objects, tosti_etal_seurat_object, cell_type_col = "Cluster"),
         pattern = map(cellbender_seurat_objects),
+        format = "file_fast",
+        resources = small
+    ),
+    # Consolidated tosti cell types
+    tar_target(
+        tosti_consolidated_csv,
+        {
+            df <- tosti_cell_type_csv %>%
+                readr::read_csv(show_col_types = FALSE, progress = FALSE) %>%
+                mutate(cell_type = case_when(
+                    pruned.labels %in% c("Alpha", "Beta", "Delta", "Gamma") ~ pruned.labels,
+                    pruned.labels %in% c("Acinar-i", "Acinar-REG+", "Acinar-s") ~ "Acinar",
+                    pruned.labels %in% c("Ductal", "MUC5B+ Ductal") ~ "Ductal",
+                    TRUE ~ "Other"
+                )) |>
+                select(cell, cell_type)
+            write.csv(df, glue::glue("{analysis_cache}/cell_type_out/tosti_consolidated.csv"), quote = FALSE)
+            glue::glue("{analysis_cache}/cell_type_out/tosti_consolidated.csv")
+        },
         format = "file_fast",
         resources = small
     ),
@@ -280,8 +302,10 @@ list(
         format = "file_fast",
         resources = medium
     ),
+    # HPAP annotation ---------------------------------------------------------------------
+    tar_target(hpap_annotation_csv, get_hpap_cell_metadata(), format = "file_fast", resources = medium),
     # Project into reference annotation - Tosti et al 2021
-    # ! performs very poorly, not used for now
+    # * performs very poorly, not used for now
     # tar_target(
     #     ref_mapped_seurat_objects,
     #     seurat_project_into_ref(cellbender_seurat_objects, tosti_etal_seurat_object, reduction_model = "umap_harmony"),
@@ -305,19 +329,6 @@ list(
         format = "file_fast",
         pattern = map(ddqc_seurat_objects)
     ),
-    # tar_target(
-    #     #TODO: split this out in to two targets, one for merging metadata and one for bpcells
-    #     annotated_seurat_bp,
-    #     merge_seurat_bpcells(ddqc_seurat_objects, pancdb_metadata, protected_cohort, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv),
-    #     format = "file_fast"
-    # ),
-    # # make a PancDB reference with 12 patients from the 77 passing qc
-    # tar_target(
-    #     pancdb_ref,
-    #     make_seurat_pancdb_ref(),
-    #     format = "file_fast",
-    # resources = medium
-    # ),
 
     # Drop failed samples before merge/clustering/DEG ------------------------------------
     tar_target(ddqc_bpcells, grep(failed_qc_donor_ids, ddqc_bpcells_all, value = TRUE, invert = TRUE), format = "file_fast", iteration = "vector", deployment = "main"),
@@ -344,32 +355,63 @@ list(
     ),
     # Clustering --------------------------------------------------------------------------
     tar_target(
-        merged_cluster_sketch_csv,
+        cluster_merged_sketch_csv,
         seurat_cluster_ari(merged_seurat_sketch_750, assay = "sketch"),
         format = "file_fast",
         resources = large_mem
     ),
-    # Clustering --------------------------------------------------------------------------
+    # choose cluster manually
     tar_target(
-        integrated_cluster_sketch_csv,
-        seurat_cluster_ari(integrated_seurat_sketch_750, assay = "sketch"),
+        cluster_merged_sketch_man_csv,
+        {
+            cluster_merged_sketch <- readr::read_csv(cluster_merged_sketch_csv, show_col_types = FALSE, progress = FALSE) |>
+                mutate(manual_clusters = SCT_snn_res.0.6) |> select(cell, manual_clusters)
+            write.csv(cluster_merged_sketch, stringr::str_replace(cluster_merged_sketch_csv, ".csv", "_res0.6.csv"), quote=FALSE)
+            stringr::str_replace(cluster_merged_sketch_csv, ".csv", "_res0.6.csv")
+        },
         format = "file_fast",
-        resources = large_mem
+        resources = tiny
     ),
+    # Clustering with CHOIR ----------------------------------------------------------------
+    #* Not working - fails for both skethc and RNA assay*#
+    # tar_target(
+    #     CHOIR_merged_seurat_sketch_750,
+    #     seurat_CHOIR(merged_seurat_sketch_750, assay = "RNA", batch = "batch",  pancdb_metadata[c("sample_name", "batch")]),
+    #     format = "file_fast",
+    #     resources = xlarge
+    # ),
     # GPT cell type annotation --------------------------------------------------------------
+    # TODO
     # tar_target(
     #     gpt_cell_type_merged_sketch_750_csv,
-    #     seurat_gpt_cell_type(merged_seurat_sketch_750, "sketch", ),
-    #     format = "file_fast"
+    #     seurat_gpt_cell_type(merged_seurat_sketch_750, "sketch", group.by = "seurat_clusters", clusters_table = cluster_merged_sketch_csv),
+    #     format = "file_fast",
+    #     resources = large
     # ),
-
+    # Aggregate cell annotation -------------------------------------------------------
+    tar_target(
+        aggregated_cell_annot_csv,
+        seurat_aggregate_cell_annot(ddqc_seurat_objects, tosti_cell_type_csv, tosti_consolidated_csv, scDblFinder_csv, cell_cycle_csv, hpap_annotation_csv, cluster_merged_sketch_man_csv),
+        resources = tiny
+    ),
+    # Annotate sketch object --------------------------------------------------------------
+        tar_target(
+        seurat_object_annotated_sketch,
+        make_annotated_seurat_object(integrated_seurat_sketch_750, aggregated_cell_annot_csv, pancdb_metadata_gt),
+        resources = small,
+        format = "file_fast"
+    ),
+    # Project sketch onto full dataset 
+    tar_target(
+        seurat_object_annotated_full,
+        seurat_project_sketch(seurat_object_annotated_sketch),
+        format = "file_fast",
+        resources = large
+    ),    
     # Reports -------------------------------------------------------------------------------
+    
     tar_target(report_one,
         render_report(here::here("quarto/pancdb_metadata.qmd")),
-        deployment = "main", format = "file_fast"
-    ),
-    tar_target(report_two,
-        render_report(here::here("quarto/study_cohort_azimuth.qmd")),
         deployment = "main", format = "file_fast"
     ),
     # Housekeeping --------------------------------------------------------------------------
@@ -384,6 +426,8 @@ list(
         cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(1, units = "weeks"))
     )
 )
+#! TODO 
+# TODO annotate beta like cells 
 ## Common Considerations for Quality Control Filters for Single Cell RNA-seq Data
 ## https://10xgenomics.com/resources/analysis-guides/common-considerations-for-quality-control-filters-for-single-cell-rna-seq-data
 ## Essentially we follow this guide with respect to pre-processing

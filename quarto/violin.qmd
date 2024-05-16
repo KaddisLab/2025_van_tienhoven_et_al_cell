@@ -22,6 +22,7 @@ suppressPackageStartupMessages({
     library(targets)
     library(ggplot2)
     library(Seurat)
+    library(tidyseurat)
     library(patchwork)
     library(scCustomize)
     library(ggpubr)
@@ -30,14 +31,25 @@ suppressPackageStartupMessages({
 tar_config_set(store = "/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/R")
 
-tar_load(seurat_object_annotated)
+tar_load(seurat_object_annotated_full)
 
-seurat_object <- load_seurat(seurat_object_annotated)
+seurat_object <- load_seurat(seurat_object_annotated_full)
 ```
 
 ## Cell types
 
 ::: {.panel-tabset}
+
+### Simplified cell types
+
+```{r}
+#| fig-cap: "Tosti et al cell types"
+#| fig-height: 12
+#| fig-width: 4
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "cell_type") & labs(title = "Cell type")
+```
+
+Simplified cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S0016-5085(20)35399-3/fulltext)
 
 ### Tosti
 
@@ -45,7 +57,7 @@ seurat_object <- load_seurat(seurat_object_annotated)
 #| fig-cap: "Tosti et al cell types"
 #| fig-height: 12
 #| fig-width: 4
-scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "tosti_cell_type") & labs(title = "Tosti et al 2021")
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "tosti_cell_type") & labs(title = "Tosti et al 2021")
 ```
 
 Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S0016-5085(20)35399-3/fulltext)
@@ -56,7 +68,7 @@ Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S00
 #| fig-cap: "HPAP cell types"
 #| fig-height: 12
 #| fig-width: 4
-scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "hpap_celltype") & labs(title = "HPAP")
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "hpap_celltype") & labs(title = "HPAP")
 ```
 
 Cell types from [HPAP](https://hpap.pmacs.upenn.edu/explore/download?matrix), as used in the recent [ML paper](https://www.cell.com/cell-reports-medicine/fulltext/S2666-3791(24)00204-0).

@@ -5,18 +5,23 @@ book:
   title: "HPAP scRNAseq Analysis rs3842752"
   author: 
   - name: "Denis O'Meally"
-  - email: domeally@coh.org
-  - orcid: 0000-0001-7749-9506
-  - institute: "Department of Diabetes & Cancer Discovery Science, <br/> Arthur Riggs Diabetes & Metabolism Research Institute, City of Hope"
+    email: domeally@coh.org
+    orcid: 0000-0001-7749-9506
+    affiliation: "Department of Diabetes & Cancer Discovery Science, <br/> Arthur Riggs Diabetes & Metabolism Research Institute, City of Hope"
   date: "2024-3-25" 
   chapters:
     - index.qmd
     - cell_wish_list.qmd
     - pancdb_metadata.qmd
     - umap.qmd
+    - beta_cells_DE.qmd
+    - beta_cells_umap.qmd
+    - beta_cells_boxplots.qmd
+    - alpha_cells_boxplots.qmd
+    - acinar_cells_boxplots.qmd
+    - ductal_cells_boxplots.qmd
     - violin.qmd
     - propeller.qmd
-    - umap_beta_cells.qmd
     - ins_snps.qmd
     - references.qmd
 
@@ -24,7 +29,6 @@ bibliography: references.bib
 
 format:
   html:
-    embed-resources: true
     theme: simplex
     code-fold: true
   pdf:

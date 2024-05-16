@@ -14,7 +14,7 @@ t1dm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "T1DM" ] |> na.o
 t2dm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "T2DM" ] |> na.omit() |> paste0(collapse="|")
 rm(metadata)
 
-custom_palette <- c(
+cell_type_palette <- c(
   # Endocrine
   "Alpha" = "#2ECC71",              # Green
   "alpha" = "#2ECC71",              # Green
@@ -46,6 +46,7 @@ custom_palette <- c(
   "Immune" = "brown",             # Pink
   
   # Other
+  "Other" = "#314c4e",        # 
   "Endothelial" = "#314c4e",        # 
   "endothelial" = "#314c4e",        # 
   "Activated Stellate" = "#F1C40F", # Yellow
@@ -58,6 +59,9 @@ custom_palette <- c(
   "cycling" <- "#FF7F50",
   "Unknown" <- "cornsilk2" 
 )
+
+cell_cycle_palette <- c(G1 = "#1f77b4", S = "#ff7f0e", G2M = "#2ca02c")
+
 
 cell_type_markers <- c(
   "acinar" = "CPA1",
@@ -84,6 +88,16 @@ diabetes_palette <- c(
   "T2DM" = "#D8604C"    # A warm red for 'Type 2 Diabetes'
 )
 
+generate_palette <- function(n) {
+    palettes <- c(
+        MoMAColors::moma.colors("Smith", n=5, type="discrete"),
+        MoMAColors::moma.colors("Warhol", n=15, type="discrete"),
+        MoMAColors::moma.colors("Klein", n=11, type="discrete"),
+        RColorBrewer::brewer.pal(12, "Set3"),
+        RColorBrewer::brewer.pal(9, "Set1"))
+    return(colorRampPalette(palettes)(n))
+}
 
-er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS", "ATF3", "ATF4", "TXNIP")
+
+er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS", "ATF3", "ATF4", "TXNIP", "GHRL")
 # XBP1spliced (XBP1s)

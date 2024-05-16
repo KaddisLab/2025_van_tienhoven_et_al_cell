@@ -14,3 +14,13 @@ analysis_cache
 .Renviron
 beta.de.genes.txt
 plot.png
+
+quarto/**
+!quarto/**/*.qmd
+!quarto/**/*.bib
+!quarto/**/*.sh
+!quarto/**/*.yaml
+
+
+
+

@@ -48,7 +48,7 @@ cell_info <- seurat_object[[]] |>
     dplyr::filter(orig.ident != "HPAP-019") |>
     dplyr::filter(!is.na(cell_type)) |>
     dplyr::filter(diabetes_status == "NODM") 
-propeller(clusters = cell_info$cell_type, sample = cell_info$orig.ident,
+propeller(clusters = cell_info$tosti_cell_type, sample = cell_info$orig.ident,
 group = cell_info$protected)
 
 protected <- cell_info |> dplyr::filter(protected == TRUE) 
@@ -56,14 +56,14 @@ susceptible <- cell_info |> dplyr::filter(protected == FALSE)
 
 # plot protected
 plot_protected<-plotCellTypeProps(
-    clusters = protected$cell_type,
+    clusters = protected$tosti_cell_type,
     sample = protected$orig.ident) +
     scale_fill_manual(values = cell_type_palette) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 # plot susceptible
 plot_susceptible<-plotCellTypeProps(
-    clusters = susceptible$cell_type,
+    clusters = susceptible$tosti_cell_type,
     sample = susceptible$orig.ident) +
     scale_fill_manual(values = cell_type_palette) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) + NoLegend()
@@ -87,7 +87,7 @@ sccomp_result <-
         formula_composition = ~ protected,
         formula_variability = ~ protected,
         .sample = orig.ident,
-        .cell_group = cell_type,
+        .cell_group = tosti_cell_type,
         bimodal_mean_variability_association = TRUE,
         variational_inference = FALSE,
         cores = cpus
@@ -120,9 +120,9 @@ plots$boxplot
 ```{r}
 # Summarize the data by sample and cell type
 cell_type_counts_per_sample <- cell_info %>%
-  group_by(orig.ident, cell_type) %>%
+  group_by(orig.ident, tosti_cell_type) %>%
   summarise(count = n(), .groups = 'drop') %>%
-  pivot_wider(names_from = cell_type, values_from = count, values_fill = list(count = 0))
+  pivot_wider(names_from = tosti_cell_type, values_from = count, values_fill = list(count = 0))
 
 # Join and process as previously outlined
 cell_info_unique <- cell_info %>%

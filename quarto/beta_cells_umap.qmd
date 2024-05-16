@@ -1,0 +1,180 @@
+
+---
+title: "Beta cells: UMAP"
+date: "2024-5-8" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(Seurat)
+    library(Nebulosa)
+    library(targets)
+    library(ggplot2)
+    library(ggdist)
+    library(clusterProfiler)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_annotated_sketch)
+seurat_object <- load_seurat(seurat_object_annotated_sketch)
+DefaultAssay(seurat_object)<-"sketch"
+```
+
+::: {.callout-important}
+## Subsampled analysis  ("sketch-based")
+
+The figures here represent a subsample of 750 cells per donor, selected to preserve variation across cell states. This is done to speed up the analysis. The full set is forthcoming. 
+:::
+
+
+::: {.panel-tabset}
+
+## UMAP beta cell subclusters
+
+```{r}
+#| fig-cap: "Beta cells UMAP"
+#| fig-alt: "UMAP beta cells"
+#| fig-height: 10
+#| fig-width: 10
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(cell_type == "Beta") |>
+    Seurat::FindNeighbors() |>
+    Seurat::FindClusters(resolution = 0.5) 
+
+num_clusters <- length(unique(seurat_object[[]]$seurat_clusters))
+
+DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Beta cell subclusters") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+## Protected status
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Protected status") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+## Cell cycle
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Cell cycle") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+## Beta cells by donor
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+
+donor_palette <- generate_palette(seurat_object[[]]$orig.ident |> unique() |> length())
+
+DimPlot(seurat_object, group.by = "orig.ident", cols = donor_palette, label = FALSE) +
+    labs(title = "Donor") +
+    NoLegend() +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+::::
+
+## Beta cells by ER genes
+
+```{r }
+#| fig-width: 8
+#| fig-height: 30
+FeaturePlot(seurat_object, features = er_genes_of_interest, split.by = "protected", keep.scale = "feature") + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) + labs(title = "Protected status")
+```
+
+### Density plots
+
+```{r }
+#| fig-cap: "Beta cell subclusters"
+#| column: margin
+DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 8) + NoLegend() + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+seurat_object_protected <- subset(seurat_object, subset = protected == "TRUE")
+seurat_object_susceptable <- subset(seurat_object, subset = protected == "FALSE")
+pplot <- plot_density(seurat_object_protected, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
+splot <- plot_density(seurat_object_susceptable, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
+```
+
+::: {.panel-tabset}
+
+### Protected
+
+```{r}
+pplot
+```
+
+### Susceptible
+
+```{r}
+splot
+```
+
+:::
+
+## Marker genes
+
+```{r}
+#| fig-width: 7
+#| fig-height: 12
+markers <- FindAllMarkers(seurat_object, only.pos = TRUE)
+seurat_object <- ScaleData(seurat_object, features = rownames(seurat_object), verbose = FALSE)
+top10 <- markers %>%
+    group_by(cluster) %>%
+    dplyr::filter(avg_log2FC > 1) %>%
+    slice_head(n = 10) %>%
+    ungroup()
+DoHeatmap(seurat_object, features = top10$gene) + NoLegend()
+```
+
+## Enrichment analysis
+```{r}
+#| fig-width: 20
+#| fig-height: 20
+#| column: page
+#| eval: true
+
+beta <- SCP::RunDEtest(srt = seurat_object, group_by = "seurat_clusters", fc.threshold = 1, only.pos = FALSE)
+
+beta <- SCP::RunEnrichment(
+    srt = beta, group_by = "seurat_clusters", db = "GO_BP", species = "Homo_sapiens",
+    DE_threshold = "avg_log2FC > log2(1.5) & p_val_adj < 0.05"
+)
+# qs::qsave(beta, glue::glue("{analysis_cache}/data/beta_cell_clusters.qs"))
+# beta <- qs::qread(glue::glue("{analysis_cache}/data/beta_cell_clusters.qs"))
+SCP::EnrichmentPlot(
+    srt = beta, group_by = "seurat_clusters", plot_type = "bar"
+)
+```

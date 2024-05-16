@@ -61,7 +61,7 @@ make_seurat_pancdb_ref <- function(pancdb_metadata, protected_cohort, annotated_
         seurat_object,
         reduction = "umap_harmony",
         group.by = "tosti_cell_type",
-        cols = custom_palette,
+        cols = cell_type_palette,
         label = TRUE, shuffle = TRUE, alpha = 0.4,
         repel = TRUE, label.size = 4
     ) & NoLegend() & labs(title = "Tosti cell types") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
@@ -102,8 +102,8 @@ make_seurat_pancdb_ref <- function(pancdb_metadata, protected_cohort, annotated_
     ) & labs(title = "Disease") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), legend.position = c(0.8, 0.9))
     umap_harmony <- patchwork::wrap_plots((p1 | p2) / (p3 | p4) / (p5 | p6))
 
-    azimuth_vp <- scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "azimuth_label")
-    tosti_vp   <- scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "tosti_cell_type")
+    azimuth_vp <- scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "azimuth_label")
+    tosti_vp   <- scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "tosti_cell_type")
 
     #--------------------------------------------------------------------------------
     # Save results

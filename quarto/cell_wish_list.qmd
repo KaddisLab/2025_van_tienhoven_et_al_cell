@@ -95,7 +95,7 @@ seurat_object <- glue::glue("{analysis_cache}/data/NODM_seurat_object.qs") |> lo
 #| fig-cap: "Tosti et al cell types"
 #| fig-height: 10
 #| fig-width: 5
-scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "tosti_cell_type") & labs(title = "Tosti et al 2021")
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "tosti_cell_type") & labs(title = "Tosti et al 2021")
 ```
 
 Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S0016-5085(20)35399-3/fulltext)
@@ -106,7 +106,7 @@ Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S00
 #| fig-cap: "Azimuth cell types"
 #| fig-height: 10
 #| fig-width: 5
-scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "azimuth_cell_type") & labs(title = "Azimuth")
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "azimuth_cell_type") & labs(title = "Azimuth")
 ```
 
 Cell types from [Azimuth, Human Pancreas Reference Explorer](https://azimuth.hubmapconsortium.org/references/#Human%20-%20Pancreas)
@@ -117,10 +117,10 @@ Cell types from [Azimuth, Human Pancreas Reference Explorer](https://azimuth.hub
 #| fig-cap: "GPT cell types"
 #| fig-height: 10
 #| fig-width: 5
-scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = custom_palette, group.by = "gpt_cell_type_sketch") & labs(title = "GPT")
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "gpt_cell_type_sketch") & labs(title = "GPT")
 ```
 
-Cell types from [GPTCellType(https://www.nature.com/articles/s41592-024-02235-4)
+Cell types from [GPTCellType](https://www.nature.com/articles/s41592-024-02235-4)
 
 ::: 
 
@@ -527,7 +527,7 @@ b. In the UMAP, please overlay differentially expressed ER stress genes to see w
 ```{r }
 #| fig-cap: "Tosti et al cell types"
 #| column: margin
-DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = custom_palette) + NoLegend() + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette) + NoLegend() + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
 ```{r }
