@@ -85,6 +85,19 @@ DimPlot(seurat_object_NODM, group.by = "orig.ident", label = FALSE, cols = donor
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
+### Cell cycle
+
+```{r}
+#| fig-cap: "Cell cycle, all donors"
+#| fig-alt: "Cell cycle, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Cell cycle") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
 ### Sex
 ```{r}
 #| fig-cap: "Sex, NODM; pink = female, lightblue  = male"
@@ -169,6 +182,19 @@ DimPlot(seurat_object, group.by = "orig.ident", label = FALSE, cols = donor_pale
 
 DimPlot(seurat_object, group.by = "diabetes_status", label = FALSE, cols = diabetes_palette, reduction = "umap_harmony", shuffle = TRUE) +
     labs(title = "Diabetes status") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Cell cycle
+
+```{r}
+#| fig-cap: "Cell cycle, all donors"
+#| fig-alt: "Cell cycle, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap_harmony", shuffle = TRUE) +
+    labs(title = "Cell cycle") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 

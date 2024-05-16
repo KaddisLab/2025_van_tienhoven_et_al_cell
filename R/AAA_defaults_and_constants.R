@@ -62,7 +62,6 @@ cell_type_palette <- c(
 
 cell_cycle_palette <- c(G1 = "#1f77b4", S = "#ff7f0e", G2M = "#2ca02c")
 
-
 cell_type_markers <- c(
   "acinar" = "CPA1",
   "stellate" = "RSG10",
