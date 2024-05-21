@@ -31,7 +31,7 @@ seurat_merge <- function(seurat_objects, project_name) {
     gc()
     # Extract sample IDs and set them as names of the list elements
     names(seurat_list) <- sapply(seurat_list, function(obj) {
-        sample_id <- obj[["orig.ident"]][1, ]
+        sample_id <- Seurat::Project(obj)
         return(sample_id)
     })
 
