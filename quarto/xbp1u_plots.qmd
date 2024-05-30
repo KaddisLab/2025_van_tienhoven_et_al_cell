@@ -1,0 +1,251 @@
+
+---
+title: "XBP1u percent spliced in"
+date: "2024-5-23" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_annotated_full)
+seurat_object <- load_seurat(seurat_object_annotated_full)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM") 
+```
+
+
+## Per donor
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+
+expression <- seurat_object %>%
+    dplyr::mutate(protected = factor(protected)) %>%
+    dplyr::select(protected, sample_xbp1u_psi) |>
+    pivot_longer(
+        cols = -protected,
+        names_to = "gene",
+        values_to = "expression"
+    ) |>
+    dplyr::filter(expression > 0) |>
+    distinct()
+
+ggplot(expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
+    stat_slab(alpha = 0.2) +
+    stat_dots(position = "dodgejust") +
+    stat_pointinterval(col = "black", alpha = 0.6) +
+    facet_wrap(~gene, scales = "free_y") +
+    geom_signif(
+        test = "wilcox.test",
+        comparisons = list(c("TRUE", "FALSE")),
+        map_signif_level = TRUE,
+        margin_top = -0.4,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = median,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
+        color = "white",
+        hjust = 1.1,
+        vjust = 1.1
+    ) +
+    theme_classic() +
+    NoLegend() +
+    labs(
+        title = "Percent XBP1u, per donor",
+        x = "Protected Status",
+        y = "Percent of transcripts unspliced"
+    ) +
+    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## Per cell
+
+::: {.panel-tabset}
+
+## Beta cells
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+#| fig-cap: "Boxplots of spliced gene expression, indicating median values per cell. Non-expressing cells are excluded."
+beta_cells <- seurat_object |>
+    dplyr::filter(cell_type == "Beta")
+
+expression <- beta_cells %>%
+    dplyr::mutate(protected = factor(protected)) %>%
+    dplyr::select(protected, xbp1u_psi) |>
+    pivot_longer(
+        cols = -protected,
+        names_to = "gene",
+        values_to = "expression"
+    ) |>
+    dplyr::filter(expression > 0)
+
+ggplot(expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
+    stat_slab(alpha = 0.2) +
+    stat_dots(position = "dodgejust") +
+    stat_pointinterval(col = "black", alpha = 0.6) +
+    facet_wrap(~gene, scales = "free_y") +
+    geom_signif(
+        test = "wilcox.test",
+        comparisons = list(c("TRUE", "FALSE")),
+        map_signif_level = TRUE,
+        margin_top = -0.4,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = median,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
+        color = "white",
+        hjust = 1.1,
+        vjust = 1.1
+    ) +
+    theme_classic() +
+    NoLegend() +
+    labs(
+        title = "Percent XBP1u, per cell",
+        x = "Protected Status",
+        y = "Percent of transcripts unspliced"
+    ) +
+    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## Alpha cells
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+#| fig-cap: "Boxplots of unspliced gene expression, indicating median values per cell. Non-expressing cells are excluded."
+alpha_cells <- seurat_object |>
+    dplyr::filter(cell_type == "Alpha")
+
+expression <- alpha_cells %>%
+    dplyr::mutate(protected = factor(protected)) %>%
+    dplyr::select(protected, xbp1u_psi) |>
+    pivot_longer(
+        cols = -protected,
+        names_to = "gene",
+        values_to = "expression"
+    ) |>
+    dplyr::filter(expression > 0)
+
+ggplot(expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
+    stat_slab(alpha = 0.2) +
+    stat_dots(position = "dodgejust") +
+    stat_pointinterval(col = "black", alpha = 0.6) +
+    facet_wrap(~gene, scales = "free_y") +
+    geom_signif(
+        test = "wilcox.test",
+        comparisons = list(c("TRUE", "FALSE")),
+        map_signif_level = TRUE,
+        margin_top = -0.4,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = median,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
+        color = "white",
+        hjust = 1.1,
+        vjust = 1.1
+    ) +
+    theme_classic() +
+    NoLegend() +
+    labs(
+        title = "Percent XBP1u, per cell",
+        x = "Protected Status",
+        y = "Percent of transcripts unspliced"
+    ) +
+    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## All cells
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+#| fig-cap: "Boxplots of spliced gene expression, indicating median values per cell. Non-expressing cells are excluded."
+
+expression <- seurat_object %>%
+    dplyr::mutate(protected = factor(protected)) %>%
+    dplyr::select(protected, xbp1u_psi) |>
+    pivot_longer(
+        cols = -protected,
+        names_to = "gene",
+        values_to = "expression"
+    ) |>
+    dplyr::filter(expression > 0)
+
+ggplot(expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
+    stat_slab(alpha = 0.2) +
+    stat_dots(position = "dodgejust") +
+    stat_pointinterval(col = "black", alpha = 0.6) +
+    facet_wrap(~gene, scales = "free_y") +
+    geom_signif(
+        test = "wilcox.test",
+        comparisons = list(c("TRUE", "FALSE")),
+        map_signif_level = TRUE,
+        margin_top = -0.4,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = median,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
+        color = "white",
+        hjust = 1.1,
+        vjust = 1.1
+    ) +
+    theme_classic() +
+    NoLegend() +
+    labs(
+        title = "Percent XBP1u, per cell",
+        x = "Protected Status",
+        y = "Percent of transcripts unspliced"
+    ) +
+    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+::::
+

@@ -1,0 +1,154 @@
+
+---
+title: "Beta cells: DEG"
+date: "2024-5-30" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggrepel)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_sct_annotated)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+```
+
+## Differential expression
+
+```{r }
+bulk <- AggregateExpression(
+    seurat_object,
+    return.seurat = TRUE,
+    assays = "RNA",
+    group.by = c("cell_type", "orig.ident", "sample_sex")
+) |>
+    separate(.cell, into = c("cell_type", "orig.ident", "sample_sex"), sep = "_", remove = FALSE)
+
+beta.bulk <- subset(bulk, cell_type == "Beta")
+
+```
+
+::: {.panel-tabset}
+
+### DESeq2
+
+```{r }
+Idents(beta.bulk) <- "sample_sex"
+
+de_markers <- FindMarkers(beta.bulk,
+    ident.1 = "M", ident.2 = "F", test.use = "DESeq2",
+    verbose = F
+)
+
+de_markers$gene <- rownames(de_markers)
+
+ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
+    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
+    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
+    labs(
+        x = "Average Log2 Fold Change",
+        y = "-log10(Unadjusted p-value)",
+        title = "Beta-cell Differential Expression",
+        subtitle = "Comparison Female (F ←) vs Male (M →) cells",
+    ) +
+    geom_text_repel(
+        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
+        size = 3.5, # Slightly larger text size for readability
+        box.padding = 0.35, # Adjust padding around text to avoid overlap
+        point.padding = 0.5, # Adjust distance from points to text
+        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
+        color = "blue", # Change text color to blue for better visibility against the background
+        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
+        nudge_y = 0.05, # Nudge text up a bit for vertical separation
+        direction = "y" # Optimize text placement primarily in the vertical direction
+    ) +
+    theme(
+        plot.title = element_text(face = "bold"), # Bold title for emphasis
+        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
+        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
+        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
+        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
+    )
+
+```
+
+### Wilcoxon rank sum test
+
+```{r }
+de_markers <- FindMarkers(beta.bulk,
+    ident.1 = "M", ident.2 = "F", test.use = "wilcox", verbose = F
+)
+
+de_markers$gene <- rownames(de_markers)
+
+ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
+    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
+    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
+    labs(
+        x = "Average Log2 Fold Change",
+        y = "-log10(Unadjusted p-value)",
+        title = "Beta-cell Differential Expression",
+        subtitle = "Comparison Female (F ←) vs Male (M →) cells",
+    ) +
+    geom_text_repel(
+        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
+        size = 3.5, # Slightly larger text size for readability
+        box.padding = 0.35, # Adjust padding around text to avoid overlap
+        point.padding = 0.5, # Adjust distance from points to text
+        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
+        color = "blue", # Change text color to blue for better visibility against the background
+        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
+        nudge_y = 0.05, # Nudge text up a bit for vertical separation
+        direction = "y" # Optimize text placement primarily in the vertical direction
+    ) +
+    theme(
+        plot.title = element_text(face = "bold"), # Bold title for emphasis
+        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
+        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
+        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
+        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
+    )
+
+```
+
+::::
+
+
+## Harmony
+
+```{r }
+seurat_object|>
+dplyr::filter(cell_type == "Beta") |>
+    #Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("batch"), verbose = TRUE) |>
+    Seurat::RunPCA(verbose = FALSE) |>
+    harmony::RunHarmony(group.by.vars = "orig.ident", ncores = cpus, verbose = TRUE) |>
+    Seurat::FindNeighbors(reduction = "harmony", verbose = TRUE) |>
+    Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = TRUE) |>
+    Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = TRUE)
+```

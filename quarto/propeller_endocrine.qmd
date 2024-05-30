@@ -1,0 +1,213 @@
+
+---
+title: "Endocrine cell proportions"
+date: "2024-5-22" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(sccomp)
+    library(tidyseurat)
+    library(targets)
+    library(speckle)
+library(limma)
+library(ggplot2)
+library(gt)
+library(dplyr)
+library(tidyr)
+library(downloadthis)
+library(patchwork)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_annotated_full)
+seurat_object <- load_seurat(seurat_object_annotated_full)
+
+```
+
+## Propeller
+
+Plots of cell type proportions for protected and susceptible individuals.
+
+```{r}
+endocrine_cell_types <- c("Alpha", "Beta", "Delta", "Gamma", "Epsilon")
+cell_info <- seurat_object[[]] |>
+    dplyr::filter(orig.ident != "HPAP-019") |>
+    dplyr::filter(!is.na(cell_type)) |>
+    dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(cell_type %in% endocrine_cell_types)
+propeller(clusters = cell_info$cell_type, sample = cell_info$orig.ident,
+group = cell_info$protected)
+
+protected <- cell_info |> dplyr::filter(protected == TRUE) 
+susceptible <- cell_info |> dplyr::filter(protected == FALSE)
+
+# plot protected
+plot_protected<-plotCellTypeProps(
+    clusters = protected$cell_type,
+    sample = protected$orig.ident) +
+    scale_fill_manual(values = cell_type_palette) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+# plot susceptible
+plot_susceptible<-plotCellTypeProps(
+    clusters = susceptible$cell_type,
+    sample = susceptible$orig.ident) +
+    scale_fill_manual(values = cell_type_palette) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) + NoLegend()
+
+plot_protected
+
+plot_susceptible
+```
+
+## sccomp 
+
+Test for differential cell-type proportions between protected and susceptible individuals.
+
+```{r }
+sccomp_result <-
+    seurat_object |>
+    dplyr::mutate(protected = as.factor(c(protected))) |>
+    dplyr::filter(orig.ident != "HPAP-019") |> # enriched for b-cells
+    dplyr::filter(!is.na(cell_type)) |>
+    dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(cell_type %in% endocrine_cell_types) |>
+    sccomp::sccomp_estimate(
+        formula_composition = ~ protected,
+        formula_variability = ~ protected,
+        .sample = orig.ident,
+        .cell_group = cell_type,
+        bimodal_mean_variability_association = TRUE,
+        variational_inference = FALSE,
+        cores = cpus
+    ) |>
+    sccomp::sccomp_remove_outliers(cores = cpus) |> # Optional
+    sccomp::sccomp_test()
+
+plots <- sccomp_result |> plot()
+```
+
+```{r}
+#| fig-cap: "A plot of estimates of differential composition (c_) on the x-axis and differential variability (v_) on the y-axis. The error bars represent 95% credible intervals. The dashed lines represent the minimal effect that the hypothesis test is based on. An effect is labelled as significant if bigger than the minimal effect according to the 95% credible interval."
+plots$credible_intervals_1D
+```
+
+```{r}
+#| eval: FALSE
+#| code-fold: true
+#| fig-cap: "We can plot the relationship between abundance and variability. As we can see below, they are positively correlated, you also appreciate that this relationship is by model for single cell RNA sequencing data."
+plots$credible_intervals_2D
+```
+
+```{r}
+#| fig-cap: "A plot of cell type proportion, faceted by *protected*. \n The blue boxplots represent the posterior predictive check. If the model is likely to be descriptively adequate to the data, the blue box plot should roughly overlay with the black box plot, which represents the observed data. The colour coding represents the significant associations for composition and/or variability."
+plots$boxplot
+```
+
+## Cell type counts
+
+```{r}
+# Summarize the data by sample and cell type
+cell_type_counts_per_sample <- cell_info %>%
+  group_by(orig.ident, cell_type) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  pivot_wider(names_from = cell_type, values_from = count, values_fill = list(count = 0))
+
+# Join and process as previously outlined
+cell_info_unique <- cell_info %>%
+  select(orig.ident, protected) %>%
+  distinct()
+
+cell_type_counts_per_sample <- cell_type_counts_per_sample %>%
+  left_join(cell_info_unique, by = "orig.ident")
+
+cell_type_counts_per_sample$protected <- ifelse(cell_type_counts_per_sample$protected, "Protected", "Susceptible")
+
+# Add a total column
+cell_type_counts_per_sample <- cell_type_counts_per_sample %>%
+  rowwise() %>%
+  mutate(Total = sum(c_across(-c(orig.ident, protected)), na.rm = TRUE)) %>%
+  ungroup()
+
+cell_type_counts_per_sample|>
+ download_this(
+    output_name = "cell_type_counts_per_sample",
+    output_extension = ".csv",
+    button_label = "Download data",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+  )
+```
+
+```{r}
+# Prepare the data and select numeric columns
+numeric_columns <- cell_type_counts_per_sample %>%
+    select(-orig.ident, -protected) %>%
+    names()
+
+# Create the gt table with the prepared settings
+cell_type_counts_per_sample %>%
+    group_by(protected) %>%
+    gt(groupname_col = "protected") %>%
+    summary_rows(
+        groups = everything(),
+        columns = numeric_columns,
+        fns = list(Total = ~ sum(.x, na.rm = TRUE))
+    ) %>%
+    tab_header(
+        title = "Cell Type Counts per Sample",
+        subtitle = "Grouped by Protection Status"
+    ) %>%
+    cols_label(
+        orig.ident = "Sample ID",
+        protected = "Protection Status"
+    ) %>%
+    fmt_number(
+        columns = numeric_columns,
+        decimals = 0
+    ) %>%
+    tab_style(
+        style = list(
+            cell_text(weight = "bold")
+        ),
+        locations = cells_body(
+            columns = "Total"
+        )
+    ) %>%
+    tab_style(
+        style = list(
+            cell_text(weight = "bold")
+        ),
+        locations = cells_summary(
+            columns = numeric_columns
+        )
+    ) %>%
+    tab_style(
+        style = list(
+            cell_text(size = px(8)) # Apply smaller font size
+        ),
+        locations = cells_body(
+            columns = "orig.ident"
+        )
+    ) %>%
+    tab_options(
+        table.font.size = px(11) # Set the overall font size for the rest of the table
+    ) 
+```

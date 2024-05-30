@@ -1,0 +1,74 @@
+
+percent_spliced_per_cell <- function(path, gene_name) {
+
+require(dplyr)
+require(Matrix)
+require(readr)
+require(stringr)
+require(qs)
+require(tibble)
+require(glue)
+
+
+    orig.ident <- stringr::str_extract(path, "HPAP-\\d+")
+    message("Start calculating ", gene_name, " ratio per cell for sample ", orig.ident)
+
+    # Correct the paths
+    spliced_path <- gsub("SJ/Summary.csv", "Velocyto/filtered/spliced.mtx", path, fixed = TRUE)
+    unspliced_path <- gsub("SJ/Summary.csv", "Velocyto/filtered/unspliced.mtx", path, fixed = TRUE)
+    barcodes_path <- gsub("SJ/Summary.csv", "Velocyto/filtered/barcodes.tsv", path, fixed = TRUE)
+    features_path <- gsub("SJ/Summary.csv", "Velocyto/filtered/features.tsv", path, fixed = TRUE)
+
+    if (!file.exists(spliced_path) || !file.exists(unspliced_path) || !file.exists(barcodes_path) || !file.exists(features_path)) {
+        stop("One or more files do not exist. Please check the paths.")
+    }
+
+    spliced <- as(Matrix::readMM(spliced_path), "CsparseMatrix")
+    unspliced <- as(Matrix::readMM(unspliced_path), "CsparseMatrix")
+
+    barcodes <- readr::read_lines(barcodes_path)
+    features <- readr::read_tsv(features_path, col_names = c("gene_id", "gene_name", "type"), show_col_types = FALSE, progress = FALSE)
+    message("Loaded spliced and unspliced matrices")
+
+    # Identify the row index for the nominated gene in the features table
+    gene_index <- which(features$gene_name == gene_name)
+
+    if (length(gene_index) == 0) {
+        stop(gene_name, " not found in the features.")
+    }
+
+    # Extract spliced and unspliced counts for the nominated gene
+    spliced_counts <- spliced[gene_index, , drop = FALSE]
+    unspliced_counts <- unspliced[gene_index, , drop = FALSE]
+
+    # Calculate the ratio (spliced / total)
+    total_counts <- spliced_counts + unspliced_counts
+    gene_ratio <- (spliced_counts / total_counts) * 100
+    message("Calculated ratio for ", gene_name, " per cell")
+
+ratio_tibble <- tibble(
+    cell = barcodes,
+    gene_ratio = as.numeric(gene_ratio),
+    spliced_counts = as.numeric(spliced_counts),
+    unspliced_counts = as.numeric(unspliced_counts),
+    total_counts = as.numeric(total_counts)
+) %>%
+    # Remove rows with NA values
+    filter(!is.na(gene_ratio)) %>%
+    mutate(cell = glue("{orig.ident}_{cell}-1")) %>%
+    # Append gene_name to every column name
+    rename_with(~ paste0(., "_", gene_name), -cell)
+
+    ratio_tibble_path <- glue::glue("{analysis_cache}/percent_spliced_{gene_name}_out/{orig.ident}_{gene_name}_ratio_per_cell.csv")
+    dir.create(dirname(ratio_tibble_path), recursive = TRUE, showWarnings = FALSE)
+    write.csv(ratio_tibble, ratio_tibble_path, row.names = FALSE, quote = FALSE)
+    message("Saved ratio tibble")
+
+    return(ratio_tibble_path)
+}
+
+# # Example usage with the provided path
+# path <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/starsolo_out/HPAP-019/Solo.out/SJ/Summary.csv"
+# result_tibble_path <- percent_spliced_per_cell(path, "INS")
+# result_tibble <- readr::read_csv(result_tibble_path)
+# print(result_tibble)
