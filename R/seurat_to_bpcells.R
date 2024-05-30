@@ -32,7 +32,7 @@
 seurat_to_bpcells <- function(seurat_object) {
 
     seurat_object <- load_seurat(seurat_object)
-    sample_id <- seurat_object[["orig.ident"]][1, ]
+    sample_id <- Seurat::Project(seurat_object)
     metadata <- seurat_object[[]] |> 
         dplyr::select(
             dplyr::any_of(

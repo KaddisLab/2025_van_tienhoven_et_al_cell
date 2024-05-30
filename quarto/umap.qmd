@@ -33,13 +33,6 @@ seurat_object_NODM <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
 ```
 
-::: {.callout-important}
-## Subsampled analysis  ("sketch-based")
-
-The figures here represent a subsample of 750 cells per donor, selected to preserve variation across cell states. This is done to speed up the analysis. The full set is forthcoming. 
-:::
-
-
 ## Non-diabetic donors
 
 ::: {.panel-tabset}
@@ -52,7 +45,7 @@ The figures here represent a subsample of 750 cells per donor, selected to prese
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object_NODM, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap_harmony") +
+DimPlot(seurat_object_NODM, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "harmony_full_UMAP") +
     NoLegend() +
     labs(title = "Tosti et al cell types") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
@@ -61,11 +54,11 @@ DimPlot(seurat_object_NODM, group.by = "tosti_cell_type", label = TRUE, cols = c
 ### Protected status
 
 ```{r}
-#| fig-cap: "Protected status, NODM; red = susceptable, blue = protected"
+#| fig-cap: "Protected status, NODM; red = susceptible, blue = protected"
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object_NODM, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object_NODM, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Protected status") +
     theme(legend.position = c(0.8, 0.9), # Adjust these values as needed
     axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
@@ -73,13 +66,13 @@ DimPlot(seurat_object_NODM, group.by = "protected", label = FALSE, cols = c("red
 
 ### Donor
 ```{r}
-#| fig-cap: "Protected status, NODM; red = susceptable, blue = protected"
+#| fig-cap: "Protected status, NODM; red = susceptible, blue = protected"
 #| fig-height: 10
 #| fig-width: 10
 
 donor_palette <- generate_palette(seurat_object[[]]$orig.ident |> unique() |> length())
 
-DimPlot(seurat_object_NODM, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object_NODM, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "harmony_full_UMAP", shuffle = TRUE) +
     NoLegend() +
     labs(title = "Protected status") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
@@ -93,7 +86,7 @@ DimPlot(seurat_object_NODM, group.by = "orig.ident", label = FALSE, cols = donor
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object_NODM, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object_NODM, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Cell cycle") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -104,7 +97,7 @@ DimPlot(seurat_object_NODM, group.by = "cell_cycle", label = FALSE, cols = cell_
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object_NODM, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object_NODM, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Sex") +
     theme(
         axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), legend.position = c(0.8, 0.9) # Adjust these values as needed
@@ -117,7 +110,7 @@ DimPlot(seurat_object_NODM, group.by = "sample_sex", label = FALSE, cols = c("#F
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "umap_harmony") +
+FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "harmony_full_UMAP") +
     labs(title = "Age") +
     theme(
         axis.text.x = element_blank(),
@@ -141,7 +134,7 @@ FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "umap_harmo
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap_harmony") +
+DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "harmony_full_UMAP") +
     NoLegend() +
     labs(title = "Tosti et al cell types") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
@@ -150,11 +143,11 @@ DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_t
 ### Protected status
 
 ```{r}
-#| fig-cap: "Protected status, all donors; red = susceptable, blue = protected"
+#| fig-cap: "Protected status, all donors; red = susceptible, blue = protected"
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Protected status") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -166,7 +159,7 @@ DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "b
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Donor ID") +
     NoLegend() +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
@@ -180,7 +173,7 @@ DimPlot(seurat_object, group.by = "orig.ident", label = FALSE, cols = donor_pale
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "diabetes_status", label = FALSE, cols = diabetes_palette, reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "diabetes_status", label = FALSE, cols = diabetes_palette, reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Diabetes status") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -193,7 +186,7 @@ DimPlot(seurat_object, group.by = "diabetes_status", label = FALSE, cols = diabe
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Cell cycle") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -204,7 +197,7 @@ DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "harmony_full_UMAP", shuffle = TRUE) +
     labs(title = "Sex") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -216,7 +209,7 @@ DimPlot(seurat_object, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "umap_harmony") +
+FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "harmony_full_UMAP") +
     labs(title = "Age") +
     theme(
         axis.text.x = element_blank(),

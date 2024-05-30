@@ -25,23 +25,27 @@ suppressPackageStartupMessages({
     library(ggplot2)
     library(ggdist)
     library(clusterProfiler)
+    library(SCP)
+    library(harmony)
+    library(downloadthis)
 })
 
 tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_annotated_sketch)
-seurat_object <- load_seurat(seurat_object_annotated_sketch)
-DefaultAssay(seurat_object)<-"sketch"
+tar_load(seurat_object_annotated_full)
+seurat_object <- load_seurat(seurat_object_annotated_full)
+DefaultAssay(seurat_object) <- "RNA"
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+
+total_endocrine_cells_per_donor <- seurat_object |>
+    dplyr::filter(cell_type %in% c("Alpha", "Beta", "Delta", "Gamma", "Epsilon")) |>
+    dplyr::count(orig.ident) |>
+    dplyr::rename(donor = orig.ident, total_count = n)
 ```
-
-::: {.callout-important}
-## Subsampled analysis  ("sketch-based")
-
-The figures here represent a subsample of 750 cells per donor, selected to preserve variation across cell states. This is done to speed up the analysis. The full set is forthcoming. 
-:::
-
 
 ::: {.panel-tabset}
 
@@ -54,24 +58,28 @@ The figures here represent a subsample of 750 cells per donor, selected to prese
 #| fig-width: 10
 
 seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM") |>
     dplyr::filter(cell_type == "Beta") |>
-    Seurat::FindNeighbors() |>
-    Seurat::FindClusters(resolution = 0.5) 
+    Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("batch"), verbose = FALSE) |>
+    Seurat::RunPCA(verbose = FALSE) |>
+    harmony::RunHarmony(group.by.vars = "batch", ncores = cpus, verbose = FALSE) |>
+    Seurat::FindNeighbors(reduction = "harmony", verbose = FALSE) |>
+    Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = FALSE) |>
+    Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = FALSE)
 
 num_clusters <- length(unique(seurat_object[[]]$seurat_clusters))
 
-DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE) +
     labs(title = "Beta cell subclusters") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
 ## Protected status
+
 ```{r}
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap", shuffle = TRUE) +
     labs(title = "Protected status") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -82,7 +90,7 @@ DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "b
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap_harmony", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap", shuffle = TRUE) +
     labs(title = "Cell cycle") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -95,7 +103,7 @@ DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle
 
 donor_palette <- generate_palette(seurat_object[[]]$orig.ident |> unique() |> length())
 
-DimPlot(seurat_object, group.by = "orig.ident", cols = donor_palette, label = FALSE) +
+DimPlot(seurat_object, group.by = "orig.ident", cols = donor_palette, label = FALSE, reduction = "umap", shuffle = TRUE) +
     labs(title = "Donor") +
     NoLegend() +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
@@ -103,12 +111,69 @@ DimPlot(seurat_object, group.by = "orig.ident", cols = donor_palette, label = FA
 
 ::::
 
+## Number of cells per subcluster, by donor and protected status
+
+::: {.panel-tabset}
+
+## Number of beta cells
+
+```{r}
+# Count unique combinations and rename columns
+data <- seurat_object |>
+    dplyr::count(seurat_clusters, orig.ident, protected) |>
+    dplyr::rename(cluster = seurat_clusters, donor = orig.ident, count = n)
+
+# Ensure donor factor levels are consistent within each protected status
+data <- data |>
+    dplyr::mutate(donor = factor(donor, levels = unique(data$donor)))
+
+# Plot the data with faceting by 'protected' status
+ggplot(data, aes(x = cluster, y = donor, fill = count)) +
+    geom_tile() +
+    scale_fill_viridis_c() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Number of Beta cells per cluster for each donor", y = "Donor") +
+    facet_grid(protected ~ ., scales = "free_y", space = "free_y") +
+    theme(strip.text.y = element_text(angle = 0))
+```
+
+## Proportion of endocrine cells
+```{r}
+# Count the number of Beta cells per donor per cluster
+beta_cells_per_cluster <- seurat_object |>
+    dplyr::count(seurat_clusters, orig.ident, protected) |>
+    dplyr::rename(cluster = seurat_clusters, donor = orig.ident, beta_count = n)
+
+# Merge total cell counts with beta cell counts
+data <- beta_cells_per_cluster |>
+    dplyr::left_join(total_endocrine_cells_per_donor, by = "donor") |>
+    dplyr::mutate(proportion = beta_count / total_count)
+
+# Ensure donor factor levels are consistent within each protected status
+data <- data |>
+    dplyr::mutate(donor = factor(donor, levels = unique(data$donor)))
+
+# Plot the data with faceting by 'protected' status
+ggplot(data, aes(x = cluster, y = donor, fill = proportion)) +
+    geom_tile() +
+    scale_fill_viridis_c() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Beta cells as a proportion of endocrine cells, per Cluster for Each Donor", y = "Donor", fill = "Proportion") +
+    facet_grid(protected ~ ., scales = "free_y", space = "free_y") +
+    theme(strip.text.y = element_text(angle = 0))
+    
+```
+
+::::
+
+TRUE = Protected (G/G), FALSE = Susceptible (G/A)
+
 ## Beta cells by ER genes
 
 ```{r }
 #| fig-width: 8
 #| fig-height: 30
-FeaturePlot(seurat_object, features = er_genes_of_interest, split.by = "protected", keep.scale = "feature") + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) + labs(title = "Protected status")
+FeaturePlot(seurat_object, features = er_genes_of_interest, split.by = "protected", keep.scale = "feature", reduction = "umap") + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) + labs(title = "Protected status")
 ```
 
 ### Density plots
@@ -123,9 +188,9 @@ DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 
 #| fig-width: 10
 #| fig-height: 10
 seurat_object_protected <- subset(seurat_object, subset = protected == "TRUE")
-seurat_object_susceptable <- subset(seurat_object, subset = protected == "FALSE")
+seurat_object_susceptible <- subset(seurat_object, subset = protected == "FALSE")
 pplot <- plot_density(seurat_object_protected, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
-splot <- plot_density(seurat_object_susceptable, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
+splot <- plot_density(seurat_object_susceptible, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
 ```
 
 ::: {.panel-tabset}
@@ -157,6 +222,22 @@ top10 <- markers %>%
     slice_head(n = 10) %>%
     ungroup()
 DoHeatmap(seurat_object, features = top10$gene) + NoLegend()
+
+top20 <- markers %>%
+    group_by(cluster) %>%
+    dplyr::filter(avg_log2FC > 1) %>%
+    slice_head(n = 20) %>%
+    ungroup()
+
+top20 |> download_this(
+    output_name = "top_20_beta_cell_subcluster_markers",
+    output_extension = ".csv",
+    button_label = "Download top 20 subcluster markers",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+)
+
 ```
 
 ## Enrichment analysis
@@ -164,7 +245,7 @@ DoHeatmap(seurat_object, features = top10$gene) + NoLegend()
 #| fig-width: 20
 #| fig-height: 20
 #| column: page
-#| eval: true
+#| eval: false
 
 beta <- SCP::RunDEtest(srt = seurat_object, group_by = "seurat_clusters", fc.threshold = 1, only.pos = FALSE)
 

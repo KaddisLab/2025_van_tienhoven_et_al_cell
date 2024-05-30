@@ -37,7 +37,7 @@ pancdb_metadata %>%
       geom_text(stat = 'count', aes(label = ..count..),
         position = position_dodge(width = 0.9), vjust = -0.5, show.legend = FALSE) +
       scale_fill_manual(values = diabetes_palette) +
-      scale_alpha_manual(values = c(`FALSE` = 0.5, `TRUE` = 1), labels = c("Susceptable", "Protected")) +  # Set the alpha transparency for protected status
+      scale_alpha_manual(values = c(`FALSE` = 0.5, `TRUE` = 1), labels = c("susceptible", "Protected")) +  # Set the alpha transparency for protected status
       labs(x = "Disease Status", y = "Count", title = "Disease Status by Cohort", fill = "Disease Status") + theme_classic() 
 ```
 

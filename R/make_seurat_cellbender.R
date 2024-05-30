@@ -2,7 +2,7 @@
 #'
 #' This function reads HDF5 formatted output from CellBender and a CellRanger run folder
 #' to create a merged Seurat object. The function also adds QC metrics and renames cells
-#' using sample identifiers.
+#' using sample identifiers, and filters out cells with fewer than 200 features.
 #'
 #' @param cellbender_h5 The file path to the CellBender output in HDF5 format.
 #' @param cellranger_run_folder The directory of the CellRanger run.
@@ -24,6 +24,7 @@ make_seurat_cellbender <- function(cellbender_h5, cellranger_run_folder, sample_
     sample_name <- sample_metadata$sample_name[which(sample_metadata$sample_id == sample_id)]
 
     seurat_object <- scCustomize::Create_CellBender_Merged_Seurat(
+        min_features = 200,
         scCustomize::Read_CellBender_h5_Mat(cellbender_h5),
         Seurat::Read10X_h5(glue::glue("{cellranger_run_folder}/outs/filtered_feature_bc_matrix.h5"))
     ) |> suppressWarnings()

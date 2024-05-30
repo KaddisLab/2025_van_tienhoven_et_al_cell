@@ -26,7 +26,7 @@
 #' @importFrom Seurat AddMetaData PercentageFeatureSet
 #' @importFrom Matrix colSums
 #' @export
-seurat_add_cell_metrics <- function(seurat_object) {
+seurat_add_cell_metrics_OLD <- function(seurat_object) {
         
         seurat_object <- load_seurat(seurat_object) |>
             Seurat::AddMetaData(metadata = data.frame(
@@ -54,6 +54,48 @@ seurat_add_cell_metrics <- function(seurat_object) {
         return(seurat_object)
 }
 
+seurat_add_cell_metrics <- function(seurat_object) {
+    seurat_object <- load_seurat(seurat_object)
+
+    # Calculate percentages
+    percent_mt <- Seurat::PercentageFeatureSet(seurat_object, pattern = "^MT-")
+    percent_rb <- Seurat::PercentageFeatureSet(seurat_object, pattern = "^RP[SL][[:digit:]]|^RPLP[[:digit:]]|^RPSA")
+    percent_hb <- Seurat::PercentageFeatureSet(seurat_object, pattern = "^HB[^(P)]")
+    percent_pl <- Seurat::PercentageFeatureSet(seurat_object, pattern = "^PECAM1|^PF4")
+    percent_xist <- Seurat::PercentageFeatureSet(seurat_object, pattern = "^XIST")
+
+    # Calculate percent_chrY
+    if (sum(rownames(seurat_object[["RNA"]]$counts) %in% chrY_genes) > 2) {
+        percent_chrY <- (Matrix::colSums(seurat_object[["RNA"]]$counts[rownames(seurat_object[["RNA"]]$counts) %in% chrY_genes, ]) / Matrix::colSums(seurat_object[["RNA"]]$counts)) * 100
+    } else if (sum(rownames(seurat_object[["RNA"]]$counts) %in% chrY_genes) == 1) {
+        percent_chrY <- Seurat::PercentageFeatureSet(seurat_object, pattern = chrY_genes[chrY_genes %in% rownames(seurat_object[["RNA"]]$counts)])
+    } else {
+        percent_chrY <- rep(0, ncol(seurat_object))
+    }
+
+    # Replace NAs with 0
+    percent_mt[is.na(percent_mt)] <- 0
+    percent_rb[is.na(percent_rb)] <- 0
+    percent_hb[is.na(percent_hb)] <- 0
+    percent_pl[is.na(percent_pl)] <- 0
+    percent_xist[is.na(percent_xist)] <- 0
+    percent_chrY[is.na(percent_chrY)] <- 0
+
+    # Combine all metrics into a data frame
+    metrics <- data.frame(
+        percent_mt,
+        percent_rb,
+        percent_hb,
+        percent_pl,
+        percent_xist,
+        percent_chrY
+    )
+
+    # Add metadata to the Seurat object
+    seurat_object <- Seurat::AddMetaData(seurat_object, metadata = metrics)
+
+    return(seurat_object)
+}
 
 #' Quick QC Filtering for Seurat Objects
 #'

@@ -23,11 +23,16 @@ make_annotated_seurat_object <- function(seurat_object,
 
     seurat_object <- load_seurat(seurat_object)
     cell_metadata <- cell_metadata |>
-        dplyr::select(c(cell, cell_cycle = "Phase", tosti_cell_type = "pruned.labels", cell_type, hpap_celltype, hpap_clusters = "cluster_labels", seurat_clusters = "manual_clusters")) |>
+        dplyr::select(c(cell, cell_cycle = "Phase", tosti_cell_type = "pruned.labels",
+        cell_type, hpap_celltype, hpap_clusters = "cluster_labels", seurat_clusters = "manual_clusters",
+        xbp1u_psi = xbp1_psi, gene_ratio_INS, gene_ratio_XBP1, gene_ratio_GAPDH)) |>
         tibble::column_to_rownames(var = "cell")
 
     sample_metadata <- sample_metadata |>
-        select(c(sample_name = donor_id, sample_sex, sample_age, sample_ethnicity, diabetes_status, batch, protected, rs3842752_consensus, rs3842753_consensus, rs689_consensus))
+        select(c(
+            sample_name = donor_id, sample_sex, sample_age, sample_ethnicity, diabetes_status,
+            batch, protected, rs3842752_consensus, rs3842753_consensus, rs689_consensus,
+            sample_xbp1u_psi = xbp1u_psi))
 
     seurat_object <- Seurat::AddMetaData(
         object = seurat_object,

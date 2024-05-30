@@ -7,7 +7,6 @@
 jobs/*
 logs/*
 
-
 R.old
 analysis_cache
 .Rprofile
@@ -21,6 +20,5 @@ quarto/**
 !quarto/**/*.sh
 !quarto/**/*.yaml
 
-
-
-
+HPAP113_velocity_seurat_object.qs
+plot_sct_protected.png

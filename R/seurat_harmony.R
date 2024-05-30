@@ -23,6 +23,7 @@ seurat_sketch_harmony <- function(seurat_object, batch = "batch", pancdb_metadat
     seurat_object[["sketch"]] <- split(seurat_object[["sketch"]], f = seurat_object$batch) 
 
     # Run PCA
+    #TODO use SCTransform, add vars_to_regress as a parameter
     seurat_object <- Seurat::NormalizeData(seurat_object) |>
         Seurat::FindVariableFeatures() |>
         Seurat::ScaleData() |>

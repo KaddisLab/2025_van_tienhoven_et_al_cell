@@ -14,7 +14,6 @@ seurat_azimuth <- function(query_seurat_object, azimuth_reference_path) {
     # https://satijalab.github.io/azimuth/articles/run_azimuth_tutorial.html
     set.seed(42)
     require(Seurat)
-    options(parallelly.availableCores.methods = "Slurm")
     hprcc::init_multisession()
 
     query_seurat_object <- load_seurat(query_seurat_object) 
@@ -23,7 +22,7 @@ seurat_azimuth <- function(query_seurat_object, azimuth_reference_path) {
     
     azimuth <- Azimuth::RunAzimuth(query_seurat_object, reference = azimuth_reference)
 
-    sample_id <- query_seurat_object@meta.data$orig.ident[1]
+    sample_id <- query_seurat_object|> Seurat::Project()
 
     plot_azimuth <- DimPlot(azimuth, group.by = "predicted.annotation.l1", cols = cell_type_palette, label = TRUE, label.size = 4, repel = TRUE, reduction = "ref.umap", shuffle = TRUE) +
         NoLegend() + 

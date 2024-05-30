@@ -19,7 +19,6 @@
 #' merged_path <- seurat_merge(seurat_paths, project_name)
 #' }
 seurat_merge <- function(seurat_objects, project_name) {
-    options(parallelly.availableCores.methods = "Slurm")
     hprcc::init_multisession()
 
     message("Loading objects to list...")
@@ -42,6 +41,7 @@ seurat_merge <- function(seurat_objects, project_name) {
     rm(seurat_list)
     gc()
     message("Merged size: ", format(object.size(object), units = "Gb"))
+
     #Join all layers in object
     for (assay in names(object@assays)) {
         Seurat::DefaultAssay(object) <- assay

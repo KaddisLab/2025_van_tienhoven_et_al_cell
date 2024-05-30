@@ -132,7 +132,7 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20
                         n.genes.lower.bound = 200, percent.mito.upper.bound = 15, percent.rb.lower.bound = 5, do.filter = TRUE) {
     message("Loading Seurat object", seurat_object)
     seurat_object <- load_seurat(seurat_object)
-    sample_id <- seurat_object[[]]$orig.ident[1]
+    sample_id <- Seurat::Project(seurat_object)
     if (!is.data.frame(scDblFinder_out)) {scDblFinder_out <- read.csv(scDblFinder_out, stringsAsFactors = FALSE)}
     scDblFinder_out <- scDblFinder_out[match(colnames(seurat_object), scDblFinder_out$cell), ]
     message("Loaded scDblFinder output for ", sample_id)
@@ -272,7 +272,7 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20
             keep_cells <- df.qc$passed.qc
         }
         seurat_object <- subset(seurat_object, cells = colnames(seurat_object)[keep_cells])
-        sample_id <- seurat_object$orig.ident[1]
+
         seurat_object_path <- glue::glue("{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs")
         dir.create(dirname(seurat_object_path), showWarnings = FALSE, recursive = TRUE)
         qs::qsave(seurat_object, file = seurat_object_path)

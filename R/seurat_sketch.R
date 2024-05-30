@@ -20,7 +20,7 @@
 #' @importFrom glue glue
 seurat_sketch <- function(seurat_object, n_cells = 750) {
     object <- load_seurat(seurat_object)
-    sample_id <- object[["orig.ident"]][1, ]
+    sample_id <- Seurat::Project(object)
     object <- Seurat::NormalizeData(object)
     object <- Seurat::FindVariableFeatures(object, verbose = FALSE)
     #  Sample representative cells from each dataset
@@ -28,7 +28,8 @@ seurat_sketch <- function(seurat_object, n_cells = 750) {
         object = object,
         ncells = n_cells,
         method = "LeverageScore",
-        sketched.assay = "sketch"
+        sketched.assay = "sketch",
+        seed = 42
     )
     object_path <- glue::glue("{analysis_cache}/seurat_sketch_out/{sample_id}_{n_cells}_cells.qs")
     dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)

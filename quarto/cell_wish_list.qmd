@@ -79,10 +79,10 @@ tar_load(c(pancdb_metadata_gt, merged_seurat_sketch_750, integrated_seurat_sketc
 #     RunPCA(features = VariableFeatures(object = .)) %>%
 #     RunUMAP(dims = 1:20)
 # # -------- SAVE OBJECTS --------------------------------
-# qs::qsave(all_samples_seurat_object, glue::glue("{analysis_cache}/data/all_samples_seurat_object.qs"))
-# qs::qsave(seurat_object_NODM, glue::glue("{analysis_cache}/data/NODM_seurat_object.qs"))
-seurat_object <- glue::glue("{analysis_cache}/data/NODM_seurat_object.qs") |> load_seurat()
-# seurat_object_all <- glue::glue("{analysis_cache}/data/all_samples_seurat_object.qs") |> load_seurat()
+# qs::qsave(all_samples_seurat_object, glue::glue("{analysis_cache}/data/all_samples_seurat_object_for_cellwishlist_tmp.qs"))
+# qs::qsave(seurat_object_NODM, glue::glue("{analysis_cache}/data/NODM_seurat_object_for_cellwishlist_tmp.qs"))
+seurat_object <- glue::glue("{analysis_cache}/data/NODM_seurat_object_for_cellwishlist_tmp.qs") |> load_seurat()
+# seurat_object_all <- glue::glue("{analysis_cache}/data/all_samples_seurat_object_for_cellwishlist_tmp.qs") |> load_seurat()
 ```
 
 ## Cell types
@@ -421,7 +421,7 @@ ggplot(bulk.beta.de, aes(x = avg_log2FC, y = -log10(p_val))) +
         x = "Average Log2 Fold Change",
         y = "-log10(Unadjusted p-value)",
         title = "Beta-cell Differential Expression",
-        subtitle = "Comparison of Protected (->) v Susceptable (<-)"
+        subtitle = "Comparison of Protected (->) v susceptible (<-)"
     ) +
     geom_text_repel(
         aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
@@ -466,7 +466,7 @@ de_markers_sorted %>%
         p_val = "P-value",
         avg_log2FC = "Average Log2 Fold Change",
         pct.1 = "Percent detected Protected",
-        pct.2 = "Percent detected Susceptable",
+        pct.2 = "Percent detected susceptible",
         p_val_adj = "Adjusted P-value",
         gene = "Gene"
     ) %>%
@@ -536,9 +536,9 @@ DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_t
 #| column: page
 # FeaturePlot(seurat_object, features = er_genes_of_interest, split.by = "protected", keep.scale = "feature") + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 seurat_object_protected <- subset(seurat_object, subset = protected == "TRUE")
-seurat_object_susceptable <- subset(seurat_object, subset = protected == "FALSE")
+seurat_object_susceptible <- subset(seurat_object, subset = protected == "FALSE")
 pplot <- plot_density(seurat_object_protected, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
-splot <- plot_density(seurat_object_susceptable, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
+splot <- plot_density(seurat_object_susceptible, features = er_genes_of_interest) + theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) & NoLegend()
 ```
 
 ::: {.panel-tabset}
@@ -549,7 +549,7 @@ splot <- plot_density(seurat_object_susceptable, features = er_genes_of_interest
 pplot
 ```
 
-### Susceptable
+### susceptible
 
 ```{r}
 splot

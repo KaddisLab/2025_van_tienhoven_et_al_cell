@@ -14,14 +14,22 @@ book:
     - cell_wish_list.qmd
     - pancdb_metadata.qmd
     - umap.qmd
-    - beta_cells_DE.qmd
+#    - beta_cells_DE_rs3842753.qmd
+    - beta_cells_DE_rs3842752.qmd
+   # - beta_cells_DE_rs689.qmd
     - beta_cells_umap.qmd
-    - beta_cells_boxplots.qmd
-    - alpha_cells_boxplots.qmd
-    - acinar_cells_boxplots.qmd
-    - ductal_cells_boxplots.qmd
+    - boxplots_beta_cells.qmd
+    - boxplots_alpha_cells.qmd
+    - boxplots_delta_cells.qmd
+    - boxplots_gamma_cells.qmd
+    - boxplots_acinar_cells.qmd
+    - boxplots_ductal_cells.qmd
+    - boxplots_other_cells.qmd
+    - xbp1u_plots.qmd
+    - spliced_plots.qmd
     - violin.qmd
     - propeller.qmd
+    - propeller_endocrine.qmd
     - ins_snps.qmd
     - references.qmd
 

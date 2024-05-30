@@ -2,7 +2,11 @@
 
 ::: {.callout-note appearance="simple"}
 
-## Data published in Nature Metabolism
+## Literature
+
+Massarenti et al [Int. J. Mol. Sci. 2022, 23:6481](https://www.mdpi.com/1422-0067/23/12/6481)
+
+## HPAP Data published in Nature Metabolism
 
 - Modeling type 1 diabetes progression using machine learning and single-cell transcriptomic measurements in human islets [Cell Reports Medicine, April 26, 2024](https://www.cell.com/cell-reports-medicine/fulltext/S2666-3791(24)00204-0)
 

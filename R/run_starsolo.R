@@ -9,7 +9,7 @@ run_starsolo <- function(cellranger_folder, technology, ref_dir, out = NULL) {
         cpus <- 2
     }
     bam_file <- glue::glue("{cellranger_folder}/outs/possorted_genome_bam.bam")
-    if (technology == "10XV2") whitelist <- "/ref_genomes/cellranger/human/cellranger_whitelists/10x_version3_whitelist.txt"
+    if (technology == "10XV2") whitelist <- "/ref_genomes/cellranger/human/cellranger_whitelists/10x_version2_whitelist.txt"
     if (technology == "10XV3") whitelist <- "/ref_genomes/cellranger/human/cellranger_whitelists/10x_version3_whitelist.txt"
 
     sample_id <- basename(cellranger_folder)
