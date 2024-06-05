@@ -1,7 +1,7 @@
 
 ---
-title: "Beta cells: boxplots"
-date: "2024-5-15" 
+title: "Beta cells: boxplots rs3842753"
+date: "2024-6-1" 
 date-modified: last-modified
 ---
 
@@ -55,22 +55,22 @@ seurat_object <- seurat_object |>
 #| fig-cap: "Boxplots of ER gene expression, indicating median values per cell. Non-expressing cells are excluded."
 
 er_expression <- seurat_object %>%
-    dplyr::mutate(protected = factor(protected)) %>%
-    FetchData(vars = c("protected", er_genes_of_interest), layer = "data") |>
+    dplyr::mutate(rs3842753_consensus = factor(rs3842753_consensus)) %>%
+    FetchData(vars = c("rs3842753_consensus", er_genes_of_interest), layer = "data") |>
     pivot_longer(
-        cols = -protected,
+        cols = -rs3842753_consensus,
         names_to = "gene",
         values_to = "expression"
     ) |>
     dplyr::filter(expression > 0)
 
-ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
+ggplot(er_expression, aes(x = rs3842753_consensus, y = expression, fill = rs3842753_consensus, col = rs3842753_consensus)) +
     stat_dots(position = "dodgejust") +
     stat_pointinterval(col = "black", alpha = 0.6) +
-    facet_wrap(~gene, scales = "free_y") + 
+    facet_wrap(~gene, scales = "free_y") +
     geom_signif(
         test = "wilcox.test",
-        comparisons = list(c("TRUE", "FALSE")),
+        comparisons = list(c("TT", "TG")),
         map_signif_level = TRUE,
         margin_top = -0.4,
         tip_length = 0,
@@ -85,14 +85,15 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
         hjust = 1.1,
         vjust = 1.1
     ) +
-    theme_classic() + NoLegend() +
+    theme_classic() +
+    NoLegend() +
     labs(
-        title = "Expression of ER Genes, per cell",
-        x = "Protected Status",
+        title = "Expression of ER Genes by rs3842753, per cell",
+        x = "Genotype",
         y = "Normalized Expression"
     ) +
-    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
-    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+    scale_fill_manual(values = c("TT" = "forestgreen", "TG" = "purple")) +
+    scale_color_manual(values = c("TT" = "forestgreen", "TG" = "purple"))
 ```
 
 ## Per donor
@@ -103,18 +104,18 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
 #| fig-cap: "Boxplots of ER gene expression, indicating median aggregate expression per donor"
 
 er_expression_PsB <- seurat_object %>%
-    dplyr::mutate(protected = factor(protected)) %>%
+    dplyr::mutate(rs3842753_consensus = factor(rs3842753_consensus)) %>%
     aggregate_cells("orig.ident", assays = "RNA", layers = "data") |>
     dplyr::filter(.feature %in% er_genes_of_interest) |>
-    select(gene = ".feature", expression = "RNA", protected)
+    select(gene = ".feature", expression = "RNA", rs3842753_consensus)
 
-ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, col = protected)) +
+ggplot(er_expression_PsB, aes(x = rs3842753_consensus, y = expression, fill = rs3842753_consensus, col = rs3842753_consensus)) +
     stat_dots(position = "dodgejust") +
     stat_pointinterval(col = "black") +
     facet_wrap(~gene, scales = "free_y") + 
     geom_signif(
         test = "wilcox.test",
-        comparisons = list(c("TRUE", "FALSE")), 
+        comparisons = list(c("TT", "TG")), 
         map_signif_level = TRUE,
         margin_top = -0.4,
         tip_length = 0,
@@ -132,12 +133,12 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
     theme_classic() +
     NoLegend() +
     labs(
-        title = "Expression of ER Genes, per donor",
-        x = "Protected Status",
+        title = "Expression of ER Genes by rs3842753, per donor",
+        x = "Genotype",
         y = "Normalized Expression"
     ) +
-    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
-    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+    scale_fill_manual(values = c("TT" = "forestgreen", "TG" = "purple")) +
+    scale_color_manual(values = c("TT" = "forestgreen", "TG" = "purple"))
 ```
 
 ::::

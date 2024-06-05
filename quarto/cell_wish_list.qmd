@@ -215,33 +215,43 @@ Wang et al report alignment with hg38:
 
 > Single-cell RNAseq reads were aligned to human reference genome **GRCh38.98** using STAR version 2.7.1a (25) with gene read counts obtained using –quantMode GeneCounts. Read count files were aggregated into study-specific read count matrices ***using a custom code***.
 
-:::
-
 However: 
 
 ```{r}
 # ensembl <- useMart("ENSEMBL_MART_SNP", dataset = "hsapiens_snp", host = "https://www.ensembl.org")
-snp_ids <- c("rs5506", "rs689", "rs3842753", "rs3842752", "rs3842740", "rs3842744", "rs5505")
-# snp_info <- getBM(
-#     attributes = c(
-#         "refsnp_id", "chromosome_name", "chrom_start",
-#         "chrom_end", "minor_allele", "minor_allele_freq"
-#     ),
-#     filters = "snp_filter", values = snp_ids, mart = ensembl
-# )
-# print(snp_info)
+snp_ids <- c("rs689", "rs3842753", "rs3842752")
+
 
 rsnps::ncbi_snp_query(snp_ids) |>
     dplyr::select(-maf_population) |>
     gt::gt()
 ```
 
-Data suggests they in fact used GRCh37: rs3842753 minor allele is C, while in GRCh38
+Data suggests they in fact used GRCh37 in which A is the ref for rs3842753 and the minor allele is C; while in GRCh38, the reference allele is T and the minor is G.
 
 - [NCBI ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/variation/304051/?oq=rs3842753&m=NM_000207.3(INS):c.*22A%3EC)
-- [NCBI SNP](https://www.ncbi.nlm.nih.gov/snp/rs3842753)
+  
+  | HGVS                                            | dbSNP       | gnomAD frequency |
+  |-------------------------------------------------|-------------|------------------|
+  | NM_000207.3(INS):c.-17-6T>A                     | rs689       | 0.59334          |
+  | NM_000207.3(INS):c.*22A>C                       | rs3842753   | 0.59307          |
+  | NM_000207.3(INS):c.*9C>T                        | rs3842752   | 0.16663          |
 
-b) Wang et al: rs3842753 C allele (**minor allele)** associates with increased INS expression in single b cells and b-like cells
+
+- [NCBI SNP](https://www.ncbi.nlm.nih.gov/snp/rs3842753)
+  
+  | Source        | Allele | Frequency   | Count       | Total     |
+  |---------------|--------|-------------|-------------|-----------|
+  | TOPMED        | G      | 0.587468    | 155497      | 264690    |
+  | GnomAD_exome  | G      | 0.733402    | 176653      | 240868    |
+  | GnomAD        | G      | 0.593068    | 83001       | 139952    |
+
+:::
+
+b) Wang et al: rs3842753 C allele (**minor allele**) associates with increased INS expression in single b cells and b-like cells
+
+We test for the **G** allele:
+
 ```{r}
 #| eval: false
 # seurat_object$tosti_cell_type.rs3842753 <- paste(seurat_object$tosti_cell_type, seurat_object$rs3842753_consensus, sep = "_")
@@ -290,7 +300,6 @@ ggplot(bulk.beta.de, aes(x = avg_log2FC, y = -log10(p_val))) +
 # Fetch data
 data <- FetchData(seurat_object, vars = c("tosti_cell_type", "INS", "rs3842753_consensus")) |> dplyr::filter(tosti_cell_type == "Beta")
 
-# Assuming 'data' is your dataframe with 'INS', 'protected' columns, and 'protected' is a factor
 ggplot(data, aes(x = as.factor(rs3842753_consensus), y = INS, fill = as.factor(rs3842753_consensus))) +
     geom_jitter(width = 0.2, alpha = 0.1, size = 0.1) +
     geom_boxplot() +
@@ -445,7 +454,7 @@ ggplot(bulk.beta.de, aes(x = avg_log2FC, y = -log10(p_val))) +
 
 ::: {.callout-note}
 
-No genes were significanlty differentially expressed between S/S and S/P beta-cells in the current analysis.
+No genes were significantly differentially expressed between S/S and S/P beta-cells in the current analysis.
 :::
 
 ```{r}
@@ -570,16 +579,3 @@ data <- FetchData(Beta_cells, vars = c("INS", "protected", "diabetes_status"))
 
 ```
 
-
-
-INS SNPs of interest
-
-| HGVS                                            | dbSNP       | gnomAD frequency |
-|-------------------------------------------------|-------------|------------------|
-| NM_000207.3(INS):c.187+11T>C                    | rs5506      | 0.93263          |
-| NM_000207.3(INS):c.-17-6T>A                     | rs689       | 0.59334          |
-| NM_000207.3(INS):c.*22A>C                       | rs3842753   | 0.59307          |
-| NM_000207.3(INS):c.*9C>T                        | rs3842752   | 0.16663          |
-| NM_000207.3(INS):c.-18+4_-18+5insTTGC           | rs3842740   | 0.07357          |
-| NM_000207.3(INS):c.36G>A (p.Ala12=)             | rs3842744   | 0.01335          |
-| NM_000207.3(INS):c.-9C>T                        | rs5505      | 0.00878          |

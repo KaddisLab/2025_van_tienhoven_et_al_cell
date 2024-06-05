@@ -4,7 +4,13 @@
 
 ## Literature
 
+Gootjes et al [Front Immunol 2022, 13:886736](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2022.886736/full)
+
 Massarenti et al [Int. J. Mol. Sci. 2022, 23:6481](https://www.mdpi.com/1422-0067/23/12/6481)
+
+Prasad Linga Reddy et al [Genes & Immunity 2011, 12:208–212](https://www.nature.com/articles/gene201070)
+
+**Risk alleles taken from Gootjes et al, [Table 1](https://www.frontiersin.org/files/Articles/886736/fimmu-13-886736-HTML/image_m/fimmu-13-886736-t001.jpg)**
 
 ## HPAP Data published in Nature Metabolism
 
@@ -18,4 +24,4 @@ Massarenti et al [Int. J. Mol. Sci. 2022, 23:6481](https://www.mdpi.com/1422-006
 
 [CellXGene](https://cellxgene.cziscience.com/e/37b21763-7f0f-41ae-9001-60bad6e2841d.cxg/)
 
-:::
+::::
