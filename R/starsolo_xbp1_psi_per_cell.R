@@ -37,10 +37,6 @@ require(rtracklayer)
     barcodes_path <- gsub("Summary.csv", "raw/barcodes.tsv", path, fixed = TRUE)
     features_path <- gsub("Summary.csv", "raw/features.tsv", path, fixed = TRUE)
 
-    if (!file.exists(matrix_path) || !file.exists(barcodes_path) || !file.exists(features_path)) {
-        stop("One or more files do not exist. Please check the paths.")
-    }
-
     spliced <- as(Matrix::readMM(matrix_path), "CsparseMatrix") # Convert explicitly to dgCMatrix
 
     barcodes <- readr::read_lines(barcodes_path)
