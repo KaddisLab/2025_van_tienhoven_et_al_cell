@@ -5,12 +5,12 @@
 #SBATCH --time=36:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --chdir=/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024
+#SBATCH --chdir=/scratch/domeally/DCD.tienhoven_scRNAseq.2024
 
 /packages/easy-build/software/singularity/3.7.0/bin/singularity exec \
     --env OMP_NUM_THREADS=1 \
-    --env R_LIBS_SITE=/packages/singularity/shared_cache/rbioc/rlibs/bioc-3.18 \
+    --env R_LIBS_SITE=/packages/singularity/shared_cache/rbioc/rlibs/bioc-3.19 \
     -B /packages,/scratch,/run,/ref_genomes \
-    /packages/singularity/shared_cache/rbioc/vscode-rbioc_3.18.sif \
+    /packages/singularity/shared_cache/rbioc/vscode-rbioc_3.19.sif \
     Rscript -e "targets::tar_make()"
 
