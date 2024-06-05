@@ -14,11 +14,20 @@ knitr::opts_chunk$set(
 ```
 
 
+## HPAP data
+
+- last updated at https://hpap.pmacs.upenn.edu/ December 2023
+- Downloaded March 2024
+- Website says 106 samples from 100 donors; (found 20 SureSeq, 82 10X, 1 in common)
+- We find 77 usable donor samples after QC, 10X data only
+
+
 ```{r }
 #| code-fold: true
 #| code-summary: "Setup"
 suppressPackageStartupMessages({
-    library(tidyseurat)
+library(tidyseurat)
+library(glmGamPoi)
     library(Seurat)
     library(targets)
     library(ggplot2)
@@ -26,6 +35,9 @@ suppressPackageStartupMessages({
     library(ggdist)
     library(ggsignif)
     library(ggpubr)
+
+    library(colorspace)
+    library(dittoSeq)
 })
 
 tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
@@ -35,8 +47,8 @@ cpus <- hprcc::slurm_allocation()$CPUs
 tar_load(seurat_object_sct_annotated)
 seurat_object <- load_seurat(seurat_object_sct_annotated)
 
-seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM")
+# seurat_object_NODM <- seurat_object |>
+#     dplyr::filter(diabetes_status == "NODM")
 ```
 
 ## Differential expression
@@ -61,9 +73,9 @@ beta.bulk <- subset(bulk, cell_type == "Beta")
 ```{r }
 Idents(beta.bulk) <- "sample_sex"
 
-de_markers <- FindMarkers(beta.bulk,
-    ident.1 = "M", ident.2 = "F", test.use = "DESeq2",
-    verbose = F
+de_markers <- Seurat::FindMarkers(beta.bulk,
+    ident.1 = "M", ident.2 = "F", test.use = "DESeq2", 
+    verbose = FALSE
 )
 
 de_markers$gene <- rownames(de_markers)
@@ -140,15 +152,327 @@ ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
 ::::
 
 
-## Harmony
+## Cell type markers
 
 ```{r }
-seurat_object|>
-dplyr::filter(cell_type == "Beta") |>
-    #Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("batch"), verbose = TRUE) |>
-    Seurat::RunPCA(verbose = FALSE) |>
-    harmony::RunHarmony(group.by.vars = "orig.ident", ncores = cpus, verbose = TRUE) |>
-    Seurat::FindNeighbors(reduction = "harmony", verbose = TRUE) |>
-    Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = TRUE) |>
-    Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = TRUE)
+seurat_object<-seurat_object|>  
+    Seurat::FindClusters(resolution = 0.15, method = "igraph", cluster.name = "sct_clusters", verbose = TRUE) |>
+#    Seurat::RunUMAP(reduction = "harmony", dims = 1:50, verbose = TRUE)
+    Seurat::RunUMAP(reduction = "harmony", dims = 1:50, verbose = TRUE)
+   
+DimPlot(seurat_object, group.by = "sct_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE) +
+    labs(title = "SCT clusters") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+ggsave('plot.png')
+
+DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE, cols = cell_type_palette) +
+    labs(title = "SCT clusters") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+ggsave('plot.png')
+
 ```
+
+
+## tidyseurat
+
+```{r }
+#
+#
+#
+#
+#
+#
+#
+#
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(glmGamPoi)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggrepel)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+
+    library(colorspace)
+    library(dittoSeq)
+})
+
+tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_sct_annotated)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
+
+# seurat_object_NODM <- seurat_object |>
+#     dplyr::filter(diabetes_status == "NODM")
+#
+#
+#
+#
+#
+bulk <- AggregateExpression(
+    seurat_object,
+    return.seurat = TRUE,
+    assays = "RNA",
+    group.by = c("cell_type", "orig.ident", "sample_sex")
+) |>
+    separate(.cell, into = c("cell_type", "orig.ident", "sample_sex"), sep = "_", remove = FALSE)
+
+beta.bulk <- subset(bulk, cell_type == "Beta")
+
+#
+#
+#
+#
+#
+#
+#
+Idents(beta.bulk) <- "sample_sex"
+
+de_markers <- Seurat::FindMarkers(beta.bulk,
+    ident.1 = "M", ident.2 = "F", test.use = "DESeq2",
+    verbose = FALSE
+)
+
+de_markers$gene <- rownames(de_markers)
+
+ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
+    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
+    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
+    labs(
+        x = "Average Log2 Fold Change",
+        y = "-log10(Unadjusted p-value)",
+        title = "Beta-cell Differential Expression",
+        subtitle = "Comparison Female (F ←) vs Male (M →) cells",
+    ) +
+    geom_text_repel(
+        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
+        size = 3.5, # Slightly larger text size for readability
+        box.padding = 0.35, # Adjust padding around text to avoid overlap
+        point.padding = 0.5, # Adjust distance from points to text
+        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
+        color = "blue", # Change text color to blue for better visibility against the background
+        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
+        nudge_y = 0.05, # Nudge text up a bit for vertical separation
+        direction = "y" # Optimize text placement primarily in the vertical direction
+    ) +
+    theme(
+        plot.title = element_text(face = "bold"), # Bold title for emphasis
+        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
+        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
+        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
+        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
+    )
+
+#
+#
+#
+#
+#
+de_markers <- FindMarkers(beta.bulk,
+    ident.1 = "M", ident.2 = "F", test.use = "wilcox", verbose = F
+)
+
+de_markers$gene <- rownames(de_markers)
+
+ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
+    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
+    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
+    labs(
+        x = "Average Log2 Fold Change",
+        y = "-log10(Unadjusted p-value)",
+        title = "Beta-cell Differential Expression",
+        subtitle = "Comparison Female (F ←) vs Male (M →) cells",
+    ) +
+    geom_text_repel(
+        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
+        size = 3.5, # Slightly larger text size for readability
+        box.padding = 0.35, # Adjust padding around text to avoid overlap
+        point.padding = 0.5, # Adjust distance from points to text
+        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
+        color = "blue", # Change text color to blue for better visibility against the background
+        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
+        nudge_y = 0.05, # Nudge text up a bit for vertical separation
+        direction = "y" # Optimize text placement primarily in the vertical direction
+    ) +
+    theme(
+        plot.title = element_text(face = "bold"), # Bold title for emphasis
+        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
+        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
+        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
+        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
+    )
+
+#
+#
+#
+#
+#
+#
+#
+#
+seurat_object <- seurat_object |>
+    Seurat::FindClusters(resolution = 0.15, method = "igraph", cluster.name = "sct_clusters", verbose = TRUE) |>
+    #    Seurat::RunUMAP(reduction = "harmony", dims = 1:50, verbose = TRUE)
+    Seurat::RunUMAP(reduction = "harmony", dims = 1:50, verbose = TRUE)
+
+DimPlot(seurat_object, group.by = "sct_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE) +
+    labs(title = "SCT clusters") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+ggsave("plot.png")
+
+DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE, cols = cell_type_palette) +
+    labs(title = "SCT clusters") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+ggsave("plot.png")
+
+#
+#
+#
+#
+#
+#
+## Set RNA assay as default and Normalize data
+DefaultAssay(seurat_object) <- "RNA"
+seurat_object <- seurat_object %>%
+    NormalizeData()
+
+seurat_object %>%
+    as_tibble() %>%
+    select(contains("PC"), everything()) %>%
+    GGally::ggpairs(columns = 1:5, ggplot2::aes(colour = rs689_consensus), alpha = 0.2)
+
+markers <-
+    seurat_object %>%
+    FindAllMarkers(only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25) %>%
+    group_by(cell_type) %>%
+    top_n(10, avg_log2FC)
+
+# Plot heatmap
+seurat_object %>%
+    DoHeatmap(
+        features = markers$gene,
+        group.colors = cell_type_palette
+    )
+
+seurat_object <- seurat_object %>%
+    RunUMAP(reduction = "pca", dims = 1:15, n.components = 3L)
+
+seurat_object |>
+    plot_ly(
+        x = ~`umap_1`,
+        y = ~`umap_2`,
+        z = ~`umap_3`,
+        color = ~cell_type,
+        colors = cell_type_palette
+    )
+
+
+
+# Filter for the relevant cell types
+filtered_seurat <- seurat_object %>%
+    dplyr::filter(cell_type %in% c("Alpha", "Beta", "Gamma", "Delta", "Acinar", "Ductal"))
+
+pseudo_bulk <-
+    filtered_seurat |>
+    aggregate_cells(c(orig.ident, cell_type), assays = "RNA")
+
+library(edgeR)
+y <- edgeR::Seurat2PB(filtered_seurat, sample = "orig.ident", cluster = "cell_type")
+y <- normLibSizes(y)
+# We first examine the library sizes of all the pseudo-bulk samples and filter out those below the threshold of 50,000
+summary(y$samples$lib.size)
+keep.samples <- y$samples$lib.size > 5e4
+table(keep.samples)
+y <- y[, keep.samples]
+# We then filter out lowly expressed genes.
+keep.genes <- filterByExpr(y, group = y$samples$cluster)
+table(keep.genes)
+y <- y[keep.genes, , keep=FALSE]
+
+# normalise lib sizes
+y <- normLibSizes(y)
+head(y$samples, n=10L)
+
+cluster <- as.factor(y$samples$cluster)
+plotMDS(y, pch=16, col=c(2:8)[cluster], main="MDS")
+
+# legend("bottomleft", legend=paste0("cluster",levels(cluster)),
+# + pch=16, col=2:8, cex=0.8)
+
+donor <- factor(y$samples$sample)
+design <- model.matrix(~ cluster + donor)
+colnames(design) <- gsub("donor", "", colnames(design))
+colnames(design)[1] <- "Int"
+head(design)
+
+
+pseudo_bulk
+
+pseudo_bulk_nested <-
+    pseudo_bulk |>
+    nest(grouped_summarized_experiment = -cell_type)
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#```
+
+
+## Cell types
+
+## Norm INS by housekeeping
+
+## Norm INS mature/nascent by housekeeping
+
+## DEG by age
+
+## HPAP rds as a positive control
+
+## B-like cells
+
+```{r }
+Seurat::Idents(seurat_object) <- "tosti_cell_type"
+plot <- DimPlot(object = seurat_object, reduction = "umap", cols = cell_type_palette)
+# Follow instructions in the terminal to select points
+cells.located <- CellSelector(plot = plot)
+cells.located
+# Automatically set the identity class of selected cells and return a new Seurat object
+pbmc_small <- CellSelector(plot = plot, object = pbmc_small, ident = "SelectedCells")
+
+```
+
