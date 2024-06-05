@@ -14,11 +14,13 @@ book:
     - cell_wish_list.qmd
     - pancdb_metadata.qmd
     - umap.qmd
-#    - beta_cells_DE_rs3842753.qmd
+    - umap_JK.qmd
     - beta_cells_DE_rs3842752.qmd
-   # - beta_cells_DE_rs689.qmd
+    - beta_cells_DE_rs3842753.qmd
+    - beta_cells_DE_rs689.qmd
     - beta_cells_umap.qmd
     - boxplots_beta_cells.qmd
+    - boxplots_beta_cells_rs3842753.qmd
     - boxplots_alpha_cells.qmd
     - boxplots_delta_cells.qmd
     - boxplots_gamma_cells.qmd

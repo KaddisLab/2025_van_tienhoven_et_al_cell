@@ -207,7 +207,7 @@ list(
         cellsnp_lite,
         run_cellsnp_lite(
             cellranger_run_folder = cellranger_run_folders,
-            region_vcf = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz"
+            region_vcf = glue::glue("{analysis_cache}/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz")
         ),
         deployment = "main",
         pattern = map(cellranger_run_folders)
@@ -224,7 +224,7 @@ list(
         filter_and_trim_vcf(
             vcf_path = snp_vcf,
             fai_path = "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa.fai",
-            output_vcf_path = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz"
+            output_vcf_path = glue::glue("{analysis_cache}/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz")
         ),
         resources = small,
         format = "file_fast"
@@ -354,7 +354,7 @@ list(
         ddqc_seurat_objects,
         # TODO update this from Nadia's project
         seurat_ddqc(cellbender_seurat_objects, scDblFinder_csv),
-        pattern = map(cellbender_seurat_objects, scDblFinder_csv),
+        pattern = map(cellbender_seurat_objects, scDblFinder_csv), 
         format = "file_fast",
         resources = small
     ),
@@ -413,7 +413,7 @@ list(
         resources = tiny
     ),
     # Clustering with CHOIR ----------------------------------------------------------------
-    #* Not working - fails for both skethc and RNA assay*#
+    #* Not working - fails for both sketch and RNA assay*#
     # tar_target(
     #     CHOIR_merged_seurat_sketch_750,
     #     seurat_CHOIR(merged_seurat_sketch_750, assay = "RNA", batch = "batch",  pancdb_metadata[c("sample_name", "batch")]),
@@ -448,7 +448,7 @@ list(
         format = "file_fast",
         resources = large
     ),
-# MARK:     # Normalise each sample with SCTransform ---------------------------------------------------------
+# MARK:     # SCTransform each sample ---------------------------------------------------------
     tar_target(
         sct_ddqc_bpcells,
         seurat_SCTransform(ddqc_bpcells, "RNA"),
@@ -457,7 +457,6 @@ list(
         resources = large
     ),
 
-# MARK:     # SUBSET NODM SCTransformed per sample ------------------------
     tar_target(
         seurat_object_sct_all, seurat_merge_sct(sct_ddqc_bpcells, "sct_all_merged"),
         format = "file_fast",
@@ -489,6 +488,15 @@ list(
         ),
         deployment = "main",
         cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(1, units = "weeks"))
+    ),
+    tar_target(
+        touch_repo,
+        sapply(
+            c(".", list.files(".", full.names = TRUE, recursive = TRUE)),
+            function(f) Sys.setFileTime(f, Sys.time())
+        ),
+        deployment = "main",
+        cue = tarchetypes::tar_cue_age(touch_cache, as.difftime(1, units = "weeks"))
     )
 )
 # ! TODO
@@ -506,15 +514,11 @@ list(
 #    {DropletQC}
 # 6. Removing ambient RNAs associated with barcodes
 #    {SoupX}, cellbender
-# TODO: genotype viz. canadian study (rs...53)
-# TODO: genotype viz. INS promoter (rs...689)
-# TODO: kallisto quantification
 # TODO: maybe https://velocyto.org/velocyto.py/tutorial/cli.html#run10x-run-on-10x-chromium-samples
 # DONE: vartrix genotyping of donors
 # TODO: vartrix genotyping of cells
 # TODO: stress score (XPB1 un/spliced)
 # TODO: https://github.com/horsedayday/eQTLsingle
-# DONE: sccomp
 
 
 # clustering with anti-correlation
