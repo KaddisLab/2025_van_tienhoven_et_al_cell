@@ -1,4 +1,4 @@
-analysis_cache <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024"
+analysis_cache <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024_cache"
 
 scrnaseq_release <- "2.5.1"
 
@@ -98,5 +98,5 @@ generate_palette <- function(n) {
 }
 
 
-er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS", "ATF3", "ATF4", "TXNIP", "GHRL")
+er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS", "ATF3", "ATF4", "TXNIP", "GAPDH")
 # XBP1spliced (XBP1s)
