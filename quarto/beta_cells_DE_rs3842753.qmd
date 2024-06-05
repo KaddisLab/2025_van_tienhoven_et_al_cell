@@ -32,8 +32,8 @@ tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_annotated_full)
-seurat_object <- load_seurat(seurat_object_annotated_full)
+tar_load(seurat_object_sct_annotated)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
 
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
@@ -46,9 +46,9 @@ bulk <- AggregateExpression(
     seurat_object,
     return.seurat = TRUE,
     assays = "RNA",
-    group.by = c("cell_type", "orig.ident", "protected")
+    group.by = c("cell_type", "orig.ident", "rs3842753_consensus")
 ) |>
-    separate(.cell, into = c("cell_type", "orig.ident", "protected"), sep = "_", remove = FALSE)
+    separate(.cell, into = c("cell_type", "orig.ident", "rs3842753_consensus"), sep = "_", remove = FALSE)
 
 beta.bulk <- subset(bulk, cell_type == "Beta")
 
@@ -59,10 +59,10 @@ beta.bulk <- subset(bulk, cell_type == "Beta")
 ### DESeq2
 
 ```{r }
-Idents(beta.bulk) <- "protected"
+Idents(beta.bulk) <- "rs3842753_consensus"
 
 de_markers <- FindMarkers(beta.bulk,
-    ident.1 = "TRUE", ident.2 = "FALSE", test.use = "DESeq2", verbose = FALSE
+    ident.1 = "TG", ident.2 = "TT", test.use = "DESeq2", verbose = FALSE
 )
 
 de_markers$gene <- rownames(de_markers)
@@ -74,7 +74,7 @@ ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
         x = "Average Log2 Fold Change",
         y = "-log10(Unadjusted p-value)",
         title = "Beta-cell Differential Expression",
-        subtitle = "Comparison susceptible (GG ←) vs Protected (GA →) cells",
+        subtitle = "Comparison protected (TT ←) vs susceptible (TG →) cells",
     ) +
     geom_text_repel(
         aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
@@ -101,7 +101,7 @@ ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
 
 ```{r }
 de_markers <- FindMarkers(beta.bulk,
-    ident.1 = "TRUE", ident.2 = "FALSE", test.use = "wilcox", verbose = F
+    ident.1 = "TG", ident.2 = "TT", test.use = "wilcox", verbose = F
 )
 
 de_markers$gene <- rownames(de_markers)
@@ -113,7 +113,7 @@ ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
         x = "Average Log2 Fold Change",
         y = "-log10(Unadjusted p-value)",
         title = "Beta-cell Differential Expression",
-        subtitle = "Comparison susceptible (GG ←) vs Protected (GA →) cells",
+        subtitle = "Comparison protected (TT ←) vs susceptible (TG →) cells",
     ) +
     geom_text_repel(
         aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
