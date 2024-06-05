@@ -61,7 +61,7 @@ seurat_object <- seurat_object |>
     dplyr::filter(cell_type == "Beta") |>
     Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("batch"), verbose = FALSE) |>
     Seurat::RunPCA(verbose = FALSE) |>
-    harmony::RunHarmony(group.by.vars = "batch", ncores = cpus, verbose = FALSE) |>
+    harmony::RunHarmony(group.by.vars = "batch", verbose = FALSE) |>
     Seurat::FindNeighbors(reduction = "harmony", verbose = FALSE) |>
     Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = FALSE) |>
     Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = FALSE)
