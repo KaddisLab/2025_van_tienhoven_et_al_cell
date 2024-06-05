@@ -68,42 +68,49 @@
 }
 
 .metricFilter <- function(seurat_object, df.qc, param = 2, metric.name, do.upper.co = FALSE, do.lower.co = FALSE,
-                        lower.bound = 10E10, upper.bound = -10E10) {
-    passed.qc <- vector(mode = "logical", length = length(colnames(seurat_object)))
+                          lower.bound = -10E10, upper.bound = 10E10) {
+    passed.qc <- rep(TRUE, length(colnames(seurat_object)))
     names(passed.qc) <- colnames(seurat_object)
 
     df.qc[[metric.name]] <- seurat_object[[metric.name]][[metric.name]]
-    df.qc[[paste0(metric.name, ".upper.co")]] <- NaN
-    df.qc[[paste0(metric.name, ".lower.co")]] <- NaN
+    df.qc[[paste0(metric.name, ".upper.co")]] <- NA_real_
+    df.qc[[paste0(metric.name, ".lower.co")]] <- NA_real_
     df.qc[[paste0(metric.name, ".passed.qc")]] <- FALSE
 
     for (cl in levels(seurat_object$seurat_clusters)) {
         idx <- seurat_object$seurat_clusters == cl
         values <- seurat_object[, idx][[metric.name]][[metric.name]]
 
-        median.v <- median(values)
-        mad.v <- mad(values)
-        lower.co <- min(median.v - param * mad.v, lower.bound)
-        upper.co <- max(median.v + param * mad.v, upper.bound)
+        median.v <- median(values, na.rm = TRUE)
+        mad.v <- mad(values, na.rm = TRUE)
+        lower.co <- max(median.v - param * mad.v, lower.bound)
+        upper.co <- min(median.v + param * mad.v, upper.bound)
 
-        qc.pass.cl <- vector(mode = "logical", length = length(values))
-        qc.pass.cl <- TRUE
+        qc.pass.cl <- rep(TRUE, length(values))
 
         if (do.lower.co) {
             qc.pass.cl <- qc.pass.cl & (values >= lower.co)
-            df.qc[idx, ][[paste0(metric.name, ".lower.co")]] <- lower.co
+            # Handle cases where values might be NA
+            qc.pass.cl[is.na(values)] <- FALSE
+            df.qc[idx, paste0(metric.name, ".lower.co")] <- lower.co
         }
         if (do.upper.co) {
             qc.pass.cl <- qc.pass.cl & (values <= upper.co)
-            df.qc[idx, ][[paste0(metric.name, ".upper.co")]] <- upper.co
+            # Handle cases where values might be NA
+            qc.pass.cl[is.na(values)] <- FALSE
+            df.qc[idx, paste0(metric.name, ".upper.co")] <- upper.co
         }
 
-        df.qc[idx, ][[paste0(metric.name, ".passed.qc")]] <- qc.pass.cl
+        # Ensure qc.pass.cl does not have NA values
+        qc.pass.cl[is.na(qc.pass.cl)] <- FALSE
+
+        df.qc[idx, paste0(metric.name, ".passed.qc")] <- qc.pass.cl
         passed.qc[idx] <- qc.pass.cl
     }
 
     return(df.qc)
 }
+
 
 #' ddQC and scDblFinder filtering for Seurat objects
 #'
@@ -123,14 +130,14 @@
 #' @param n.genes.lower.bound bound for lower nFeature_RNA cluster-level threshold. 200 by default
 #' @param percent.mito.upper.bound bound for upper percent_mt cluster-level threshold. 15 by default
 #' @param percent.rb.lower.bound bound for lower percent_rm cluster-level threshold. 5 by default
-#' @param do.filter Logical. Write a filtered Seurat object to "{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs". TRUE by default
+#' @param do.filter Logical. Filter MAD outliers and doublets if scDblFinder_out is provided. TRUE by default
 #' @param scDblFinder_out Path to the CSV file with scDoublet results.
 #'
-#' @return Path to the filtered seurat_object, or to the CSV file with ddqc statistics if do.filter is FALSE
+#' @return Path to the filtered seurat_object at "{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs", or the similarly named CSV file with ddqc statistics if do.filter is FALSE
 #' @export
 seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20, res = 1, threshold = 3.5, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
-                        n.genes.lower.bound = 200, percent.mito.upper.bound = 15, percent.rb.lower.bound = 5, do.filter = TRUE) {
-    message("Loading Seurat object", seurat_object)
+                        n.reads.lower.bound = 500, n.genes.lower.bound = 200, percent.mito.upper.bound = 20, percent.rb.lower.bound = 5, do.filter = TRUE) {
+    message("Loading Seurat object...")
     seurat_object <- load_seurat(seurat_object)
     sample_id <- Seurat::Project(seurat_object)
     if (!is.data.frame(scDblFinder_out)) {scDblFinder_out <- read.csv(scDblFinder_out, stringsAsFactors = FALSE)}
@@ -140,16 +147,18 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20
     seurat_object <- .clusterData(seurat_object, res = res, n.pcs = n.pcs, k.param = k.param)
     message("Clustered the Seurat object")
     df.qc <- data.frame("cluster_labels" = seurat_object$seurat_clusters, row.names = colnames(seurat_object)) |> mutate(cell = colnames(seurat_object), .before = 1)
-    passed.qc <- vector(mode = "logical", length = length(seurat_object$seurat_clusters))
-    passed.qc <- TRUE
+    passed.qc <- rep(TRUE, nrow(seurat_object[[]]))
 
     plots <- list() # Initialize an empty list to store plots
 
     if (do.counts) {
         message("Filtering cells based on nCount_RNA")
-        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nCount_RNA", do.lower.co = TRUE)
+        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nCount_RNA",
+            do.lower.co = TRUE,
+            lower.bound = n.reads.lower.bound
+        )
         if (do.plots) {
-            plots[["nCount_RNA"]] <- .ddqcBoxplot(df.qc, "nCount_RNA", scDblFinder_out = scDblFinder_out)
+            plots[["nCount_RNA"]] <- .ddqcBoxplot(df.qc, "nCount_RNA", n.reads.lower.bound, scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$nCount_RNA.passed.qc
     }
