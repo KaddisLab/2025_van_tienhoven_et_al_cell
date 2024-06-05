@@ -1,6 +1,6 @@
 get_hpap_cell_metadata <- function() {
-    hpap <- load_seurat("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/analysis_cache/data/T1D_T2D_20220428.rds")
-    hpap_metadata_csv_path <- "/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/analysis_cache/data/T1D_T2D_20220428_cell_metadata.csv"
+    hpap <- load_seurat(glue::glue("{analysis_cache}/data/T1D_T2D_20220428.rds"))
+    hpap_metadata_csv_path <- glue::glue("{analysis_cache}/data/T1D_T2D_20220428_cell_metadata.csv")
 
     hpap_metadata <- hpap[[]] |>
         select(hpap_celltype = "cell_type", hpap_id) |>
@@ -14,4 +14,11 @@ get_hpap_cell_metadata <- function() {
 
     write.csv(hpap_metadata, file = hpap_metadata_csv_path, row.names = FALSE, quote = FALSE)
     return(hpap_metadata_csv_path)
+}
+
+import_hpap_seurat <- function() {
+    hpap <- load_seurat(glue::glue("{analysis_cache}/data/T1D_T2D_20220428.rds"))
+    hpap_metadata_csv_path <- glue::glue("{analysis_cache}/data/T1D_T2D_20220428_cell_metadata.csv")
+
+return(hpap)
 }

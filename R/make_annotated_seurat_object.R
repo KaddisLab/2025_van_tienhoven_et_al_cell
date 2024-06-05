@@ -51,8 +51,8 @@ make_annotated_seurat_object <- function(seurat_object,
         overwrite = TRUE,
         na_ok = TRUE
     )
-
-    seurat_object_path <- glue::glue("{analysis_cache}/data/seurat_object_annotated.qs")
+    project_name <- Seurat::Project(object = seurat_object)
+    seurat_object_path <- glue::glue("{analysis_cache}/data/{project_name}_annotated.qs")
     qs::qsave(seurat_object, seurat_object_path)
     message("Saved seurat object")
 
