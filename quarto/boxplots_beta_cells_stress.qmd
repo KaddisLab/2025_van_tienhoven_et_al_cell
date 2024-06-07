@@ -1,6 +1,6 @@
 
 ---
-title: "Acinar cells: ER Genes"
+title: "Beta cells: ER Genes stress score"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -34,9 +34,15 @@ cpus <- hprcc::slurm_allocation()$CPUs
 tar_load(seurat_object_annotated_full)
 seurat_object <- load_seurat(seurat_object_annotated_full)
 
+cell_types <- seurat_object |>
+    dplyr::select(cell_type) |>
+    dplyr::distinct()
+
+cell_type <- "Beta"
+
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
-    dplyr::filter(cell_type == "Acinar") 
+    dplyr::filter(cell_type == cell_type) 
 ```
 
 ::: {.panel-tabset}
@@ -47,11 +53,12 @@ seurat_object <- seurat_object |>
 #| fig-width: 10
 #| fig-height: 10
 #| fig-cap: "Boxplots of ER gene expression, indicating median values per cell. Non-expressing cells are excluded."
+
 er_expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    FetchData(vars = c("protected", er_genes_of_interest), layer = "data") |>
+    FetchData(vars = c("orig.ident", "protected", "er_stress_score", "upr_score"), layer = "data") |>
     pivot_longer(
-        cols = -protected,
+        cols = -c(protected, orig.ident),
         names_to = "gene",
         values_to = "expression"
     ) |>
@@ -80,9 +87,9 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
     ) +
     theme_classic() + NoLegend() +
     labs(
-        title = "Expression of ER Genes, per cell",
+        title = "Stress scores, per cell",
         x = "Protected Status",
-        y = "Normalized Expression"
+        y = "Score"
     ) +
     scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
     scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
@@ -134,3 +141,4 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
 ```
 
 ::::
+

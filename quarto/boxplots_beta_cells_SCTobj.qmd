@@ -1,6 +1,6 @@
 
 ---
-title: "Beta cells: boxplots"
+title: "Beta cells: ER Genes"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -27,8 +27,8 @@ suppressPackageStartupMessages({
     library(ggpubr)
 })
 
-tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
 tar_load(seurat_object_sct_annotated)
@@ -40,7 +40,7 @@ cell_types <- seurat_object |>
 
 cell_type <- "Beta"
 
-seurat_object <- seurat_object |>
+seurat_object_beta <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
     dplyr::filter(cell_type == cell_type) 
 ```
@@ -53,13 +53,11 @@ seurat_object <- seurat_object |>
 #| fig-width: 10
 #| fig-height: 10
 #| fig-cap: "Boxplots of ER gene expression, indicating median values per cell. Non-expressing cells are excluded."
-DefaultAssay(seurat_object) <- "RNA"
-seurat_object <- NormalizeData(seurat_object)
-seurat_object <- ScaleData(seurat_object, vars.to.regress = c("orig.ident", "percent_mt", "percent_rb", "batch"))
+DefaultAssay(seurat_object) <- "SCT"
 
 er_expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    FetchData(vars = c("protected", er_genes_of_interest), layer = "scale.data") |>
+    FetchData(vars = c("protected", er_genes_of_interest), layer = "data") |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",

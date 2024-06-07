@@ -7,6 +7,53 @@
 #' @author Denis O'Meally
 #' @export
 make_seurat_tosti_etal <- function(integrate_across_donors = FALSE) {
+    cell_type_palette_orig <- c(
+        # Endocrine
+        "Alpha" = "#2ECC71", # Green
+        "alpha" = "#2ECC71", # Green
+        "Beta" = "#3498DB", # Blue
+        "Beta-like" = "#15bfd9", # Blue
+        "beta" = "#3498DB", # Blue
+        "Beta-like" = "#15bfd9", # Blue
+        "Delta" = "#1ABC9C", # Teal
+        "delta" = "#1ABC9C", # Teal
+        "Gamma" = "#16A085", # Dark Teal
+        "gamma" = "#16A085", # Dark Teal
+        "PP_Gamma" = "#16A085", # Dark Teal
+        "epsilon" = "#27AE60", # Emerald
+        "Epsilon" = "#27AE60", # Emerald
+
+        # Exocrine
+        "Acinar-s" = "#E74C3C", # Red
+        "Acinar-i" = "#E67E22", # Orange
+        "Acinar-REG+" = "#F39C12", # Amber
+        "acinar" = "#E74C3C", # Red
+        "Acinar" = "#E74C3C", # Red
+        "Ductal" = "#9B59B6", # Purple
+        "ductal" = "#9B59B6", # Purple
+        "MUC5B+ Ductal" = "#8E44AD", # Dark Purple
+
+        # Immune
+        "Macrophage" = "brown", # Dark Grey
+        "macrophage" = "brown", # Dark Grey
+        "immune" = "brown", # Pink
+        "Immune" = "brown", # Pink
+
+        # Other
+        "Other" = "#314c4e", #
+        "Endothelial" = "#314c4e", #
+        "endothelial" = "#314c4e", #
+        "Activated Stellate" = "#F1C40F", # Yellow
+        "Stellates_Mesenchymal" = "#F1C40F", # Yellow
+        "activated_stellate" = "#F1C40F", # Yellow
+        "Quiescent Stellate" = "#FDFD96", # Light Yellow
+        "quiescent_stellate" = "#FDFD96", # Light Yellow
+        "Schwann" = "#2C3E50", # Dark blue
+        "schwann" = "#2C3E50", # Dark blue
+        "cycling" <- "#FF7F50",
+        "Unknown" <- "cornsilk2"
+    )
+
     require(Seurat)
     options(parallelly.availableCores.methods = "Slurm")
     hprcc::init_multisession()
@@ -44,7 +91,7 @@ make_seurat_tosti_etal <- function(integrate_across_donors = FALSE) {
     # Add the UMAP coordinates to the Seurat object
     seurat_object[["umap_tosti_etal"]] <- Seurat::CreateDimReducObject(embeddings = umap_coords, key = "UMAP_")
     # make a UMAP plot
-    plot_umap_tosti_etal <- Seurat::DimPlot(seurat_object, group.by = "Cluster", reduction = "umap_tosti_etal", cols = cell_type_palette, label = TRUE, repel = TRUE, label.size = 4, shuffle = TRUE) & NoLegend() & labs(title = "UMAP Tosti et al.") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+    plot_umap_tosti_etal <- Seurat::DimPlot(seurat_object, group.by = "Cluster", reduction = "umap_tosti_etal", cols = cell_type_palette_orig, label = TRUE, repel = TRUE, label.size = 4, shuffle = TRUE) & NoLegend() & labs(title = "UMAP Tosti et al.") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
     ggsave(glue::glue("{analysis_cache}/data/tosti_etal/tosti_etal_UMAP_coords.png", plot = plot_umap_tosti_etal, width = 10, height = 10, dpi = 300))
 
     # Run PCA
@@ -65,7 +112,7 @@ make_seurat_tosti_etal <- function(integrate_across_donors = FALSE) {
             Seurat::FindNeighbors(dims = 1:30) |>
             Seurat::FindClusters(cluster.name = "harmony_clusters") |>
             Seurat::RunUMAP(dims = 1:30, reduction = "harmony", reduction.name = "umap_harmony", return.model = TRUE, repulsion.strength = 5)
-        plot_umap_ref <- DimPlot(seurat_object, group.by = "Cluster", cols = cell_type_palette, label = TRUE, label.size = 6, repel = TRUE, reduction = "umap_harmony", shuffle = TRUE) & NoLegend() & labs(title = "UMAP reference") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+        plot_umap_ref <- DimPlot(seurat_object, group.by = "Cluster", cols = cell_type_palette_orig, label = TRUE, label.size = 6, repel = TRUE, reduction = "umap_harmony", shuffle = TRUE) & NoLegend() & labs(title = "UMAP reference") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
         plot_umap_ref_path <- glue::glue("{analysis_cache}/data/tosti_etal/tosti_etal_UMAP_harmony.png")
         seurat_object_path <- (glue::glue("{analysis_cache}/data/tosti_etal/tosti_etal_harmony.qs"))
     } else {
@@ -74,7 +121,7 @@ make_seurat_tosti_etal <- function(integrate_across_donors = FALSE) {
             Seurat::FindNeighbors(dims = 1:30) |>
             Seurat::FindClusters() |>
             Seurat::RunUMAP(dims = 1:30, reduction = "pca", return.model = TRUE, reduction.name = "umap_sct")
-        plot_umap_ref <- DimPlot(seurat_object, group.by = "Cluster", cols = cell_type_palette, label = TRUE, label.size = 6, repel = TRUE, reduction = "umap_sct", shuffle = TRUE) & NoLegend() & labs(title = "UMAP reference") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+        plot_umap_ref <- DimPlot(seurat_object, group.by = "Cluster", cols = cell_type_palette_orig, label = TRUE, label.size = 6, repel = TRUE, reduction = "umap_sct", shuffle = TRUE) & NoLegend() & labs(title = "UMAP reference") & theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
         plot_umap_ref_path <- glue::glue("{analysis_cache}/data/tosti_etal/tosti_etal_UMAP_sct.png")
         seurat_object_path <- (glue::glue("{analysis_cache}/data/tosti_etal/tosti_etal_sct.qs"))
     }

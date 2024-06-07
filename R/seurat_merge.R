@@ -19,8 +19,9 @@
 #' merged_path <- seurat_merge(seurat_paths, project_name)
 #' }
 seurat_merge <- function(seurat_objects, project_name) {
-    hprcc::init_multisession()
 
+future::plan("multisession", workers = 4)
+options(future.globals.maxSize = 20 * 1024^3)
     message("Loading objects to list...")
     # Parallel loading of Seurat objects
     seurat_list <- future.apply::future_lapply(seurat_objects, function(obj_path) {

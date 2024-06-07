@@ -1,6 +1,6 @@
 
 ---
-title: "Beta cells: boxplots"
+title: "Beta cells: ER Genes"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -27,8 +27,8 @@ suppressPackageStartupMessages({
     library(ggpubr)
 })
 
-tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
 tar_load(seurat_object_annotated_full)
@@ -52,7 +52,7 @@ seurat_object <- seurat_object |>
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of ER gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of ER gene expression, indicating modal values per cell. Non-expressing cells are excluded."
 
 er_expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
@@ -78,7 +78,7 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = Mode,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",
@@ -100,7 +100,7 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of ER gene expression, indicating median aggregate expression per donor"
+#| fig-cap: "Boxplots of ER gene expression, indicating modal aggregate expression per donor"
 
 er_expression_PsB <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
@@ -122,7 +122,7 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = Mode,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",
@@ -141,4 +141,3 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
 ```
 
 ::::
-

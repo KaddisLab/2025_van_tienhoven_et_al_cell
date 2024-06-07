@@ -35,12 +35,12 @@ seurat_cluster_ari <- function(
     res = seq(0.1, 1.5, by = 0.05),
     reduction = "pca",
     dims = 30,
-    regress_out = NULL,
+    vars_to_regress = c("percent_mt", "percent_rb"),
     do.plot = TRUE, ...) {
     set.seed(42)
+    message("This is seurat_cluster_ari()")
 
-    options(parallelly.availableCores.methods = "Slurm")
-    hprcc::init_multisession()
+    options(future.globals.maxSize = 100 * 1024^3)
     future::plan("multisession", workers = 6)
 
     seurat_object <- load_seurat(seurat_object)
@@ -49,7 +49,10 @@ seurat_cluster_ari <- function(
     # Run the standard workflow for visualization and clustering -------------------
     # https://satijalab.org/seurat/articles/pbmc3k_tutorial.html
     seurat_object <- seurat_object |>
-        Seurat::SCTransform(vars.to.regress = regress_out) |>
+        Seurat::SCTransform(assay = assay, vars.to.regress = vars_to_regress) |>
+        # Seurat::NormalizeData() |>
+        # Seurat::FindVariableFeatures() |>
+        # Seurat::ScaleData(vars.to.regress = vars_to_regress) |>
         Seurat::RunPCA() |>
         Seurat::FindNeighbors(reduction = reduction, dims = 1:dims) |>
         Seurat::FindClusters(resolution = res, method = "igraph")

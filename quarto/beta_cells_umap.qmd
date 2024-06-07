@@ -30,8 +30,8 @@ suppressPackageStartupMessages({
     library(downloadthis)
 })
 
-tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
 tar_load(seurat_object_annotated_full)
@@ -42,7 +42,7 @@ seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
 
 total_endocrine_cells_per_donor <- seurat_object |>
-    dplyr::filter(cell_type %in% c("Alpha", "Beta", "Delta", "Gamma", "Epsilon")) |>
+    dplyr::filter(cell_type %in% c("Alpha", "Beta", "Beta_like", "Delta", "Gamma", "Epsilon")) |>
     dplyr::count(orig.ident) |>
     dplyr::rename(donor = orig.ident, total_count = n)
 ```
@@ -108,6 +108,62 @@ DimPlot(seurat_object, group.by = "orig.ident", cols = donor_palette, label = FA
     NoLegend() +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
+
+## Age
+
+```{r}
+#| fig-cap: "Age"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "sample_age", reduction = "umap", raster = FALSE) +
+    labs(title = "Age") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
+```
+
+## ER Stress score
+
+```{r}
+#| fig-cap: "ER Stress"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "er_stress_score", reduction = "umap", raster = FALSE) +
+    labs(title = "ER stress score") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlOrRd"))
+```
+`r er_stress_genes`
+
+## UPR score
+
+```{r}
+#| fig-cap: "UPR Score"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "upr_score", reduction = "umap", raster = FALSE) +
+    labs(title = "UPR stress score") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlGnBu"))
+```
+`r upr_genes`
 
 ::::
 
@@ -245,7 +301,7 @@ top20 |> download_this(
 #| fig-width: 20
 #| fig-height: 20
 #| column: page
-#| eval: false
+#| eval: FALSE
 
 beta <- SCP::RunDEtest(srt = seurat_object, group_by = "seurat_clusters", fc.threshold = 1, only.pos = FALSE)
 

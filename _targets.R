@@ -501,6 +501,7 @@ list(
 )
 # ! TODO
 # TODO annotate beta like cells
+# TODO https://github.com/JSB-UCLA/scDEED
 ## Common Considerations for Quality Control Filters for Single Cell RNA-seq Data
 ## https://10xgenomics.com/resources/analysis-guides/common-considerations-for-quality-control-filters-for-single-cell-rna-seq-data
 ## Essentially we follow this guide with respect to pre-processing

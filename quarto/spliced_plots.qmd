@@ -27,15 +27,15 @@ suppressPackageStartupMessages({
     library(ggpubr)
 })
 
-tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
 tar_load(seurat_object_annotated_full)
 seurat_object <- load_seurat(seurat_object_annotated_full)
 
 seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM") 
+    dplyr::filter(diabetes_status == "NODM")
 
 spliced_ratio_genes <- c("gene_ratio_INS", "gene_ratio_XBP1", "gene_ratio_GAPDH")
 ```

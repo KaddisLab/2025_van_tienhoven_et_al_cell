@@ -1,6 +1,6 @@
 
 ---
-title: "Acinar cells: ER Genes"
+title: "Beta cells: HK genes"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -34,9 +34,15 @@ cpus <- hprcc::slurm_allocation()$CPUs
 tar_load(seurat_object_annotated_full)
 seurat_object <- load_seurat(seurat_object_annotated_full)
 
+cell_types <- seurat_object |>
+    dplyr::select(cell_type) |>
+    dplyr::distinct()
+
+cell_type <- "Beta"
+
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
-    dplyr::filter(cell_type == "Acinar") 
+    dplyr::filter(cell_type == cell_type) 
 ```
 
 ::: {.panel-tabset}
@@ -46,10 +52,11 @@ seurat_object <- seurat_object |>
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of ER gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of housekeeping gene expression, indicating median values per cell. Non-expressing cells are excluded."
+
 er_expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    FetchData(vars = c("protected", er_genes_of_interest), layer = "data") |>
+    FetchData(vars = c("protected", housekeeping_genes), layer = "data") |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",
@@ -80,7 +87,7 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
     ) +
     theme_classic() + NoLegend() +
     labs(
-        title = "Expression of ER Genes, per cell",
+        title = "Expression of housekeeping genes, per cell",
         x = "Protected Status",
         y = "Normalized Expression"
     ) +
@@ -93,12 +100,12 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of ER gene expression, indicating median aggregate expression per donor"
+#| fig-cap: "Boxplots of housekeeping gene expression, indicating median aggregate expression per donor"
 
 er_expression_PsB <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
     aggregate_cells("orig.ident", assays = "RNA", layers = "data") |>
-    dplyr::filter(.feature %in% er_genes_of_interest) |>
+    dplyr::filter(.feature %in% housekeeping_genes) |>
     select(gene = ".feature", expression = "RNA", protected)
 
 ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, col = protected)) +
@@ -125,7 +132,7 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
     theme_classic() +
     NoLegend() +
     labs(
-        title = "Expression of ER Genes, per donor",
+        title = "Expression of housekeeping genes, per donor",
         x = "Protected Status",
         y = "Normalized Expression"
     ) +
@@ -134,3 +141,4 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
 ```
 
 ::::
+

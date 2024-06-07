@@ -36,8 +36,8 @@ suppressPackageStartupMessages({
     library(Nebulosa)
 })
 
-tar_config_set(store = "/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 
 tar_load(c(pancdb_metadata_gt, merged_seurat_sketch_750, integrated_seurat_sketch_750, azimuth_mapped_seurat_objects, cell_cycle_csv, tosti_cell_type_csv, cluster_merged_sketch_csv))
 
@@ -153,8 +153,9 @@ ggplot(meta_data_long, aes(x = genotype, y = n, fill = diabetes_status)) +
         axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom"
     ) +
-    labs(x = "Genotype", y = "Count", fill = "Diabetes Status")
-# TODO! Make this an upset plot
+    labs(x = "Genotype", y = "Count", fill = "Diabetes Status") +
+    ylim(0, 30)
+# TODO Make this an upset plot
 ```
 
 ## 1. INS expression is similar in beta-cells of AA vs. TT islet donors (_rs689_)

@@ -1,0 +1,88 @@
+
+---
+title: "Beta cells: DEG"
+date: "2024-5-30" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+library(tidyseurat)
+library(glmGamPoi)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggrepel)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+
+    library(colorspace)
+    library(dittoSeq)
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_sct_annotated)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+
+# ## Set RNA assay as default and Normalize data
+# DefaultAssay(seurat_object) <- "RNA"
+# seurat_object <- seurat_object %>%
+#     NormalizeData()
+
+```
+
+
+## rs689
+
+```{r}
+seurat_object %>%
+    as_tibble() %>%
+    select(contains("PC"), everything()) %>%
+    GGally::ggpairs(columns = 1:5, ggplot2::aes(colour = sample_sex, alpha = 0.2))
+
+markers <-
+    seurat_object %>%
+    FindAllMarkers(only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25) %>%
+    group_by(cell_type) %>%
+    top_n(10, avg_log2FC)
+
+# Plot heatmap
+seurat_object %>%
+    DoHeatmap(
+        features = markers$gene,
+        group.colors = cell_type_palette
+    )
+
+seurat_object <- seurat_object %>%
+    RunUMAP(reduction = "pca", dims = 1:15, n.components = 3L)
+
+seurat_object |>
+    plot_ly(
+        x = ~`umap_1`,
+        y = ~`umap_2`,
+        z = ~`umap_3`,
+        color = ~cell_type,
+        colors = cell_type_palette
+    )
+
+
+```
+

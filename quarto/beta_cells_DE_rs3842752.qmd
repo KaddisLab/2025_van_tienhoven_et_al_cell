@@ -28,8 +28,8 @@ suppressPackageStartupMessages({
     library(ggpubr)
 })
 
-tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("~/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
 tar_load(seurat_object_sct_annotated)

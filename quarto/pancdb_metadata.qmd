@@ -19,12 +19,12 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(targets)
 library(ggridges)
-tar_config_set(store = "~/workspaces/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("/home/domeally/workspaces/DCD.tienhoven_scRNAseq.2024/R")
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 
 tar_load(protected_cohort)
 tar_load(pancdb_metadata)
-pancdb_metadata$protected<-pancdb_metadata$donor_id %in% protected_cohort$sample_id
+pancdb_metadata$protected <- pancdb_metadata$donor_id %in% protected_cohort$sample_id
 pancdb_metadata <- pancdb_metadata |> dplyr::filter(str_detect(reagent_kit, "10X"))
 pancdb_metadata$diabetes_status <- factor(pancdb_metadata$diabetes_status, levels = names(diabetes_palette))
 ```

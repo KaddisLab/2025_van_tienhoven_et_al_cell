@@ -1,7 +1,7 @@
 
 ---
-title: "Acinar cells: ER Genes"
-date: "2024-5-15" 
+title: "Beta cells: ER Genes rs689"
+date: "2024-6-1" 
 date-modified: last-modified
 ---
 
@@ -34,9 +34,15 @@ cpus <- hprcc::slurm_allocation()$CPUs
 tar_load(seurat_object_annotated_full)
 seurat_object <- load_seurat(seurat_object_annotated_full)
 
+cell_types <- seurat_object |>
+    dplyr::select(cell_type) |>
+    dplyr::distinct()
+
+cell_type <- "Beta"
+
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
-    dplyr::filter(cell_type == "Acinar") 
+    dplyr::filter(cell_type == cell_type) 
 ```
 
 ::: {.panel-tabset}
@@ -47,23 +53,24 @@ seurat_object <- seurat_object |>
 #| fig-width: 10
 #| fig-height: 10
 #| fig-cap: "Boxplots of ER gene expression, indicating median values per cell. Non-expressing cells are excluded."
+
 er_expression <- seurat_object %>%
-    dplyr::mutate(protected = factor(protected)) %>%
-    FetchData(vars = c("protected", er_genes_of_interest), layer = "data") |>
+    dplyr::mutate(rs689_consensus = factor(rs689_consensus)) %>%
+    FetchData(vars = c("rs689_consensus", er_genes_of_interest), layer = "data") |>
     pivot_longer(
-        cols = -protected,
+        cols = -rs689_consensus,
         names_to = "gene",
         values_to = "expression"
     ) |>
     dplyr::filter(expression > 0)
 
-ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
+ggplot(er_expression, aes(x = rs689_consensus, y = expression, fill = rs689_consensus, col = rs689_consensus)) +
     stat_dots(position = "dodgejust") +
     stat_pointinterval(col = "black", alpha = 0.6) +
-    facet_wrap(~gene, scales = "free_y") + 
+    facet_wrap(~gene, scales = "free_y") +
     geom_signif(
         test = "wilcox.test",
-        comparisons = list(c("TRUE", "FALSE")),
+        comparisons = list(c("AA", "TT")),
         map_signif_level = TRUE,
         margin_top = -0.4,
         tip_length = 0,
@@ -78,14 +85,15 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
         hjust = 1.1,
         vjust = 1.1
     ) +
-    theme_classic() + NoLegend() +
+    theme_classic() +
+    NoLegend() +
     labs(
-        title = "Expression of ER Genes, per cell",
-        x = "Protected Status",
+        title = "Expression of ER Genes by rs689, per cell",
+        x = "Genotype",
         y = "Normalized Expression"
     ) +
-    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
-    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+    scale_fill_manual(values = c("AA" = "darkgoldenrod2", "TT" = "darkslateblue")) +
+    scale_color_manual(values = c("AA" = "darkgoldenrod2", "TT" = "darkslateblue"))
 ```
 
 ## Per donor
@@ -96,18 +104,18 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
 #| fig-cap: "Boxplots of ER gene expression, indicating median aggregate expression per donor"
 
 er_expression_PsB <- seurat_object %>%
-    dplyr::mutate(protected = factor(protected)) %>%
+    dplyr::mutate(rs689_consensus = factor(rs689_consensus)) %>%
     aggregate_cells("orig.ident", assays = "RNA", layers = "data") |>
     dplyr::filter(.feature %in% er_genes_of_interest) |>
-    select(gene = ".feature", expression = "RNA", protected)
+    select(gene = ".feature", expression = "RNA", rs689_consensus)
 
-ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, col = protected)) +
+ggplot(er_expression_PsB, aes(x = rs689_consensus, y = expression, fill = rs689_consensus, col = rs689_consensus)) +
     stat_dots(position = "dodgejust") +
     stat_pointinterval(col = "black") +
     facet_wrap(~gene, scales = "free_y") + 
     geom_signif(
         test = "wilcox.test",
-        comparisons = list(c("TRUE", "FALSE")), 
+        comparisons = list(c("TT", "TG")), 
         map_signif_level = TRUE,
         margin_top = -0.4,
         tip_length = 0,
@@ -125,12 +133,15 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
     theme_classic() +
     NoLegend() +
     labs(
-        title = "Expression of ER Genes, per donor",
-        x = "Protected Status",
+        title = "Expression of ER Genes by rs689, per donor",
+        x = "Genotype",
         y = "Normalized Expression"
     ) +
-    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
-    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+    scale_fill_manual(values = c("AA" = "darkgoldenrod2", "TT" = "darkslateblue")) +
+    scale_color_manual(values = c("AA" = "darkgoldenrod2", "TT" = "darkslateblue"))
 ```
 
 ::::
+
+AA = Protected
+TT = Susceptible
