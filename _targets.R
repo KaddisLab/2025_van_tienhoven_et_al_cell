@@ -241,7 +241,7 @@ list(
         pattern = map(cellranger_run_folders),
         format = "file_fast",
     ),
-# MARK:     # Agggregate sample metadata
+# MARK:     # Aggregate sample metadata
     tar_target(
         pancdb_metadata_agg,
         aggregate_sample_metadata(pancdb_metadata, protected_cohort, rs3842753_cohort, rs689_cohort, xbp1_psi_per_sample),
@@ -268,6 +268,23 @@ list(
         resources = small
     ),
 # MARK:     # SingleR cell type annotation --------------------------------------------------------------
+    # Get cell atlas from Elgamal et al. 2023
+    # https://doi.org/10.2337/db23-0130
+    # https://islet-hpap.s3.us-west-2.amazonaws.com/hpap_islet_scRNAseq.rds
+    tar_target(
+        elgamal_etal_seurat_object,
+        print("/scratch/domeally/DCD.tienhoven_scRNAseq.2024_cache/data/hpapdata/gaulton_lab/hpap_islet_scRNAseq.rds"),
+        format = "file_fast",
+        deployment = "main"
+    ),
+    tar_target(
+        elgamal_cell_type_csv,
+        seurat_singleR_transfer_label(cellbender_seurat_objects, elgamal_etal_seurat_object, cell_type_col = "Cell Type"),
+        pattern = map(cellbender_seurat_objects),
+        format = "file_fast",
+        resources = medium
+    ),
+    
     # Get cell atlas from Tosti et al. 2021
     # https://doi.org/10.1053/j.gastro.2020.11.010
     # http://singlecell.charite.de/cellbrowser/pancreas/
@@ -289,13 +306,13 @@ list(
         {
             df <- tosti_cell_type_csv %>%
                 readr::read_csv(show_col_types = FALSE, progress = FALSE) %>%
-                mutate(cell_type = case_when(
-                    pruned.labels %in% c("Alpha", "Beta", "Delta", "Gamma") ~ pruned.labels,
-                    pruned.labels %in% c("Acinar-i", "Acinar-REG+", "Acinar-s") ~ "Acinar",
-                    pruned.labels %in% c("Ductal", "MUC5B+ Ductal") ~ "Ductal",
+                mutate(tosti2_cell_type = case_when(
+                    tosti_etalcell_type %in% c("Alpha", "Beta", "Delta", "Gamma") ~ tosti_etalcell_type,
+                    tosti_etalcell_type %in% c("Acinar-i", "Acinar-REG+", "Acinar-s") ~ "Acinar",
+                    tosti_etalcell_type %in% c("Ductal", "MUC5B+ Ductal") ~ "Ductal",
                     TRUE ~ "Other"
                 )) |>
-                select(cell, cell_type)
+                select(cell, tosti2_cell_type)
             write.csv(df, glue::glue("{analysis_cache}/cell_type_out/tosti_consolidated.csv"), quote = FALSE)
             glue::glue("{analysis_cache}/cell_type_out/tosti_consolidated.csv")
         },
@@ -367,7 +384,11 @@ list(
     ),
 
 # MARK:     # Drop failed samples before merge/clustering/DEG ------------------------------------
-    tar_target(ddqc_bpcells, grep(failed_qc_donor_ids, ddqc_bpcells_all, value = TRUE, invert = TRUE), format = "file_fast", iteration = "vector", deployment = "main"),
+    tar_target(ddqc_bpcells,
+        grep(failed_qc_donor_ids, ddqc_bpcells_all, value = TRUE, invert = TRUE),
+        format = "file_fast",
+        iteration = "vector",
+        deployment = "main"),
 
 # MARK:     # Sketch-based integration and clustering ---------------------------------------------
     # Sketch
@@ -387,7 +408,7 @@ list(
     # Integrate
     tar_target(
         integrated_seurat_sketch_750,
-        seurat_sketch_harmony(merged_seurat_sketch_750, batch = "batch", pancdb_metadata),
+        seurat_sketch_harmony(merged_seurat_sketch_750, group_by_vars = c("tissue_source", "reagent_kit"), pancdb_metadata),
         format = "file_fast",
         resources = large
     ),
@@ -431,7 +452,7 @@ list(
 # MARK:     # Aggregate cell annotation -------------------------------------------------------
     tar_target(
         aggregated_cell_annot_csv,
-        seurat_aggregate_cell_annot(ddqc_seurat_objects, tosti_cell_type_csv, tosti_consolidated_csv, scDblFinder_csv, cell_cycle_csv, hpap_annotation_csv, cluster_merged_sketch_man_csv, xbp1_psi_per_cell, percent_spliced_per_cell_INS, percent_spliced_per_cell_XBP1, percent_spliced_per_cell_GAPDH),
+        seurat_aggregate_cell_annot(ddqc_seurat_objects, tosti_cell_type_csv, tosti_consolidated_csv, elgamal_cell_type_csv, scDblFinder_csv, cell_cycle_csv, hpap_annotation_csv, cluster_merged_sketch_man_csv, xbp1_psi_per_cell, percent_spliced_per_cell_INS, percent_spliced_per_cell_XBP1, percent_spliced_per_cell_GAPDH),
         resources = tiny
     ),
 # MARK:     # Annotate sketch object --------------------------------------------------------------
@@ -443,7 +464,7 @@ list(
     ),
 # MARK:     # Project sketch onto full dataset
     tar_target(
-        seurat_object_annotated_full,
+        seurat_object_annotated_full_sketch,
         seurat_project_sketch(seurat_object_annotated_sketch),
         format = "file_fast",
         resources = large
@@ -456,34 +477,69 @@ list(
         format = "file_fast",
         resources = large
     ),
-
     tar_target(
         seurat_object_sct_all, seurat_merge_sct(sct_ddqc_bpcells, "sct_all_merged"),
         format = "file_fast",
         resources = large_mem
     ),
-    # tar_target(
-    #     seurat_object_sct_nodm,
-    #     {
-    #         nodm <- pancdb_metadata_agg[pancdb_metadata_agg$diabetes_status == "NODM", ]
-    #         nodm <- sct_ddqc_bpcells[stringr::str_detect(sct_ddqc_bpcells, stringr::str_c(nodm$donor_id, collapse = "|"))]
-    #         seurat_merge_sct(nodm, "NODM_sct_merged")
-    #     },
-    #     format = "file_fast",
-    #     resources = large_mem
-    # ),
+    # annotate the merged SCT object
     tar_target(
         seurat_object_sct_annotated,
         make_annotated_seurat_object(seurat_object_sct_all, aggregated_cell_annot_csv, pancdb_metadata_agg),
         format = "file_fast",
         resources = large
     ),
+    # integrate
+    tar_target(
+        seurat_object_sct_integrated,
+        seurat_harmony(seurat_object_sct_annotated, "SCT", c("tissue_source", "reagent_kit")),
+        format = "file_fast",
+        resources = large_mem
+    ),
+        tar_target(
+        seurat_object_sct_integrated2,
+        seurat_harmony(seurat_object_sct_annotated, "SCT", c("orig.ident", "tissue_source", "reagent_kit")),
+        format = "file_fast",
+        resources = large_mem
+    ),
+    # MARK: Log-normalised counts --------------------------------------------------------------
+    tar_target(
+        seurat_objects_merged,
+        seurat_merge(ddqc_bpcells, "all_merged"),
+        format = "file_fast",
+        resources = large
+    ),
+    tar_target(
+        seurat_objects_lognorm,
+        seurat_lognorm(seurat_objects_merged, assay = "RNA", vars_to_regress = NULL),
+        format = "file_fast",
+        resources = large
+    ),
+    tar_target(
+        seurat_objects_lognorm_annot,
+        make_annotated_seurat_object(seurat_objects_lognorm, aggregated_cell_annot_csv, pancdb_metadata_agg),
+        format = "file_fast",
+        resources = large
+    ),
+    tar_target(
+        seurat_objects_lognorm_harmony,
+        seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit")),
+        format = "file_fast",
+        resources = large_mem
+    ),
+    tar_target(
+        seurat_objects_lognorm_harmony2,
+        seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit", "orig.ident")),
+        format = "file_fast",
+        resources = large_mem
+    ),
+    
     # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
         touch_cache,
         sapply(
-            c(analysis_cache, list.files(analysis_cache, full.names = TRUE, recursive = TRUE)),
+            c(analysis_cache, list.files(analysis_cache, all.files = TRUE, full.names = TRUE, recursive = TRUE)),
             function(f) Sys.setFileTime(f, Sys.time())
         ),
         deployment = "main",
@@ -492,7 +548,7 @@ list(
     tar_target(
         touch_repo,
         sapply(
-            c(".", list.files(".", full.names = TRUE, recursive = TRUE)),
+            c(".", list.files(".", all.files = TRUE, full.names = TRUE, recursive = TRUE)),
             function(f) Sys.setFileTime(f, Sys.time())
         ),
         deployment = "main",

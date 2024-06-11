@@ -16,7 +16,8 @@ seurat_project_into_ref <- function(query_seurat_object, ref_seurat_object, redu
     set.seed(42)
     require(Seurat)
     options(parallelly.availableCores.methods = "Slurm")
-    hprcc::init_multisession()
+    future::plan("multisession")
+    options(future.globals.maxSize = hprcc::slurm_allocation()$Memory_GB / hprcc::slurm_allocation()$CPUs * 1024^3)
 
     query_seurat_object <- load_seurat(query_seurat_object) 
 

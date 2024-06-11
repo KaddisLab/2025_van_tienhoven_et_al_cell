@@ -37,7 +37,7 @@ seurat_object <- load_seurat(seurat_object_annotated_full)
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
 
-spliced_ratio_genes <- c("gene_ratio_INS", "gene_ratio_XBP1", "gene_ratio_GAPDH")
+spliced_ratio_genes <- c("spliced_ratio_INS", "spliced_ratio_XBP1", "spliced_ratio_GAPDH")
 ```
 
 ::: {.panel-tabset}
@@ -57,7 +57,7 @@ beta <- seurat_object |> dplyr::filter(cell_type == "Beta")
 expression <- beta %>%
     dplyr::mutate(protected = factor(protected)) %>%
     dplyr::select(protected, all_of(spliced_ratio_genes)) |>
-    rename_with(~ gsub("gene_ratio_", "", .x)) |>
+    rename_with(~ gsub("spliced_ratio_", "", .x)) |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",
@@ -109,7 +109,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 expression <- beta %>%
     dplyr::mutate(protected = factor(protected)) %>%
     dplyr::select(orig.ident, protected, all_of(spliced_ratio_genes)) %>%
-    rename_with(~ gsub("gene_ratio_", "", .x)) %>%
+    rename_with(~ gsub("spliced_ratio_", "", .x)) %>%
     pivot_longer(
         cols = -c(orig.ident, protected),
         names_to = "gene",
@@ -171,7 +171,7 @@ alpha <- seurat_object |> dplyr::filter(cell_type == "Alpha")
 expression <- alpha %>%
     dplyr::mutate(protected = factor(protected)) %>%
     dplyr::select(protected, all_of(spliced_ratio_genes)) |>
-    rename_with(~ gsub("gene_ratio_", "", .x)) |>
+    rename_with(~ gsub("spliced_ratio_", "", .x)) |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",
@@ -223,7 +223,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 expression <- alpha %>%
     dplyr::mutate(protected = factor(protected)) %>%
     dplyr::select(orig.ident, protected, all_of(spliced_ratio_genes)) %>%
-    rename_with(~ gsub("gene_ratio_", "", .x)) %>%
+    rename_with(~ gsub("spliced_ratio_", "", .x)) %>%
     pivot_longer(
         cols = -c(orig.ident, protected),
         names_to = "gene",
@@ -281,11 +281,11 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
 #| fig-height: 10
 #| fig-cap: "Boxplots of nascent/mature gene expression, indicating median values per cell. Non-expressing cells are excluded."
 
-spliced_ratio_genes <- c("gene_ratio_INS", "gene_ratio_XBP1", "gene_ratio_GAPDH")
+spliced_ratio_genes <- c("spliced_ratio_INS", "spliced_ratio_XBP1", "spliced_ratio_GAPDH")
 expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
     dplyr::select(protected, all_of(spliced_ratio_genes)) |>
-    rename_with(~ gsub("gene_ratio_", "", .x)) |>
+    rename_with(~ gsub("spliced_ratio_", "", .x)) |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",
@@ -337,7 +337,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
     dplyr::select(orig.ident, protected, all_of(spliced_ratio_genes)) %>%
-    rename_with(~ gsub("gene_ratio_", "", .x)) %>%
+    rename_with(~ gsub("spliced_ratio_", "", .x)) %>%
     pivot_longer(
         cols = -c(orig.ident, protected),
         names_to = "gene",

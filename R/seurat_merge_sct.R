@@ -18,9 +18,9 @@
 #' project_name <- "MyMergedProject"
 #' merged_path <- seurat_merge(seurat_paths, project_name)
 #' }
-seurat_merge_sct <- function(seurat_objects, project_name, do.umap = TRUE, do.norm.rna = TRUE) {
-    hprcc::init_multisession()
+seurat_merge_sct <- function(seurat_objects, project_name) {
     future::plan("multisession")
+    options(future.globals.maxSize = hprcc::slurm_allocation()$Memory_GB / hprcc::slurm_allocation()$CPUs * 1024^3)
 
     message("Loading objects to list...\n")
     # Parallel loading of Seurat objects
@@ -54,21 +54,7 @@ seurat_merge_sct <- function(seurat_objects, project_name, do.umap = TRUE, do.no
     # https://github.com/satijalab/seurat/issues/2814
     Seurat::VariableFeatures(object[["SCT"]]) <- rownames(object[["SCT"]]@scale.data)
 
-    if (do.umap) {
-        object <- object |>
-            Seurat::RunPCA(verbose = TRUE) |>
-            harmony::RunHarmony(group.by.vars = c("orig.ident"), verbose = TRUE) |>
-            Seurat::FindNeighbors(reduction = "harmony", verbose = TRUE) |>
-            Seurat::FindClusters(resolution = 0.15, method = "igraph", cluster.name = "sct_clusters", verbose = TRUE) |>
-            Seurat::RunUMAP(reduction = "harmony", dims = 1:50, verbose = TRUE)
-    }
-    
-    if (do.norm.rna) {
-        message("Normalising RNA assay counts with NormalizeData()...\n")
-        object <- object |>
-            Seurat::NormalizeData(assay = "RNA", verbose = TRUE)
-    }
-    Seurat::DefaultAssay(object) <- "RNA"
+    Seurat::DefaultAssay(object) <- "SCT"
     Seurat::Project(object) <- project_name
     object_path <- glue::glue("{analysis_cache}/seurat_merged/{project_name}.qs")
     dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)

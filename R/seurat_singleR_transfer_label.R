@@ -51,6 +51,9 @@ seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object
     query_seurat_object <- load_seurat(query_seurat_object)
     ref_seurat_object <- load_seurat(ref_seurat_object)
 
+    sample_id <- query_seurat_object|> Seurat::Project()
+    ref_id <- ref_seurat_object |> Seurat::Project()
+
     if (!isNormalized(query_seurat_object)) {
         query_seurat_object <- Seurat::NormalizeData(query_seurat_object)
     }
@@ -80,13 +83,15 @@ seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object
     cell_labels$scores<-NULL
     
     # rename
-    cell_type_table <- cell_labels |> 
-        as.data.frame() |> 
-        tibble::rownames_to_column(var = "cell") |> 
-        tibble::as_tibble()
-
-    sample_id <- query_seurat_object@meta.data$orig.ident[1]
-    ref_id <- ref_seurat_object@project.name
+    cell_type_table <- cell_labels |>
+        as.data.frame() |>
+        tibble::rownames_to_column(var = "cell") |>
+        tibble::as_tibble() |>
+        dplyr::select(cell,
+            cell_type = pruned.labels,
+            cell_type_label = labels,
+            delta_next = delta.next) |>
+        dplyr::rename_with(~ paste0(ref_id, .), -cell)
     
     cell_type_table_path <- glue::glue("{analysis_cache}/{out_folder}/{sample_id}_{ref_id}_cell_type.csv")
 

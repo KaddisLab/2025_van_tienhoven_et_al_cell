@@ -10,6 +10,10 @@ Massarenti et al [Int. J. Mol. Sci. 2022, 23:6481](https://www.mdpi.com/1422-006
 
 Prasad Linga Reddy et al [Genes & Immunity 2011, 12:208–212](https://www.nature.com/articles/gene201070)
 
+Elgamal et al [Diabetes 2023, 72:1719](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10588282/)
+- *An Integrated Map of Cell Type–Specific Gene Expression in Pancreatic Islets*
+
+
 **Risk alleles taken from Gootjes et al, [Table 1](https://www.frontiersin.org/files/Articles/886736/fimmu-13-886736-HTML/image_m/fimmu-13-886736-t001.jpg)**
 
 ## HPAP Data published in Nature Metabolism

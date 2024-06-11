@@ -1,50 +1,50 @@
-seurat_sketch_harmony <- function(seurat_object, batch = "batch", pancdb_metadata) {
 
-    options(parallelly.availableCores.methods = "Slurm")
-    #hprcc::init_multisession()
+#' Perform Harmony Integration on a Seurat Object
+#'
+#' This function performs PCA, Harmony integration, neighbor finding, clustering, and UMAP on a Seurat object.
+#' The Seurat object must have variable features and some form of normalization applied.
+#'
+#' @param seurat_object A Seurat object to be processed.
+#' @param assay The assay to be used for the analysis.
+#' @param group_by_vars A character vector specifying the variables to group by for Harmony integration. Default is "batch".
+#' @param res The resolution parameter for clustering. Default is 0.3.
+#' @param dims Dimensions to use for UMAP. Default is 1:50.
+#' @return The file path where the processed Seurat object is saved.
+#' @examples
+#' \dontrun{
+#' seurat_harmony(seurat_object, assay = "RNA", group_by_vars = "batch", res = 0.3, dims = 1:50)
+#' }
+#' @importFrom Seurat Project DefaultAssay RunPCA FindNeighbors FindClusters RunUMAP
+#' @importFrom harmony RunHarmony
+#' @importFrom glue glue
+#' @importFrom qs qsave
+#' @importFrom future plan
+#' @importFrom hprcc init_multisession
+#' @importFrom tibble rownames_to_column
+#' @export
+seurat_harmony <- function(seurat_object, assay, group_by_vars = "batch", res = 0.3, dims = 1:50) {
+    future::plan("multisession")
+    options(future.globals.maxSize = hprcc::slurm_allocation()$Memory_GB * 1024^3)
 
-    # Seurat object
-    seurat_object <- seurat_object |> load_seurat()
+    message("This is seurat_harmony()...\n")
+    seurat_object <- load_seurat(seurat_object)
+    
     project_name <- Seurat::Project(seurat_object)
 
-    # Add sample metadata
-    # TODO - should be in get_pancdb_metadata()
-    
-    meta_data <- pancdb_metadata |> 
-        dplyr::filter(str_detect(reagent_kit, "10X")) |>
-        dplyr::select(c(sample_id = "donor_id", "sample_sex", "sample_age", "sample_ethnicity", "ab_positive", "diabetes_status", "reagent_kit")) |>
-        dplyr::mutate(batch = as.integer(as.factor(reagent_kit))) |>
-        dplyr::select(-reagent_kit)
-    
-    seurat_object<- scCustomize::Add_Sample_Meta(seurat_object = seurat_object, meta_data = meta_data, join_by_seurat = "orig.ident", join_by_meta = "sample_id")
-    
-    Seurat::Idents(seurat_object) <- batch
-    Seurat::DefaultAssay(seurat_object) <- "sketch"
-    seurat_object[["sketch"]] <- split(seurat_object[["sketch"]], f = seurat_object$batch) 
+    Seurat::DefaultAssay(seurat_object) <- assay
 
-    # Run PCA
-    #TODO use SCTransform, add vars_to_regress as a parameter
-    seurat_object <- Seurat::NormalizeData(seurat_object) |>
-        Seurat::FindVariableFeatures() |>
-        Seurat::ScaleData() |>
-        Seurat::RunPCA()
-    # Integrate across batch
-    seurat_object <- Seurat::IntegrateLayers(
-        object = seurat_object,
-        method = HarmonyIntegration,
-        orig.reduction = "pca",
-        new.reduction = "harmony",
-        verbose = FALSE
-    )
-    seurat_object <- Seurat::RunUMAP(seurat_object, dims = 1:30, reduction = "harmony", reduction.name = "umap_harmony", return.model = TRUE)
-    seurat_object <- JoinLayers(seurat_object)
-    Project(seurat_object) <- glue::glue("harmony_{batch}_{project_name}")
+    seurat_object <- seurat_object |>
+            Seurat::RunPCA(verbose = TRUE) |>
+            harmony::RunHarmony(group.by.vars = group_by_vars, verbose = TRUE) |>
+            Seurat::FindNeighbors(reduction = "harmony", verbose = TRUE) |>
+            Seurat::FindClusters(resolution = res, method = "igraph", cluster.name = "harmony_clusters", verbose = TRUE) |>
+            Seurat::RunUMAP(reduction = "harmony", dims = dims, verbose = TRUE)
+
+    new_project_name <- glue::glue("harmony__{paste(group_by_vars, collapse = '_')}__{project_name}")
+    
+    Seurat::Project(seurat_object) <- new_project_name
     #--------------------------------------------------------------------------------
     # Save results
-    seurat_object_path <- (glue::glue("{analysis_cache}/harmony_out/harmony_{batch}_{project_name}.qs"))
-    dir.create(dirname(seurat_object_path), showWarnings = FALSE, recursive = TRUE)
-
-    qs::qsave(seurat_object, seurat_object_path)
-
-    return(seurat_object_path)
+    object_path <- (glue::glue("{analysis_cache}/harmony_out/{new_project_name}.qs"))
+    save_results(seurat_object, object_path)
 }

@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 ```{r }
 #| code-fold: true
 #| code-summary: "Setup"
-suppressPackageStartupMessages({
+*suppressPackageStartupMessages({
     library(tidyseurat)
     library(Seurat)
     library(targets)
@@ -31,8 +31,8 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_sct_annotated)
-seurat_object <- load_seurat(seurat_object_sct_annotated)
+tar_load(seurat_object_sct_integrated)
+seurat_object <- load_seurat(seurat_object_sct_integrated)
 
 cell_types <- seurat_object |>
     dplyr::select(cell_type) |>

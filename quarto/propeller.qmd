@@ -22,21 +22,21 @@ suppressPackageStartupMessages({
     library(tidyseurat)
     library(targets)
     library(speckle)
-library(limma)
-library(ggplot2)
-library(gt)
-library(dplyr)
-library(tidyr)
-library(downloadthis)
-library(patchwork)
+    library(limma)
+    library(ggplot2)
+    library(gt)
+    library(dplyr)
+    library(tidyr)
+    library(downloadthis)
+    library(patchwork)
 })
 
 tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_annotated_full)
-seurat_object <- load_seurat(seurat_object_annotated_full)
+tar_load(seurat_objects_lognorm_harmony)
+seurat_object <- load_seurat(seurat_objects_lognorm_harmony)
 ```
 
 ## Propeller
@@ -82,10 +82,11 @@ sccomp_result <-
     seurat_object |>
     dplyr::mutate(protected = as.factor(c(protected))) |>
     dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(!is.na(cell_type)) |>
     dplyr::filter(orig.ident != "HPAP-019") |> # enriched for b-cells
     sccomp::sccomp_estimate(
-        formula_composition = ~ protected,
-        formula_variability = ~ protected,
+        formula_composition = ~protected,
+        formula_variability = ~protected,
         .sample = orig.ident,
         .cell_group = cell_type,
         bimodal_mean_variability_association = TRUE,

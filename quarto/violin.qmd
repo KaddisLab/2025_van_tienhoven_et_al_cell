@@ -68,7 +68,7 @@ Cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S00
 #| fig-cap: "HPAP cell types"
 #| fig-height: 12
 #| fig-width: 4
-scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "hpap_celltype") & labs(title = "HPAP")
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "hpap_cell_type") & labs(title = "HPAP")
 ```
 
 Cell types from [HPAP](https://hpap.pmacs.upenn.edu/explore/download?matrix), as used in the recent [ML paper](https://www.cell.com/cell-reports-medicine/fulltext/S2666-3791(24)00204-0).

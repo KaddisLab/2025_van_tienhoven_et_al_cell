@@ -1,6 +1,6 @@
 
 ---
-title: "Gamma cells: ER Genes"
+title: "Gamma+Epsilon cells: ER Genes"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -36,7 +36,7 @@ seurat_object <- load_seurat(seurat_object_annotated_full)
 
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
-    dplyr::filter(cell_type == "Gamma") 
+    dplyr::filter(cell_type == "Gamma+Epsilon") 
 ```
 
 ::: {.panel-tabset}

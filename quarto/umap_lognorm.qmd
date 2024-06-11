@@ -1,0 +1,321 @@
+
+---
+title: "UMAP lognorm"
+date: "2024-6-10" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(targets)
+    library(ggplot2)
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_objects_lognorm_harmony)
+seurat_object <- load_seurat(seurat_objects_lognorm_harmony)
+seurat_object_NODM <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+```
+
+## Non-diabetic donors
+
+::: {.panel-tabset}
+
+### Tosti cell type
+
+```{r}
+#| fig-cap: "Tosti et al cell types, NODM"
+#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Tosti et al cell type") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Cell type
+
+```{r}
+#| fig-cap: "Tosti et al cell types, NODM"
+#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Cell type") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Protected status
+
+```{r}
+#| fig-cap: "Protected status, NODM; red = susceptible, blue = protected"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Protected status") +
+    theme(
+        legend.position = c(0.8, 0.9), # Adjust these values as needed
+        axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()
+    )
+```
+
+### Donor
+```{r}
+#| fig-cap: "Protected status, NODM; red = susceptible, blue = protected"
+#| fig-height: 10
+#| fig-width: 10
+
+donor_palette <- generate_palette(seurat_object[[]]$orig.ident |> unique() |> length())
+
+DimPlot(seurat_object_NODM, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Protected status") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Cell cycle
+
+```{r}
+#| fig-cap: "Cell cycle, all donors"
+#| fig-alt: "Cell cycle, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Cell cycle") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Sex
+```{r}
+#| fig-cap: "Sex, NODM; pink = female, lightblue  = male"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object_NODM, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Sex") +
+    theme(
+        axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), legend.position = c(0.8, 0.9) # Adjust these values as needed
+    )
+```
+
+### Age
+```{r}
+#| fig-cap: "Age, NODM"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "umap", raster = FALSE) +
+    labs(title = "Age") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
+```
+
+### ER Stress score
+```{r}
+#| fig-cap: "ER Stress, NODM"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object_NODM, features = "er_stress_score", reduction = "umap", raster = FALSE) +
+    labs(title = "ER stress score") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlOrRd"))
+```
+`r er_stress_genes`
+
+### UPR score
+```{r}
+#| fig-cap: "UPR Score, NODM"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object_NODM, features = "upr_score", reduction = "umap", raster = FALSE) +
+    labs(title = "UPR stress score") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlGnBu"))
+```
+`r upr_genes`
+
+::::
+
+## All donors
+
+::: {.panel-tabset}
+
+### Tosti cell type
+```{r}
+#| fig-cap: "Tosti et al cell types, all donors"
+#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Tosti et al cell type") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Cell type
+
+```{r}
+#| fig-cap: "Cell type, all donors"
+#| fig-alt: "UMAP of cell types"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Cell type") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Protected status
+
+```{r}
+#| fig-cap: "Protected status, all donors; red = susceptible, blue = protected"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Protected status") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Donor
+
+```{r}
+#| fig-cap: "Donor"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "orig.ident", label = FALSE, cols = donor_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Donor ID") +
+    NoLegend() +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Diabetes status
+
+```{r}
+#| fig-cap: "Diabetes status, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "diabetes_status", label = FALSE, cols = diabetes_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Diabetes status") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Cell cycle
+
+```{r}
+#| fig-cap: "Cell cycle, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Cell cycle") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Sex
+```{r}
+#| fig-cap: "Sex, all donors; pink = female, lightblue = male"
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "sample_sex", label = FALSE, cols = c("#FFC0CB", "#007BFF"), reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    labs(title = "Sex") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Age
+
+```{r}
+#| fig-cap: "Age, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "sample_age", reduction = "umap", raster = FALSE) +
+    labs(title = "Age") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
+```
+### ER Stress score
+```{r}
+#| fig-cap: "ER Stress, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "er_stress_score", reduction = "umap", raster = FALSE) +
+    labs(title = "ER stress score") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlOrRd"))
+```
+`r er_stress_genes`
+
+### UPR score
+```{r}
+#| fig-cap: "UPR Score, all donors"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "upr_score", reduction = "umap", raster = FALSE) +
+    labs(title = "UPR stress score") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlGnBu"))
+```
+`r upr_genes`
+::::

@@ -42,7 +42,7 @@ seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
 
 total_endocrine_cells_per_donor <- seurat_object |>
-    dplyr::filter(cell_type %in% c("Alpha", "Beta", "Beta_like", "Delta", "Gamma", "Epsilon")) |>
+    dplyr::filter(cell_type %in% c("Alpha", "Beta", "Beta_like", "Delta", "Gamma", "Epsilon", "Gamma+Epsilon")) |>
     dplyr::count(orig.ident) |>
     dplyr::rename(donor = orig.ident, total_count = n)
 ```
@@ -58,10 +58,10 @@ total_endocrine_cells_per_donor <- seurat_object |>
 #| fig-width: 10
 
 seurat_object <- seurat_object |>
-    dplyr::filter(cell_type == "Beta") |>
-    Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("batch"), verbose = FALSE) |>
+    dplyr::filter(cell_type %in% c("Beta", "Beta_like")) |>
+    Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("percent_mt", "percent_rb"), verbose = FALSE) |>
     Seurat::RunPCA(verbose = FALSE) |>
-    harmony::RunHarmony(group.by.vars = "batch", verbose = FALSE) |>
+    harmony::RunHarmony(group.by.vars = c("tissue_source", "reagent_kit"), verbose = FALSE) |>
     Seurat::FindNeighbors(reduction = "harmony", verbose = FALSE) |>
     Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = FALSE) |>
     Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = FALSE)
