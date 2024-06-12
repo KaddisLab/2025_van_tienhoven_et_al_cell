@@ -22,22 +22,39 @@ make_annotated_seurat_object <- function(seurat_object,
 
     seurat_object <- load_seurat(seurat_object)
     assay <- Seurat::DefaultAssay(seurat_object)
-    cell_metadata <- cell_metadata |>
-        dplyr::select(c(
-            cell,
-            cell_cycle = "Phase",
-            tosti_cell_type=tosti_etalcell_type,
-            tosti2_cell_type,
-            cell_type=HPAPcell_type,
-            hpap_cell_type=hpap_celltype,
-            hpap_clusters = "cluster_labels",
-            seurat_clusters = "manual_clusters",
+    cell_metadata <- cell_metadata %>%
+        dplyr::mutate(
+            cell_cycle = Phase,
+            tosti_cell_type = tosti_etalcell_type,
+            elgamal_cell_type = HPAPcell_type,
+            cell_type = dplyr::case_when(
+                HPAPcell_type %in% c("Alpha", "Cycling Alpha", "Beta", "Alpha+Beta", "Delta", "Gamma+Epsilon", "Epsilon") ~ HPAPcell_type,
+                HPAPcell_type %in% c("Acinar") ~ HPAPcell_type,
+                HPAPcell_type %in% c("Ductal", "MUC5B+ Ductal") ~ HPAPcell_type,
+                TRUE ~ "Other"),
+            hpap_cell_type = hpap_celltype,
+            hpap_clusters = cluster_labels,
+            seurat_clusters = manual_clusters,
             xbp1u_psi = xbp1_psi,
-            spliced_ratio_INS=gene_ratio_INS,
-            spliced_ratio_XBP1=gene_ratio_XBP1,
-            spliced_ratio_GAPDH=gene_ratio_GAPDH
-        )) |>
+            spliced_ratio_INS = gene_ratio_INS,
+            spliced_ratio_XBP1 = gene_ratio_XBP1,
+            spliced_ratio_GAPDH = gene_ratio_GAPDH) %>%
+        dplyr::select(
+            cell,
+            cell_cycle,
+            tosti_cell_type,
+            elgamal_cell_type,
+            cell_type,
+            hpap_cell_type,
+            hpap_clusters,
+            seurat_clusters,
+            xbp1u_psi,
+            INS_hk,
+            spliced_ratio_INS,
+            spliced_ratio_XBP1,
+            spliced_ratio_GAPDH) %>%
         tibble::column_to_rownames(var = "cell")
+
 
     sample_metadata <- sample_metadata |>
         select(c(
@@ -78,7 +95,7 @@ make_annotated_seurat_object <- function(seurat_object,
             epsilon_score =
                 scales::rescale(GHRL + SOX15 + FEV, to = c(0, 1)) -
                     scales::rescale(INS + GCG + SST + PPY, to = c(0, 1)),
-            cell_type = case_when(
+            cell_type_extra = case_when(
                 grepl("Beta", cell_type) & INS <= 5.8 ~ "Beta_like",
                 epsilon_score > 0.3 ~ "Epsilon",
                 TRUE ~ cell_type
@@ -99,12 +116,12 @@ make_annotated_seurat_object <- function(seurat_object,
         # clean up
         select(-all_of(c(marker_genes, upr_genes, er_stress_genes)))
 
-    project_name <- Seurat::Project(object = seurat_object)
-    seurat_object_path <- glue::glue("{analysis_cache}/data/{project_name}_annotated.qs")
-    qs::qsave(seurat_object, seurat_object_path)
-    message("Saved seurat object")
+    # project_name <- Seurat::Project(object = seurat_object)
+    # seurat_object_path <- glue::glue("{analysis_cache}/data/{project_name}_annotated.qs")
+    # qs::qsave(seurat_object, seurat_object_path)
+    # message("Saved seurat object")
 
-    return(seurat_object_path)
+    return(seurat_object)
 }
 
 
