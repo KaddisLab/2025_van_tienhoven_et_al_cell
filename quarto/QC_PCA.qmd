@@ -1,0 +1,116 @@
+
+---
+title: "Beta cells: DEG"
+date: "2024-5-30" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(targets)
+    library(ggplot2)
+    library(ggrepel)
+    library(tidyverse)
+    library(FactoMineR)
+    library(factoextra)
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+tar_load(ddqc_seurat_objects)
+tar_load(pancdb_metadata_agg)
+```
+
+## QC metrics PCA
+
+```{r}
+# Load data
+data <- ddqc_seurat_objects %>%
+    gsub(".qs", ".csv", .) %>%
+    readr::read_csv(show_col_types = FALSE, progress = FALSE)
+
+# Extract orig.ident from the cell column
+data <- data %>%
+    mutate(
+        orig.ident = sub("_.*", "", cell),
+        # Convert logical columns to numeric for PCA
+        across(where(is.logical), as.numeric)
+    ) |>
+    # drop cout-off threshold columns
+    select(-contains("co"))
+
+# Aggregate data by orig.ident
+data_agg <- data %>%
+    group_by(orig.ident) %>%
+    summarize(
+        across(where(is.logical), ~ mean(.x, na.rm = TRUE) * 100), # Calculate the percentage of TRUE values
+        across(where(is.numeric), ~ mean(.x, na.rm = TRUE)),
+        .groups = "drop"
+    )
+
+# Select only numeric columns for PCA
+numeric_data <- data_agg %>%
+    select(where(is.numeric)) %>%
+    select(where(~ all(!is.na(.))))
+
+# Perform PCA with scaling
+pca_result <- PCA(numeric_data, scale.unit = TRUE, graph = FALSE)
+
+# Create a data frame for plotting individuals with orig.ident
+pca_ind <- get_pca_ind(pca_result)
+pca_coords <- as_tibble(pca_ind$coord, rownames = "sample")
+pca_coords <- pca_coords %>%
+    mutate(orig.ident = data_agg$orig.ident) |>
+    left_join(pancdb_metadata_agg, by = c("orig.ident" = "donor_id"))
+
+# Create a data frame for plotting variables
+pca_var <- get_pca_var(pca_result)
+pca_vars <- as_tibble(pca_var$coord, rownames = "variable")
+
+# Calculate the distance from the origin for each point
+pca_coords <- pca_coords %>%
+    mutate(distance = sqrt(Dim.1^2 + Dim.2^2))
+
+# Identify outliers based on the top 5% of distances
+outlier_threshold <- quantile(pca_coords$distance, 0.95)
+outliers <- pca_coords %>%
+    mutate(outlier = distance > outlier_threshold)
+
+# Visualize PCA results with orig.ident labels and variables
+ggplot() +
+    geom_point(data = outliers, aes(x = Dim.1, y = Dim.2, color = protected, shape = outlier), size = 3, alpha = 0.5) +
+    geom_text_repel(data = pca_coords, aes(x = Dim.1, y = Dim.2, label = orig.ident), size = 3, alpha = 0.3) +
+    geom_segment(data = pca_vars, aes(x = 0, y = 0, xend = Dim.1, yend = Dim.2), arrow = arrow(length = unit(0.2, "cm")), color = "seagreen") +
+    geom_text_repel(data = pca_vars, aes(x = Dim.1, y = Dim.2, label = variable), size = 5, fontface = "bold", color = "seagreen") +
+    theme_classic() +
+    labs(
+        title = "PCA of Samples with QC metrics",
+        subtitle = "Points coloured by protected status; asterisks indicate outliers",
+        x = "PC1",
+        y = "PC2"
+    ) +
+    NoLegend() +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
+    scale_shape_manual(values = c("FALSE" = 16, "TRUE" = 8))
+```
+
+### Technical outliers
+
+```{r}
+outliers |>
+    dplyr::filter(outlier == TRUE) |>
+    select(orig.ident, distance, outlier, protected, diabetes_status, sample_sex, sample_age, sample_ethnicity, tissue_source, reagent_kit) |>
+    arrange(desc(distance)) |>
+    gt::gt()
+```

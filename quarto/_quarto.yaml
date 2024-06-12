@@ -13,6 +13,7 @@ book:
     - index.qmd
     - cell_wish_list.qmd
     - pancdb_metadata.qmd
+    - QC_PCA.qmd
     - umap.qmd
     - umap_lognorm.qmd
     - beta_cells_DE_rs3842752.qmd
