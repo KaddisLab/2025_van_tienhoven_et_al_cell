@@ -136,7 +136,7 @@
 #' @return Path to the filtered seurat_object at "{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs", or the similarly named CSV file with ddqc statistics if do.filter is FALSE
 #' @export
 seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20, res = 1, threshold = 3.5, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
-                        n.reads.lower.bound = 500, n.genes.lower.bound = 200, percent.mito.upper.bound = 20, percent.rb.lower.bound = 5, do.filter = TRUE) {
+                        n.reads.lower.bound = 500, n.genes.lower.bound = 200, percent.mito.upper.bound = 20, percent.rb.lower.bound = 0, do.filter = TRUE) {
     message("Loading Seurat object...")
     seurat_object <- load_seurat(seurat_object)
     sample_id <- Seurat::Project(seurat_object)

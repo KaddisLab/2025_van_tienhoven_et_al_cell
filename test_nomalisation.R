@@ -1,0 +1,128 @@
+library(targets)
+library(tidyseurat)
+library(Seurat)
+library(Matrix)
+library(ggplot2)
+library(ggdist)
+library(dplyr)
+library(tidyr)
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_objects_lognorm_harmony)
+seurat_object <- load_seurat(seurat_objects_lognorm_harmony)
+# tar_load(seurat_object_sct_integrated)
+# seurat_object <- load_seurat(seurat_object_sct_integrated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+
+
+
+# Define the function
+seurat_plot_rle <- function(seurat_object, assay = "RNA", layer = "data", aggregate_by = "orig.ident") {
+    # Check if the assay is present in the Seurat object
+    if (!(assay %in% Seurat::Assays(seurat_object))) {
+        stop(paste("Assay", assay, "is not present in the Seurat object."))
+    }
+
+    # Check if the layer is present in the assay
+    if (!(layer %in% SeuratObject::Layers(seurat_object[[assay]]))) {
+        stop(paste("Layer", layer, "is not present in the assay", assay))
+    }
+
+    # Check if aggregate_by is in the Seurat object metadata
+    if (!(aggregate_by %in% colnames(seurat_object@meta.data))) {
+        stop(paste("Column", aggregate_by, "is not present in the Seurat object metadata."))
+    }
+
+    # Aggregate data by sample using aggregate_cells from tidyseurat
+    aggregated_data <- tidyseurat::aggregate_cells(
+        .data = seurat_object,
+        .sample = !!rlang::sym(aggregate_by),
+        slot = layer,
+        assays = assay,
+        aggregation_function = Matrix::rowSums
+    )
+
+    # Select only relevant columns (.feature, .sample, and the expression values)
+    aggregated_data <- aggregated_data %>%
+        dplyr::select(.feature, .sample, !!rlang::sym(assay))
+
+    # Convert the aggregated data to a long format tibble
+    aggregated_long <- aggregated_data %>%
+        tidyr::pivot_longer(cols = !!rlang::sym(assay), names_to = "Sample", values_to = "Expression")
+
+    # Log-transform the expression values (if not already log-transformed)
+    aggregated_long <- aggregated_long %>%
+        dplyr::mutate(LogExpression = log1p(Expression))
+
+    # Compute RLE values by subtracting the median log expression of each gene
+    aggregated_long <- aggregated_long %>%
+        dplyr::group_by(.feature) %>%
+        dplyr::mutate(RLE = LogExpression - median(LogExpression)) %>%
+        dplyr::ungroup()
+
+    # Extract project name for the plot title
+    project_name <- seurat_object@project.name
+
+    # Create the plot
+    plot <- ggplot2::ggplot(aggregated_long, ggplot2::aes(x = .sample, y = RLE)) +
+        ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+        ggplot2::geom_jitter(width = 0.15, height = 0, alpha = 0.2, size = 0.2, color = "orange") +
+        ggdist::stat_eye(fill = "grey") +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, hjust = 1)) +
+        ggplot2::ggtitle(paste("RLE Plot by Sample for Project:", project_name)) +
+        ggplot2::labs(subtitle = paste("Assay:", assay, "| Layer:", layer)) +
+        ggplot2::ylab("Relative Log1p Expression (RLE)") +
+        ggplot2::theme_classic() +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+
+    return(plot)
+}
+
+# Example usage with pbmc_small
+seurat_plot_rle(seurat_object, assay = "RNA", layer = "data", aggregate_by = "orig.ident")
+ggsave("plot_RNA_data.png")
+seurat_plot_rle(seurat_object, assay = "RNA", layer = "counts", aggregate_by = "orig.ident")
+ggsave("plot_RNA_counts.png")
+
+
+tar_load(seurat_object_sct_integrated)
+seurat_object <- load_seurat(seurat_object_sct_integrated)
+# tar_load(seurat_object_sct_integrated)
+# seurat_object <- load_seurat(seurat_object_sct_integrated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+seurat_plot_rle(seurat_object, assay = "SCT", layer = "data", aggregate_by = "orig.ident")
+ggsave("plot_SCT_data.png")
+seurat_plot_rle(seurat_object, assay = "SCT", layer = "counts", aggregate_by = "orig.ident")
+ggsave("plot_SCT_counts.png")
+
+
+tar_load(seurat_object_sct_integrated2)
+seurat_object <- load_seurat(seurat_object_sct_integrated2)
+# tar_load(seurat_object_sct_integrated)
+# seurat_object <- load_seurat(seurat_object_sct_integrated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+seurat_plot_rle(seurat_object, assay = "SCT", layer = "data", aggregate_by = "orig.ident")
+ggsave("plot_SCT2_data.png")
+seurat_plot_rle(seurat_object, assay = "SCT", layer = "counts", aggregate_by = "orig.ident")
+ggsave("plot_SCT2_counts.png")
+
+tar_load(seurat_object_sct_annotated)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
+# tar_load(seurat_object_sct_integrated)
+# seurat_object <- load_seurat(seurat_object_sct_integrated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+seurat_plot_rle(seurat_object, assay = "SCT", layer = "data", aggregate_by = "orig.ident")
+ggsave("plot_SCTa_data.png")
+seurat_plot_rle(seurat_object, assay = "SCT", layer = "counts", aggregate_by = "orig.ident")
+ggsave("plot_SCTa_counts.png")
