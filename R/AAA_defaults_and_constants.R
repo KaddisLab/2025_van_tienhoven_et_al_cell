@@ -5,6 +5,7 @@ scrnaseq_release <- "2.5.1"
 failed_qc_donor_ids <- paste0(
     c("HPAP-021|HPAP-023|HPAP-027|"), # v2
     c("HPAP-038|HPAP-093"), # v3
+    c("HPAP-023|HPAP-027|HPAP-070|HPAP-106|HPAP-109"), # failed_qc: see QC_PCA report
     collapse = "|"
 )
 
