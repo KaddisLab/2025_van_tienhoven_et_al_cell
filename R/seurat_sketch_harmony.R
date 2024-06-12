@@ -33,7 +33,8 @@ seurat_sketch_harmony <- function(seurat_object, group_by_vars = "batch", pancdb
 
     Seurat::Project(seurat_object) <- new_project_name
     #--------------------------------------------------------------------------------
-    # Save results
-    object_path <- (glue::glue("{analysis_cache}/harmony_out/{new_project_name}.qs"))
-    save_results(seurat_object, object_path)
+    # # Save results
+    # object_path <- (glue::glue("{analysis_cache}/harmony_out/{new_project_name}.qs"))
+    # save_results(seurat_object, object_path)
+    return(seurat_object)
 }
