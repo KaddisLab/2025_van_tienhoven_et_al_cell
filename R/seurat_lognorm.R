@@ -18,15 +18,7 @@ seurat_lognorm <- function(seurat_object, assay = "RNA", vars_to_regress = "batc
     project_name <- Seurat::Project(seurat_object)
 
     new_project_name <- glue::glue("{project_name}_lognorm")
-
-    output_path <- (glue::glue("{analysis_cache}/lognorm_out/{new_project_name}.qs"))
-
-    if (file.exists(output_path)) {
-        message("Returning existing log-normalized object...\n")
-        return(output_path)
-    } else {
-        message("Log-normalized object does not exist, creating ", new_project_name, "\n")
-
+   
     Seurat::DefaultAssay(seurat_object) <- assay
 
     seurat_object <- seurat_object |>
@@ -37,7 +29,8 @@ seurat_lognorm <- function(seurat_object, assay = "RNA", vars_to_regress = "batc
     Seurat::Project(seurat_object) <- new_project_name
     #--------------------------------------------------------------------------------
     # Save results
-    save_results(seurat_object, output_path)
+    # output_path <- (glue::glue("{analysis_cache}/lognorm_out/{new_project_name}.qs"))
+    # save_results(seurat_object, output_path)
+    return(seurat_object)
 }
 
-}

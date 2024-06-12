@@ -52,18 +52,6 @@ seurat_project_sketch <- function(
 
     Seurat::Project(seurat_object) <- new_project_name
     
-    seurat_object_path <- glue::glue("{analysis_cache}/ref_projection_out/{new_project_name}_{reduction_name}.qs")
-
-    dir.create(dirname(seurat_object_path), showWarnings = FALSE, recursive = TRUE)
-
-    # predicted_ref_data <- updated_query[[]] |> as.data.frame() |> tibble::rownames_to_column(var = "cell") |> select("cell", matches("predicted")) |> tibble::as_tibble()
-    # predicted_ref_data_path <- glue::glue("{analysis_cache}/ref_projection_out/{sample_id}_{reduction_model}_{ref_id}_predictions.csv")
-    
-    # predicted_ref_data |> write.csv(predicted_ref_data_path, row.names = FALSE, quote = FALSE)
-
-
-    qs::qsave(seurat_object, seurat_object_path)
-
-    return(seurat_object_path)
+    return(seurat_object)
 
 }

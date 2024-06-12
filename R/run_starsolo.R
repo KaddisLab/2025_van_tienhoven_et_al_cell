@@ -2,7 +2,7 @@ run_starsolo <- function(cellranger_folder, technology, ref_dir, out = NULL) {
     
     sample_id <- basename(cellranger_folder)
     # build the output path
-    if (is.null(out)) out <- glue::glue("{analysis_cache}/starsolo_out/{sample_id}/")
+    if (is.null(out)) out <- glue::glue("{analysis_cache}/starsolo_out/{sample_id}")
 
     # Check for an existing run
     return_path <- glue::glue("{out}/Solo.out/SJ/Summary.csv")

@@ -47,7 +47,7 @@ seurat_merge_sct <- function(seurat_objects, project_name) {
     message("Normalising merged object with PrepSCTFindMarkers()...\n")
     # normalise to median UMI
     future::plan("multisession", workers = 4)
-    object<-Seurat::PrepSCTFindMarkers(object)
+    object <- Seurat::PrepSCTFindMarkers(object)
 
     message("Setting variable features to scale.data...\n")
     # set variable features
@@ -56,10 +56,11 @@ seurat_merge_sct <- function(seurat_objects, project_name) {
 
     Seurat::DefaultAssay(object) <- "SCT"
     Seurat::Project(object) <- project_name
-    object_path <- glue::glue("{analysis_cache}/seurat_merged/{project_name}.qs")
-    dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)
-    message("Saving Seurat object...")
-    qs::qsave(object, file = object_path)
-    message("Done.")
-    return(object_path)
+    
+    # object_path <- glue::glue("{analysis_cache}/seurat_merged/{project_name}.qs")
+    # dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)
+    # message("Saving Seurat object...")
+    # qs::qsave(object, file = object_path)
+    # message("Done.")
+    return(object)
 }

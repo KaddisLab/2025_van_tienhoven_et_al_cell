@@ -45,6 +45,7 @@ seurat_harmony <- function(seurat_object, assay, group_by_vars = "batch", res = 
     Seurat::Project(seurat_object) <- new_project_name
     #--------------------------------------------------------------------------------
     # Save results
-    object_path <- (glue::glue("{analysis_cache}/harmony_out/{new_project_name}.qs"))
-    save_results(seurat_object, object_path)
+    #object_path <- (glue::glue("{analysis_cache}/harmony_out/{new_project_name}.qs"))
+    #save_results(seurat_object, object_path)
+    return(seurat_object)
 }

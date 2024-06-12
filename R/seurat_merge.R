@@ -51,10 +51,11 @@ options(future.globals.maxSize = 20 * 1024^3)
     }
 
     Seurat::Project(object) <- project_name
-    object_path <- glue::glue("{analysis_cache}/seurat_merged/{project_name}.qs")
-    dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)
-    message("Saving Seurat object...")
-    qs::qsave(object, file = object_path)
-    message("Done.")
-    return(object_path)
+    
+    # object_path <- glue::glue("{analysis_cache}/seurat_merged/{project_name}.qs")
+    # dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)
+    # message("Saving Seurat object...")
+    # qs::qsave(object, file = object_path)
+    # message("Done.")
+    return(object)
 }
