@@ -28,9 +28,6 @@ seurat_SCTransform <- function(seurat_object, assay = "RNA", vars_to_regress = c
         seed.use = 42
     )
 
-    # seurat_object_path <- glue::glue("{analysis_cache}/sctransform_out/{sample_id}_sct.qs")
-    # dir.create(dirname(seurat_object_path), recursive = TRUE, showWarnings = FALSE)
-
-    # qs::qsave(seurat_object, file = seurat_object_path)
-    return(seurat_object)
+    seurat_object_path <- glue::glue("{analysis_cache}/sctransform_out/{sample_id}_sct.qs")
+    save_results(seurat_object, seurat_object_path)
 }
