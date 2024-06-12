@@ -31,9 +31,9 @@ seurat_sketch <- function(seurat_object, n_cells = 750) {
         sketched.assay = "sketch",
         seed = 42
     )
-    # object_path <- glue::glue("{analysis_cache}/seurat_sketch_out/{sample_id}_{n_cells}_cells.qs")
-    # dir.create(dirname(object_path), showWarnings = FALSE, recursive = TRUE)
-    # qs::qsave(object, file = object_path)
-    # return(object_path)
-    return(object)
+    
+    object_path <- glue::glue("{analysis_cache}/seurat_sketch_out/{sample_id}_{n_cells}_cells.qs")
+    save_results(object, object_path)
+    return(object_path)
 }
+
