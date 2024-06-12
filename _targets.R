@@ -5,9 +5,11 @@ library(hprcc)
 tar_source()
 
 tar_option_set(
-    packages = c("tidyverse"),
+    packages = c("tidyverse", "Seurat"),
     error = "abridge",
-    workspace_on_error = TRUE
+    workspace_on_error = TRUE,
+    storage = "worker",
+    retrieval = "worker"
 )
 
 list(
@@ -18,7 +20,7 @@ list(
     # tar_target(md5sums_check, check_md5sum(fastq_md5sums), map(fastq_md5sums), resources = tiny),
     # import metadata --------------------------------------------------------
     tar_target(pancdb_metadata, get_pancdb_metadata(), deployment = "main"),
-# MARK: get fastq files --------------------------------------------------------
+    # MARK: get fastq files --------------------------------------------------------
     tar_target(
         fastq_10x,
         grep("SSq2", list.files(path = glue::glue("{analysis_cache}/data/hpapdata/fastq"), pattern = "R[12](_001)?(_fastq-data)?\\.fastq\\.gz$", full.names = TRUE, recursive = TRUE),
@@ -47,7 +49,7 @@ list(
         deployment = "main"
     ),
 
-# MARK:     # kallisto-bustools ---------------------------------------------------------------------
+    # MARK:     # kallisto-bustools ---------------------------------------------------------------------
     # # Using cellranger reference genome as index
     # # Group fastqs by sample
     # tar_target(fastq_10xv3_by_sample, arrange_by_sample_10x(fastq_10xv3), deployment = "main"),
@@ -96,7 +98,7 @@ list(
     #     c(kb_count_10xv3_tcc, kb_count_10xv2_tcc),
     #     deployment = "main"
     # ),
-# MARK:     # Cellranger -----------------------------------------------------------------------
+    # MARK:     # Cellranger -----------------------------------------------------------------------
     # Make nf-core sample sheet
     tar_target(sample_sheet_10xv2, hpap_fastq_to_sample_sheet(fastq_10xv2), deployment = "main"),
     tar_target(sample_sheet_10xv3, hpap_fastq_to_sample_sheet(fastq_10xv3), deployment = "main"),
@@ -125,7 +127,7 @@ list(
     tar_target(cellranger_run_folders_10xv3, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv3), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders_10xv2, list.files(gsub("multiqc/multiqc_report.html", "cellranger/count", nfcore_scrnaseq_multiqc_10xv2), pattern = "HPAP", full.names = TRUE), deployment = "main"),
     tar_target(cellranger_run_folders, c(cellranger_run_folders_10xv3, cellranger_run_folders_10xv2), deployment = "main"),
-# MARK:     # Run STARsolo on cellranger BAMs -----------------------------------------------------
+    # MARK:     # Run STARsolo on cellranger BAMs -----------------------------------------------------
     # TODO rerun 10xv2 samples - the incorrect whitelist was passed here
     tar_target(
         starsolo_10xv2,
@@ -154,7 +156,7 @@ list(
         c(starsolo_10xv2, starsolo_10xv3),
         deployment = "main"
     ),
-# MARK: XBP1u score
+    # MARK: XBP1u score
     # per sample XBP1u score
     tar_target(
         xbp1_psi_per_sample,
@@ -168,7 +170,7 @@ list(
         resources = tiny,
         pattern = map(starsolo_alltech)
     ),
-# MARK:     # percent spliced per cell
+    # MARK:     # percent spliced per cell
     tar_target(
         percent_spliced_per_cell_INS,
         percent_spliced_per_cell(starsolo_alltech, "INS"),
@@ -187,7 +189,7 @@ list(
         resources = tiny,
         pattern = map(starsolo_alltech)
     ),
-# MARK:     # Download SNPs ---------------------------------------------------------------------
+    # MARK:     # Download SNPs ---------------------------------------------------------------------
     tar_target(
         snp_vcf,
         {
@@ -202,7 +204,7 @@ list(
         deployment = "main",
         format = "file_fast"
     ),
-# MARK:     # CellSNP-lite ---------------------------------------------------------------------
+    # MARK:     # CellSNP-lite ---------------------------------------------------------------------
     tar_target(
         cellsnp_lite,
         run_cellsnp_lite(
@@ -217,37 +219,37 @@ list(
     tar_target(rs3842753_cohort, get_cellsnp_lite_genotypes("11\t2159830", "rs3842753"), deployment = "main"),
     tar_target(rs689_cohort, get_cellsnp_lite_genotypes("11\t2160994", "rs689"), deployment = "main"),
     tar_target(rs13266634_cohort, get_cellsnp_lite_genotypes("8\t117172544", "rs13266634"), deployment = "main"),
-# MARK:     # VarTrix ---------------------------------------------------------------------
-    # prep reference snps
-    tar_target(
-        vartrix_vcf,
-        filter_and_trim_vcf(
-            vcf_path = snp_vcf,
-            fai_path = "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa.fai",
-            output_vcf_path = glue::glue("{analysis_cache}/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz")
-        ),
-        resources = small,
-        format = "file_fast"
-    ),
-    tar_target(
-        vartrix_coverage,
-        run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
-        pattern = map(cellranger_run_folders),
-        format = "file_fast",
-    ),
-    tar_target(
-        vartrix_consensus,
-        run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "consensus", mapq = 30),
-        pattern = map(cellranger_run_folders),
-        format = "file_fast",
-    ),
-# MARK:     # Aggregate sample metadata
+    # MARK:     # VarTrix ---------------------------------------------------------------------
+    # # prep reference snps
+    # tar_target(
+    #     vartrix_vcf,
+    #     filter_and_trim_vcf(
+    #         vcf_path = snp_vcf,
+    #         fai_path = "/ref_genomes/cellranger/human/refdata-gex-GRCh38-2020-A/fasta/genome.fa.fai",
+    #         output_vcf_path = glue::glue("{analysis_cache}/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.mod.vcf.gz")
+    #     ),
+    #     resources = small,
+    #     format = "file_fast"
+    # ),
+    # tar_target(
+    #     vartrix_coverage,
+    #     run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "coverage", mapq = 30),
+    #     pattern = map(cellranger_run_folders),
+    #     format = "file_fast",
+    # ),
+    # tar_target(
+    #     vartrix_consensus,
+    #     run_vartrix(cellranger_run_folders, vartrix_vcf, mode = "consensus", mapq = 30),
+    #     pattern = map(cellranger_run_folders),
+    #     format = "file_fast",
+    # ),
+    # MARK:     # Aggregate sample metadata
     tar_target(
         pancdb_metadata_agg,
         aggregate_sample_metadata(pancdb_metadata, protected_cohort, rs3842753_cohort, rs689_cohort, xbp1_psi_per_sample),
         deployment = "main"
     ),
-# MARK:     # Cellbender using CellRanger counts ------------------------------------------------------------
+    # MARK:     # Cellbender using CellRanger counts ------------------------------------------------------------
     tar_target(cellbender_h5,
         run_cellbender(cellranger_run_folders),
         pattern = map(cellranger_run_folders),
@@ -263,11 +265,18 @@ list(
     tar_target(
         cellbender_qc_plots,
         seurat_plot_cellbender(cellbender_seurat_objects, "INS"),
-        pattern = slice(map(cellbender_seurat_objects),1),
+        pattern = slice(map(cellbender_seurat_objects), 1),
         format = "file_fast",
         resources = small
     ),
-# MARK:     # SingleR cell type annotation --------------------------------------------------------------
+    # MARK:     # INS housekeeping normalisation -----------------------------------------------------
+    tar_target(
+        INS_hknorm_per_cell,
+        seurat_INS_hknorm(cellbender_seurat_objects),
+        pattern = map(cellbender_seurat_objects),
+        resources = tiny
+    ),
+    # MARK:     # SingleR cell type annotation --------------------------------------------------------------
     # Get cell atlas from Elgamal et al. 2023
     # https://doi.org/10.2337/db23-0130
     # https://islet-hpap.s3.us-west-2.amazonaws.com/hpap_islet_scRNAseq.rds
@@ -284,7 +293,7 @@ list(
         format = "file_fast",
         resources = medium
     ),
-    
+
     # Get cell atlas from Tosti et al. 2021
     # https://doi.org/10.1053/j.gastro.2020.11.010
     # http://singlecell.charite.de/cellbrowser/pancreas/
@@ -300,26 +309,7 @@ list(
         format = "file_fast",
         resources = small
     ),
-    # Consolidated tosti cell types
-    tar_target(
-        tosti_consolidated_csv,
-        {
-            df <- tosti_cell_type_csv %>%
-                readr::read_csv(show_col_types = FALSE, progress = FALSE) %>%
-                mutate(tosti2_cell_type = case_when(
-                    tosti_etalcell_type %in% c("Alpha", "Beta", "Delta", "Gamma") ~ tosti_etalcell_type,
-                    tosti_etalcell_type %in% c("Acinar-i", "Acinar-REG+", "Acinar-s") ~ "Acinar",
-                    tosti_etalcell_type %in% c("Ductal", "MUC5B+ Ductal") ~ "Ductal",
-                    TRUE ~ "Other"
-                )) |>
-                select(cell, tosti2_cell_type)
-            write.csv(df, glue::glue("{analysis_cache}/cell_type_out/tosti_consolidated.csv"), quote = FALSE)
-            glue::glue("{analysis_cache}/cell_type_out/tosti_consolidated.csv")
-        },
-        format = "file_fast",
-        resources = small
-    ),
-# MARK:     # Azimuth --------------------------------------------------------
+    # MARK:     # Azimuth --------------------------------------------------------
     tar_target(
         azimuth_reference_path,
         download_zenodo_files(
@@ -339,7 +329,7 @@ list(
         format = "file_fast",
         resources = medium
     ),
-# MARK:     # Cell cycle annotation --------------------------------------------------------------
+    # MARK:     # Cell cycle annotation --------------------------------------------------------------
     tar_target(
         cell_cycle_csv,
         seurat_cell_cycle(cellbender_seurat_objects),
@@ -347,7 +337,7 @@ list(
         format = "file_fast",
         resources = small
     ),
-# MARK:     # Doublet annotation --------------------------------------------------------------
+    # MARK:     # Doublet annotation --------------------------------------------------------------
     tar_target(
         scDblFinder_csv,
         seurat_scDblFinder(cellbender_seurat_objects),
@@ -355,7 +345,7 @@ list(
         format = "file_fast",
         resources = medium
     ),
-# MARK:     # HPAP annotation ---------------------------------------------------------------------
+    # MARK:     # HPAP annotation ---------------------------------------------------------------------
     tar_target(hpap_annotation_csv, get_hpap_cell_metadata(), format = "file_fast", resources = medium),
     # Project into reference annotation - Tosti et al 2021
     # * performs very poorly, not used for now
@@ -366,16 +356,15 @@ list(
     #     format = "file_fast",
     #     resources = large
     # ),
-# MARK:     # ddqc -------------------------------------------------------------------------------
+    # MARK:     # ddqc -------------------------------------------------------------------------------
     tar_target(
         ddqc_seurat_objects,
-        # TODO update this from Nadia's project
         seurat_ddqc(cellbender_seurat_objects, scDblFinder_csv),
-        pattern = map(cellbender_seurat_objects, scDblFinder_csv), 
+        pattern = map(cellbender_seurat_objects, scDblFinder_csv),
         format = "file_fast",
         resources = small
     ),
-# MARK:     # Convert seurat_objects to BPcells matrices -------------------------------------------
+    # MARK:     # Convert seurat_objects to BPcells matrices -------------------------------------------
     tar_target(
         ddqc_bpcells_all,
         seurat_to_bpcells(ddqc_seurat_objects),
@@ -383,36 +372,35 @@ list(
         pattern = map(ddqc_seurat_objects)
     ),
 
-# MARK:     # Drop failed samples before merge/clustering/DEG ------------------------------------
+    # MARK:     # Drop failed samples before merge/clustering/DEG ------------------------------------
     tar_target(ddqc_bpcells,
         grep(failed_qc_donor_ids, ddqc_bpcells_all, value = TRUE, invert = TRUE),
         format = "file_fast",
         iteration = "vector",
-        deployment = "main"),
+        deployment = "main"
+    ),
 
-# MARK:     # Sketch-based integration and clustering ---------------------------------------------
+    # MARK:     # Sketch-based integration and clustering ---------------------------------------------
     # Sketch
     tar_target(
         seurat_sketch_750,
         seurat_sketch(ddqc_bpcells, 750),
-        format = "file_fast",
-        pattern = map(ddqc_bpcells)
+        pattern = map(ddqc_bpcells),
+        format = "file_fast"
     ),
     # Merge
     tar_target(
         merged_seurat_sketch_750,
         seurat_merge(seurat_sketch_750, "merged_sketch_750"),
-        format = "file_fast",
         resources = large
     ),
     # Integrate
     tar_target(
         integrated_seurat_sketch_750,
         seurat_sketch_harmony(merged_seurat_sketch_750, group_by_vars = c("tissue_source", "reagent_kit"), pancdb_metadata),
-        format = "file_fast",
         resources = large
     ),
-# MARK:     # Clustering --------------------------------------------------------------------------
+    # MARK:     # Clustering --------------------------------------------------------------------------
     tar_target(
         cluster_merged_sketch_csv,
         seurat_cluster_ari(merged_seurat_sketch_750, assay = "sketch"),
@@ -441,7 +429,7 @@ list(
     #     format = "file_fast",
     #     resources = xlarge
     # ),
-# MARK:     # GPT cell type annotation --------------------------------------------------------------
+    # MARK:     # GPT cell type annotation --------------------------------------------------------------
     # TODO
     # tar_target(
     #     gpt_cell_type_merged_sketch_750_csv,
@@ -449,91 +437,86 @@ list(
     #     format = "file_fast",
     #     resources = large
     # ),
-# MARK:     # Aggregate cell annotation -------------------------------------------------------
+    # MARK:     # Aggregate cell annotation -------------------------------------------------------
     tar_target(
         aggregated_cell_annot_csv,
-        seurat_aggregate_cell_annot(ddqc_seurat_objects, tosti_cell_type_csv, tosti_consolidated_csv, elgamal_cell_type_csv, scDblFinder_csv, cell_cycle_csv, hpap_annotation_csv, cluster_merged_sketch_man_csv, xbp1_psi_per_cell, percent_spliced_per_cell_INS, percent_spliced_per_cell_XBP1, percent_spliced_per_cell_GAPDH),
+        seurat_aggregate_cell_annot(
+            ddqc_seurat_objects,
+            tosti_cell_type_csv, elgamal_cell_type_csv, hpap_annotation_csv,
+            scDblFinder_csv, cell_cycle_csv,
+            cluster_merged_sketch_man_csv,
+            xbp1_psi_per_cell, INS_hknorm_per_cell,
+            percent_spliced_per_cell_INS, percent_spliced_per_cell_XBP1, percent_spliced_per_cell_GAPDH),
         resources = tiny
     ),
-# MARK:     # Annotate sketch object --------------------------------------------------------------
-    tar_target(
-        seurat_object_annotated_sketch,
-        make_annotated_seurat_object(integrated_seurat_sketch_750, aggregated_cell_annot_csv, pancdb_metadata_agg),
-        resources = small,
-        format = "file_fast"
-    ),
-# MARK:     # Project sketch onto full dataset
-    tar_target(
-        seurat_object_annotated_full_sketch,
-        seurat_project_sketch(seurat_object_annotated_sketch),
-        format = "file_fast",
-        resources = large
-    ),
-# MARK:     # SCTransform each sample ---------------------------------------------------------
+#!    # # MARK:     # Annotate sketch object --------------------------------------------------------------
+    # tar_target(
+    #     seurat_object_annotated_sketch,
+    #     make_annotated_seurat_object(integrated_seurat_sketch_750, aggregated_cell_annot_csv, pancdb_metadata_agg),
+    #     resources = small
+    # ),
+    # MARK:     # Project sketch onto full dataset
+    # tar_target(
+    #     seurat_object_annotated_full_sketch,
+    #     seurat_project_sketch(seurat_object_annotated_sketch),
+    #     resources = large
+    # ),
+    # MARK:     # SCTransform each sample ---------------------------------------------------------
     tar_target(
         sct_ddqc_bpcells,
         seurat_SCTransform(ddqc_bpcells, "RNA"),
         pattern = map(ddqc_bpcells),
-        format = "file_fast",
-        resources = large
+        resources = large,
+        format = "file_fast"
     ),
     tar_target(
         seurat_object_sct_all, seurat_merge_sct(sct_ddqc_bpcells, "sct_all_merged"),
-        format = "file_fast",
         resources = large_mem
     ),
     # annotate the merged SCT object
-    tar_target(
-        seurat_object_sct_annotated,
-        make_annotated_seurat_object(seurat_object_sct_all, aggregated_cell_annot_csv, pancdb_metadata_agg),
-        format = "file_fast",
-        resources = large
-    ),
+#!    # tar_target(
+    #     seurat_object_sct_annotated,
+    #     make_annotated_seurat_object(seurat_object_sct_all, aggregated_cell_annot_csv, pancdb_metadata_agg),
+    #     resources = large
+    # ),
     # integrate
-    tar_target(
-        seurat_object_sct_integrated,
-        seurat_harmony(seurat_object_sct_annotated, "SCT", c("tissue_source", "reagent_kit")),
-        format = "file_fast",
-        resources = large_mem
-    ),
-        tar_target(
-        seurat_object_sct_integrated2,
-        seurat_harmony(seurat_object_sct_annotated, "SCT", c("orig.ident", "tissue_source", "reagent_kit")),
-        format = "file_fast",
-        resources = large_mem
-    ),
+    # tar_target(
+    #     seurat_object_sct_integrated,
+    #     seurat_harmony(seurat_object_sct_annotated, "SCT", c("tissue_source", "reagent_kit")),
+    #     resources = large_mem
+    # ),
+    # tar_target(
+    #     seurat_object_sct_integrated2,
+    #     seurat_harmony(seurat_object_sct_annotated, "SCT", c("orig.ident", "tissue_source", "reagent_kit")),
+    #     resources = large_mem
+    # ),
     # MARK: Log-normalised counts --------------------------------------------------------------
     tar_target(
         seurat_objects_merged,
         seurat_merge(ddqc_bpcells, "all_merged"),
-        format = "file_fast",
         resources = large
     ),
     tar_target(
         seurat_objects_lognorm,
         seurat_lognorm(seurat_objects_merged, assay = "RNA", vars_to_regress = NULL),
-        format = "file_fast",
         resources = large
     ),
-    tar_target(
-        seurat_objects_lognorm_annot,
-        make_annotated_seurat_object(seurat_objects_lognorm, aggregated_cell_annot_csv, pancdb_metadata_agg),
-        format = "file_fast",
-        resources = large
-    ),
-    tar_target(
-        seurat_objects_lognorm_harmony,
-        seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit")),
-        format = "file_fast",
-        resources = large_mem
-    ),
-    tar_target(
-        seurat_objects_lognorm_harmony2,
-        seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit", "orig.ident")),
-        format = "file_fast",
-        resources = large_mem
-    ),
-    
+#!    # tar_target(
+    #     seurat_objects_lognorm_annot,
+    #     make_annotated_seurat_object(seurat_objects_lognorm, aggregated_cell_annot_csv, pancdb_metadata_agg),
+    #     resources = large
+    # ),
+    # tar_target(
+    #     seurat_objects_lognorm_harmony,
+    #     seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit")),
+    #     resources = large_mem
+    # ),
+    # tar_target(
+    #     seurat_objects_lognorm_harmony2,
+    #     seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit", "orig.ident")),
+    #     resources = large_mem
+    # ),
+
     # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
