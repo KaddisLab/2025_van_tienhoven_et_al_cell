@@ -14,53 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-
-```{r }
-#| code-fold: true
-#| code-summary: "Setup"
-suppressPackageStartupMessages({
-library(tidyseurat)
-library(glmGamPoi)
-    library(Seurat)
-    library(targets)
-    library(ggplot2)
-    library(ggrepel)
-    library(ggdist)
-    library(ggsignif)
-    library(ggpubr)
-
-    library(colorspace)
-    library(dittoSeq)
-})
-
-tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
-tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
-cpus <- hprcc::slurm_allocation()$CPUs
-
-tar_load(seurat_object_sct_annotated)
-seurat_object <- load_seurat(seurat_object_sct_annotated)
-
-seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM")
-
-# ## Set RNA assay as default and Normalize data
-# DefaultAssay(seurat_object) <- "RNA"
-# seurat_object <- seurat_object %>%
-#     NormalizeData()
-
-```
-
-
-## rs689
-
-```{r}
-seurat_object %>%
-    as_tibble() %>%
-    select(contains("PC"), everything()) %>%
-    GGally::ggpairs(columns = 1:5, ggplot2::aes(colour = sample_sex, alpha = 0.2))
-
-
-## Technical covriates PCA
+## QC metrics PCA
 
 ```{r}
 library(tidyverse)
@@ -151,3 +105,44 @@ outliers |>
     arrange(desc(distance)) |>
     gt::gt()
 ```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+library(tidyseurat)
+library(glmGamPoi)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggrepel)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+
+    library(colorspace)
+    library(dittoSeq)
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_sct_annotated)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+
+```
+
+## rs689
+
+```{r}
+seurat_object %>%
+    as_tibble() %>%
+    select(contains("PC"), everything()) %>%
+    GGally::ggpairs(columns = 1:5, ggplot2::aes(colour = protected, alpha = 0.2))
+```
+

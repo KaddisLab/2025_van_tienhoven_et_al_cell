@@ -31,9 +31,9 @@ suppressPackageStartupMessages({
 tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 
-tar_load(seurat_object_annotated_full)
+tar_load(seurat_object_sct_annotated)
 
-seurat_object <- load_seurat(seurat_object_annotated_full)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
 ```
 
 ## Cell types
@@ -43,13 +43,24 @@ seurat_object <- load_seurat(seurat_object_annotated_full)
 ### Simplified cell types
 
 ```{r}
-#| fig-cap: "Tosti et al cell types"
+#| fig-cap: "Elgamal et al cell types"
 #| fig-height: 12
 #| fig-width: 4
 scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "cell_type") & labs(title = "Cell type")
 ```
 
-Simplified cell types after [Tosti et al. (2020)](https://www.gastrojournal.org/article/S0016-5085(20)35399-3/fulltext)
+Cell types after [Elgamal et al. (2020)](https://doi.org/10.2337/db23-0130)
+
+### Elgamal
+
+```{r}
+#| fig-cap: "Elgamal et al cell types"
+#| fig-height: 12
+#| fig-width: 4
+scCustomize::Stacked_VlnPlot(seurat_object, features = cell_type_markers, x_lab_rotate = TRUE, colors_use = cell_type_palette, group.by = "elgamal_cell_type") & labs(title = "Elgamal et al 2021")
+```
+
+Cell types after [Elgamal et al. (2020)](https://doi.org/10.2337/db23-0130)
 
 ### Tosti
 

@@ -1,6 +1,6 @@
 
 ---
-title: "UMAP lognorm"
+title: "UMAP sct"
 date: "2024-6-10" 
 date-modified: last-modified
 ---
@@ -27,8 +27,8 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_objects_lognorm_harmony)
-seurat_object <- load_seurat(seurat_objects_lognorm_harmony)
+tar_load(seurat_objects_sct_harmony)
+seurat_object <- load_seurat(seurat_objects_sct_harmony)
 seurat_object_NODM <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
 ```
@@ -37,25 +37,25 @@ seurat_object_NODM <- seurat_object |>
 
 ::: {.panel-tabset}
 
-### Tosti cell type
+### Elgamal cell type
 
 ```{r}
-#| fig-cap: "Tosti et al cell types, NODM"
-#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-cap: "Elgamal et al cell types, NODM"
+#| fig-alt: "UMAP of Elgamal et al cell types"
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object_NODM, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+DimPlot(seurat_object_NODM, group.by = "elgamal_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
     NoLegend() +
-    labs(title = "Tosti et al cell type") +
+    labs(title = "Elgamal et al cell type") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
 ### Cell type
 
 ```{r}
-#| fig-cap: "Tosti et al cell types, NODM"
-#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-cap: "Elgamal et al cell types, NODM"
+#| fig-alt: "UMAP of Elgamal et al cell types"
 #| fig-height: 10
 #| fig-width: 10
 
@@ -179,16 +179,16 @@ FeaturePlot(seurat_object_NODM, features = "upr_score", reduction = "umap", rast
 
 ::: {.panel-tabset}
 
-### Tosti cell type
+### Elgamal cell type
 ```{r}
-#| fig-cap: "Tosti et al cell types, all donors"
-#| fig-alt: "UMAP of Tosti et al cell types"
+#| fig-cap: "Elgamal et al cell types, all donors"
+#| fig-alt: "UMAP of Elgamal et al cell types"
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "tosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "eosti_cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
     NoLegend() +
-    labs(title = "Tosti et al cell type") +
+    labs(title = "Elgamal et al cell type") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 

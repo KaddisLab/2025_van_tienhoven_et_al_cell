@@ -100,7 +100,7 @@ ggplot() +
         x = "PC1",
         y = "PC2"
     ) +
-    NoLegend() +
+    Seurat::NoLegend() +
     scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
     scale_shape_manual(values = c("FALSE" = 16, "TRUE" = 8))
 ```
