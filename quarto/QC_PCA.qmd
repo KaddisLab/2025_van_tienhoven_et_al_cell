@@ -1,7 +1,7 @@
 
 ---
-title: "Beta cells: DEG"
-date: "2024-5-30" 
+title: "QC: PCA"
+date: "2024-6-10" 
 date-modified: last-modified
 ---
 
