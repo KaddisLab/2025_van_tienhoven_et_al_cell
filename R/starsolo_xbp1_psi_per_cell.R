@@ -85,11 +85,10 @@ require(rtracklayer)
         dplyr::filter(!is.na(xbp1_psi)) |>
         dplyr::mutate(cell = glue::glue("{orig.ident}_{cell}-1"))
 
-    psi_tibble_path <- glue::glue("{analysis_cache}/xbp1_psi_out/{orig.ident}_xbp1_psi_per_cell.csv")
-    dir.create(dirname(psi_tibble_path), recursive = TRUE, showWarnings = FALSE)
-    write.csv(psi_tibble, psi_tibble_path, row.names = FALSE, quote = FALSE)
+    # psi_tibble_path <- glue::glue("{analysis_cache}/xbp1_psi_out/{orig.ident}_xbp1_psi_per_cell.csv")
 
-    return(psi_tibble_path)
+    # save_results(psi_tibble, psi_tibble_path)
+    return(psi_tibble)
 }
 
 # # Example usage with the provided path
