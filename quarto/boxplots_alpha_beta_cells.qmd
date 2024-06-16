@@ -1,6 +1,6 @@
 
 ---
-title: "Epsilon cells: ER Genes"
+title: "Alpha+Beta cells: ER Genes"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -34,15 +34,9 @@ cpus <- hprcc::slurm_allocation()$CPUs
 tar_load(seurat_object_lognorm_annotated)
 seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 
-cell_types <- seurat_object |>
-    dplyr::select(cell_type) |>
-    dplyr::distinct()
-
-cell_type <- "Epsilon"
-
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
-    dplyr::filter(cell_type == cell_type) 
+    dplyr::filter(cell_type == "Alpha+Beta") 
 ```
 
 ::: {.panel-tabset}
@@ -53,7 +47,6 @@ seurat_object <- seurat_object |>
 #| fig-width: 10
 #| fig-height: 10
 #| fig-cap: "Boxplots of ER gene expression, indicating median values per cell. Non-expressing cells are excluded."
-
 er_expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
     FetchData(vars = c("protected", er_genes_of_interest), layer = "data") |>
@@ -141,4 +134,3 @@ ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, c
 ```
 
 ::::
-
