@@ -51,7 +51,7 @@ spliced_ratio_genes <- c("spliced_ratio_INS", "spliced_ratio_XBP1", "spliced_rat
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of nascent/mature gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of nascent/mature gene expression, indicating mean values per cell. Non-expressing cells are excluded."
 
 beta <- seurat_object |> dplyr::filter(cell_type == "Beta")
 expression <- beta %>%
@@ -80,7 +80,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = mean,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",
@@ -103,7 +103,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of spliced gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of spliced gene expression, indicating mean values per cell. Non-expressing cells are excluded."
 
 # Prepare the data
 expression <- beta %>%
@@ -136,7 +136,7 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = mean,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",
@@ -165,7 +165,7 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of nascent/mature gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of nascent/mature gene expression, indicating mean values per cell. Non-expressing cells are excluded."
 
 alpha <- seurat_object |> dplyr::filter(cell_type == "Alpha")
 expression <- alpha %>%
@@ -194,7 +194,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = mean,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",
@@ -217,7 +217,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of spliced gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of spliced gene expression, indicating mean values per cell. Non-expressing cells are excluded."
 
 # Prepare the data
 expression <- alpha %>%
@@ -250,7 +250,7 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = mean,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",
@@ -279,7 +279,7 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of nascent/mature gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of nascent/mature gene expression, indicating mean values per cell. Non-expressing cells are excluded."
 
 spliced_ratio_genes <- c("spliced_ratio_INS", "spliced_ratio_XBP1", "spliced_ratio_GAPDH")
 expression <- seurat_object %>%
@@ -308,7 +308,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = mean,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",
@@ -331,7 +331,7 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 ```{r }
 #| fig-width: 10
 #| fig-height: 10
-#| fig-cap: "Boxplots of spliced gene expression, indicating median values per cell. Non-expressing cells are excluded."
+#| fig-cap: "Boxplots of spliced gene expression, indicating mean values per cell. Non-expressing cells are excluded."
 
 # Prepare the data
 expression <- seurat_object %>%
@@ -364,7 +364,7 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
         color = "black"
     ) +
     stat_summary(
-        fun = median,
+        fun = mean,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
         color = "white",

@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 suppressPackageStartupMessages({
     library(sccomp)
     library(tidyseurat)
+    library(Seurat)
     library(targets)
     library(speckle)
     library(limma)
@@ -35,8 +36,8 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_sct_annotated)
-seurat_object <- load_seurat(seurat_object_sct_annotated)
+tar_load(seurat_object_lognorm_annotated)
+seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 
 ```
 
@@ -45,29 +46,33 @@ seurat_object <- load_seurat(seurat_object_sct_annotated)
 Plots of cell type proportions for protected and susceptible individuals.
 
 ```{r}
-endocrine_cell_types <- c("Alpha", "Beta", "Beta_like", "Delta", "Gamma", "Epsilon")
+endocrine_cell_types <- c("Alpha", "Beta", "Alpha+Beta", "Delta", "Gamma", "Gamma+Epsilon", "Epsilon")
 cell_info <- seurat_object[[]] |>
     dplyr::filter(orig.ident != "HPAP-019") |>
     dplyr::filter(!is.na(cell_type)) |>
     dplyr::filter(diabetes_status == "NODM") |>
     dplyr::filter(cell_type %in% endocrine_cell_types)
-propeller(clusters = cell_info$cell_type, sample = cell_info$orig.ident,
-group = cell_info$protected)
+propeller(
+    clusters = cell_info$cell_type, sample = cell_info$orig.ident,
+    group = cell_info$protected
+)
 
-protected <- cell_info |> dplyr::filter(protected == TRUE) 
+protected <- cell_info |> dplyr::filter(protected == TRUE)
 susceptible <- cell_info |> dplyr::filter(protected == FALSE)
 
 # plot protected
-plot_protected<-plotCellTypeProps(
+plot_protected <- plotCellTypeProps(
     clusters = protected$cell_type,
-    sample = protected$orig.ident) +
+    sample = protected$orig.ident
+) +
     scale_fill_manual(values = cell_type_palette) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # plot susceptible
-plot_susceptible<-plotCellTypeProps(
+plot_susceptible <- plotCellTypeProps(
     clusters = susceptible$cell_type,
-    sample = susceptible$orig.ident) +
+    sample = susceptible$orig.ident
+) +
     scale_fill_manual(values = cell_type_palette) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) + NoLegend()
 

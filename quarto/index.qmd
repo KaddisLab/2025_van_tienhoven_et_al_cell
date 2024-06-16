@@ -1,3 +1,8 @@
+---
+date: "2024-3-25" 
+date-modified: last-modified
+---
+
 # About {.unnumbered}
 
 ::: {.callout-note appearance="simple"}
@@ -5,18 +10,30 @@
 ## Literature
 
 Gootjes et al [Front Immunol 2022, 13:886736](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2022.886736/full)
+    
+- Risk alleles taken from Gootjes et al, [Table 1](https://www.frontiersin.org/files/Articles/886736/fimmu-13-886736-HTML/image_m/fimmu-13-886736-t001.jpg)
 
 Massarenti et al [Int. J. Mol. Sci. 2022, 23:6481](https://www.mdpi.com/1422-0067/23/12/6481)
+    
+- identifies rs3842752 as a risk allele for T1D
 
 Prasad Linga Reddy et al [Genes & Immunity 2011, 12:208–212](https://www.nature.com/articles/gene201070)
+    
+- T1D and GWAS SNPs in southeast US 
 
-Elgamal et al [Diabetes 2023, 72:1719](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10588282/)
-- *An Integrated Map of Cell Type–Specific Gene Expression in Pancreatic Islets*
+Groen et al 2021 [Cells 2021, 10: 3585](https://www.mdpi.com/2073-4409/10/12/3585)
 
+- Loss of B-cell identity in response to ER stress (scRNAseq)
 
-**Risk alleles taken from Gootjes et al, [Table 1](https://www.frontiersin.org/files/Articles/886736/fimmu-13-886736-HTML/image_m/fimmu-13-886736-t001.jpg)**
+## HPAP Data publications
 
-## HPAP Data published in Nature Metabolism
+Gaulton lab:
+
+- An Integrated Map of Cell Type–Specific Gene Expression in Pancreatic Islets. Elgamal et al [Diabetes 2023, 72:1719](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10588282/)
+    
+    - Comprehensive analysis of HPAP cell types; transferred cell types from this study
+
+HPAP Consortium:
 
 - Modeling type 1 diabetes progression using machine learning and single-cell transcriptomic measurements in human islets [Cell Reports Medicine, April 26, 2024](https://www.cell.com/cell-reports-medicine/fulltext/S2666-3791(24)00204-0)
 

@@ -27,6 +27,8 @@ tar_load(pancdb_metadata)
 pancdb_metadata$protected <- pancdb_metadata$donor_id %in% protected_cohort$sample_id
 pancdb_metadata <- pancdb_metadata |> dplyr::filter(str_detect(reagent_kit, "10X"))
 pancdb_metadata$diabetes_status <- factor(pancdb_metadata$diabetes_status, levels = names(diabetes_palette))
+
+pancdb_metadata <- pancdb_metadata |> dplyr::filter(!donor_id %in% unique(unlist(strsplit(failed_qc_donor_ids, split = "\\|"))))
 ```
 
 ## Disease status by cohort
