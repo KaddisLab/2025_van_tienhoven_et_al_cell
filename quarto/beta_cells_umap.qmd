@@ -34,17 +34,12 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_sct_annotated)
-seurat_object <- load_seurat(seurat_object_sct_annotated)
+tar_load(beta_cells_object)
+
+seurat_object <- beta_cells_object$seurat_object
 DefaultAssay(seurat_object) <- "RNA"
 
-seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM")
-
-total_endocrine_cells_per_donor <- seurat_object |>
-    dplyr::filter(cell_type %in% c("Alpha", "Beta", "Beta_like", "Delta", "Gamma", "Epsilon", "Gamma+Epsilon")) |>
-    dplyr::count(orig.ident) |>
-    dplyr::rename(donor = orig.ident, total_count = n)
+total_endocrine_cells_per_donor <- beta_cells_object$total_endocrine_cells_per_donor 
 ```
 
 ::: {.panel-tabset}
@@ -58,18 +53,29 @@ total_endocrine_cells_per_donor <- seurat_object |>
 #| fig-width: 10
 
 seurat_object <- seurat_object |>
-    dplyr::filter(cell_type %in% c("Beta", "Beta_like")) |>
+    dplyr::filter(cell_type %in% c("Beta", "Alpha+Beta")) |>
     Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("percent_mt", "percent_rb"), verbose = FALSE) |>
     Seurat::RunPCA(verbose = FALSE) |>
-    harmony::RunHarmony(group.by.vars = c("tissue_source", "reagent_kit"), verbose = FALSE) |>
+    harmony::RunHarmony(group.by.vars = c("tissue_source", "reagent_kit", "orig.ident"), verbose = FALSE) |>
     Seurat::FindNeighbors(reduction = "harmony", verbose = FALSE) |>
     Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = FALSE) |>
     Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = FALSE)
 
 num_clusters <- length(unique(seurat_object[[]]$seurat_clusters))
 
-DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE, raster = FALSE) +
     labs(title = "Beta cell subclusters") +
+    theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+## Cell type
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+
+DimPlot(seurat_object, group.by = "cell_type", label = FALSE, cols = cell_type_palette, reduction = "umap", shuffle = TRUE, raster = FALSE) +
+    labs(title = "Protected status") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
@@ -79,7 +85,7 @@ DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "blue"), reduction = "umap", shuffle = TRUE, raster = FALSE) +
     labs(title = "Protected status") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -90,7 +96,7 @@ DimPlot(seurat_object, group.by = "protected", label = FALSE, cols = c("red", "b
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle_palette, reduction = "umap", shuffle = TRUE, raster = FALSE) +
     labs(title = "Cell cycle") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
@@ -103,7 +109,7 @@ DimPlot(seurat_object, group.by = "cell_cycle", label = FALSE, cols = cell_cycle
 
 donor_palette <- generate_palette(seurat_object[[]]$orig.ident |> unique() |> length())
 
-DimPlot(seurat_object, group.by = "orig.ident", cols = donor_palette, label = FALSE, reduction = "umap", shuffle = TRUE) +
+DimPlot(seurat_object, group.by = "orig.ident", cols = donor_palette, label = FALSE, reduction = "umap", shuffle = TRUE, raster = FALSE) +
     labs(title = "Donor") +
     NoLegend() +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())

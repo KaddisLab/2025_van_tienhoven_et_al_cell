@@ -276,6 +276,13 @@ list(
         pattern = map(cellbender_seurat_objects),
         resources = tiny
     ),
+    # MARK:    # UCell Signature scores ---------------------------------------------------------------------
+    tar_target(
+        sig_scores_per_cell,
+        seurat_sig_scores(cellbender_seurat_objects, features = signatures),
+        pattern = map(cellbender_seurat_objects),
+        resources = medium
+    ),
     # MARK:     # SingleR cell type annotation --------------------------------------------------------------
     # Get cell atlas from Elgamal et al. 2023
     # https://doi.org/10.2337/db23-0130
@@ -445,23 +452,29 @@ list(
             tosti_cell_type_csv, elgamal_cell_type_csv, hpap_annotation_csv,
             scDblFinder_csv, cell_cycle_csv,
             cluster_merged_sketch_man_csv,
-            xbp1_psi_per_cell, INS_hknorm_per_cell,
-            percent_spliced_per_cell_INS, percent_spliced_per_cell_XBP1, percent_spliced_per_cell_GAPDH),
-        resources = tiny
+            INS_hknorm_per_cell, xbp1_psi_per_cell,
+            percent_spliced_per_cell_INS, percent_spliced_per_cell_XBP1, percent_spliced_per_cell_GAPDH,
+            sig_scores_per_cell),
+        resources = small
     ),
-#!    # # MARK:     # Annotate sketch object --------------------------------------------------------------
-    # tar_target(
-    #     seurat_object_annotated_sketch,
-    #     make_annotated_seurat_object(integrated_seurat_sketch_750, aggregated_cell_annot_csv, pancdb_metadata_agg),
-    #     resources = small
-    # ),
+    # MARK:     # Annotate sketch object --------------------------------------------------------------
+    tar_target(
+        seurat_object_ann_samples_sketch,
+        seurat_annotate_samples(integrated_seurat_sketch_750, pancdb_metadata_agg),
+        resources = medium
+    ),
+    tar_target(
+        seurat_object_annotated_sketch,
+        seurat_annotate_cells(seurat_object_ann_samples_sketch, aggregated_cell_annot_csv),
+        resources = medium
+    ),
     # MARK:     # Project sketch onto full dataset
-    # tar_target(
-    #     seurat_object_annotated_full_sketch,
-    #     seurat_project_sketch(seurat_object_annotated_sketch),
-    #     resources = large
-    # ),
-    # MARK:     # SCTransform each sample ---------------------------------------------------------
+    tar_target(
+        seurat_object_annotated_full_sketch,
+        seurat_project_sketch(seurat_object_annotated_sketch),
+        resources = large
+    ),
+    #  MARK:     # SCTransform each sample ---------------------------------------------------------
     tar_target(
         sct_ddqc_bpcells,
         seurat_SCTransform(ddqc_bpcells, "RNA"),
@@ -470,53 +483,79 @@ list(
         format = "file_fast"
     ),
     tar_target(
-        seurat_object_sct_all, seurat_merge_sct(sct_ddqc_bpcells, "sct_all_merged"),
+        seurat_object_sct_all,
+        seurat_merge_sct(sct_ddqc_bpcells, "sct_all_merged"),
         resources = large_mem
     ),
-    # annotate the merged SCT object
-#!    # tar_target(
-    #     seurat_object_sct_annotated,
-    #     make_annotated_seurat_object(seurat_object_sct_all, aggregated_cell_annot_csv, pancdb_metadata_agg),
-    #     resources = large
-    # ),
+    # annotate the merged SCT object 
+    tar_target(
+        seurat_object_sct_ann_samples,
+        seurat_annotate_samples(seurat_object_sct_all, pancdb_metadata_agg),
+        resources = large
+    ),
+    tar_target(
+        seurat_object_sct_ann_cells,
+        seurat_annotate_cells(seurat_object_sct_all, aggregated_cell_annot_csv),
+        resources = large
+    ),
     # integrate
-    # tar_target(
-    #     seurat_object_sct_integrated,
-    #     seurat_harmony(seurat_object_sct_annotated, "SCT", c("tissue_source", "reagent_kit")),
-    #     resources = large_mem
-    # ),
-    # tar_target(
-    #     seurat_object_sct_integrated2,
-    #     seurat_harmony(seurat_object_sct_annotated, "SCT", c("orig.ident", "tissue_source", "reagent_kit")),
-    #     resources = large_mem
-    # ),
+    tar_target(
+        seurat_object_sct_harmony,
+        seurat_harmony(seurat_object_sct_ann_samples, "SCT", c("tissue_source", "reagent_kit")),
+        resources = large_mem
+    ),
+    tar_target(
+        seurat_object_sct_harmony2,
+        seurat_harmony(seurat_object_sct_ann_samples, "SCT", c("orig.ident", "tissue_source", "reagent_kit")),
+        resources = large_mem
+    ),
+    tar_target(
+        seurat_object_sct_annotated,
+        seurat_annotate_cells(seurat_object_sct_harmony, aggregated_cell_annot_csv),
+        resources = large
+    ),
+
     # MARK: Log-normalised counts --------------------------------------------------------------
     tar_target(
-        seurat_objects_merged,
+        seurat_object_merged,
         seurat_merge(ddqc_bpcells, "all_merged"),
         resources = large
     ),
     tar_target(
-        seurat_objects_lognorm,
-        seurat_lognorm(seurat_objects_merged, assay = "RNA", vars_to_regress = NULL),
+        seurat_object_lognorm,
+        seurat_lognorm(seurat_object_merged, assay = "RNA", vars_to_regress = NULL),
         resources = large
     ),
-#!    # tar_target(
-    #     seurat_objects_lognorm_annot,
-    #     make_annotated_seurat_object(seurat_objects_lognorm, aggregated_cell_annot_csv, pancdb_metadata_agg),
-    #     resources = large
-    # ),
-    # tar_target(
-    #     seurat_objects_lognorm_harmony,
-    #     seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit")),
-    #     resources = large_mem
-    # ),
-    # tar_target(
-    #     seurat_objects_lognorm_harmony2,
-    #     seurat_harmony(seurat_objects_lognorm_annot, "RNA", c("tissue_source", "reagent_kit", "orig.ident")),
-    #     resources = large_mem
-    # ),
-
+    tar_target(
+        seurat_object_lognorm_ann_samples,
+        seurat_annotate_samples(seurat_object_lognorm, pancdb_metadata_agg),
+        resources = large
+    ),
+    tar_target(
+        seurat_object_lognorm_ann_cells,
+        seurat_annotate_cells(seurat_object_lognorm, aggregated_cell_annot_csv),
+        resources = large
+    ),
+    tar_target(
+        seurat_object_lognorm_harmony,
+        seurat_harmony(seurat_object_lognorm_ann_samples, "RNA", c("tissue_source", "reagent_kit")),
+        resources = large_mem
+    ),
+    tar_target(
+        seurat_object_lognorm_harmony2,
+        seurat_harmony(seurat_object_lognorm_ann_samples, "RNA", c("tissue_source", "reagent_kit", "orig.ident")),
+        resources = large_mem
+    ),
+    tar_target(
+        seurat_object_lognorm_annotated,
+        seurat_annotate_cells(seurat_object_lognorm_harmony2, aggregated_cell_annot_csv),
+        resources = large
+    ),
+    tar_target(
+        beta_cells_object,
+        make_beta_cell_object(seurat_object_lognorm_annotated),
+        resources = large
+    ),
     # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
@@ -564,6 +603,9 @@ list(
 # clustering with anti-correlation
 # https://www.nature.com/articles/s41467-023-43406-9#code-availability
 
+# Gene "programs" from sparse matrices
+# https://github.com/carmonalab/GeneNMF
+
 ## Kmerator
 # https://academic.oup.com/nargab/article/3/3/lqab058/6308460
 
@@ -585,7 +627,6 @@ list(
 
 # Genomic Plots
 # https://www.bioconductor.org/packages/release/bioc/vignettes/GenomicPlot/inst/doc/GenomicPlot_vignettes.html#Introduction
-
 
 # Splicing graphs
 # https://www.bioconductor.org/packages/release/bioc/vignettes/SplicingGraphs/inst/doc/SplicingGraphs.pdf
