@@ -127,36 +127,34 @@ er_stress_genes <- c("DDIT3", "PSMB10", "ATF3", "TXNIP")
 housekeeping_genes <- c("ACTB", "GAPDH", "PGK1", "PPIA", "RPLP0", "SDHA", "TFRC", "GUSB", "HMBS", "HPRT1", "TBP")
 
 # cell type signatures
-elgamal <- list(
-    Acinar = scGate::gating_model(name = "Acinar", signature = c("PNLIP", "CPA1", "CPB1", "PRSS2", "KLK1", "CUZD1", "AMY2A", "CTRB2", "CTRL", "CLPS")),
-    Alpha = scGate::gating_model(name = "Alpha", signature = c("GCG", "CRH", "SPOCK3", "F10", "IRX2", "POPDC3", "C5orf38", "GC", "SPINK4", "TMEM236")),
-    Beta = scGate::gating_model(name = "Beta", signature = c("MAFA", "IAPP", "ADCYAP1", "INS", "AC132217.2", "LRRTM3", "HHATL", "SAMD11", "C1orf127", "WSCD2")),
-    Delta = scGate::gating_model(name = "Delta", signature = c("SST", "GPC5-AS11", "LRFN5", "LY6H1", "BCHE", "CALB11", "LINC01571", "CBLN4", "CRYGD", "F5")),
-    Ductal = scGate::gating_model(name = "Ductal", signature = c("FGFBP1", "CFTR", "MMP7", "KRT23", "S100A14", "KRT19", "LGALS4", "CEACAM7", "VTCN1", "TRPV6")),
-    Endothelial = scGate::gating_model(name = "Endothelial", signature = c("PLVAP", "KDR", "ESM1", "VWF", "PCAT19", "PECAM1", "CLDN5", "CLEC14A", "ADGRL4", "FCN3")),
-    `Gamma+Epsilon` = scGate::gating_model(name = "Gamma+Epsilon", signature = c("PPY", "CARTPT", "NPW", "GPC5-AS1", "CALB1", "SERTM1", "LY6H", "GHRL", "ERICH3", "PRG4")),
-    Macrophage = scGate::gating_model(name = "Macrophage", signature = c("C1QA", "C1QB", "C1QC", "TYROBP", "SDS", "LAPTM5", "MS4A7", "RGS1", "ITGB2", "GPR183")),
-    Mast = scGate::gating_model(name = "Mast", signature = c("TPSB2", "TPSAB1", "CD69", "SAMSN1", "CD37", "CD48", "KIT", "GCSAML", "SRGN", "ITGAX")),
-    Stellate = scGate::gating_model(name = "Stellate", signature = c("COL3A1", "DCN", "LUM", "SFRP2", "PTGDS", "PRRX1", "COL1A2", "BGN", "C7", "COL6A3")),
-    Cycling_alpha = scGate::gating_model(name = "Cycling_alpha", signature = c("UBE2C", "CENPF", "BIRC5", "TOP2A", "FOXM1", "NUSAP1", "TPX2", "CKAP2L", "MKI67", "CKS2")),
-    Active_stellate = scGate::gating_model(name = "Active_stellate", signature = c("APOD", "SFRP2", "PTGDS", "CFD", "CCL11", "DPT", "C7", "PODN", "CHI3L1", "CYP1B1")),
-    Quiescent_stellate = scGate::gating_model(name = "Quiescent_stellate", signature = c("FABP4", "RGS5", "PDK4", "ADIRF", "MCAM", "MUSTN1", "ESAM", "EFHD1", "ADAMTS9", "ADAMTS4")),
-    `Ductal_MUC5B+` = scGate::gating_model(name = "Ductal_MUC5B+", signature = c("TFF2", "TFF1", "MGST1", "TFF3", "TCN1", "FXYD3", "SPINK1", "MMP1", "C19orf33", "LDHB"))
+signatures <- list(
+    Acinar = c("PNLIP", "CPA1", "CPB1", "PRSS2", "KLK1", "CUZD1", "AMY2A", "CTRB2", "CTRL", "CLPS"),
+    Alpha = c("GCG", "CRH", "SPOCK3", "F10", "IRX2", "POPDC3", "C5orf38", "GC", "SPINK4", "TMEM236"),
+    Beta = c("MAFA", "IAPP", "ADCYAP1", "INS", "AC132217.2", "LRRTM3", "HHATL", "SAMD11", "C1orf127", "WSCD2"),
+    Delta = c("SST", "GPC5-AS11", "LRFN5", "LY6H1", "BCHE", "CALB11", "LINC01571", "CBLN4", "CRYGD", "F5"),
+    Ductal = c("FGFBP1", "CFTR", "MMP7", "KRT23", "S100A14", "KRT19", "LGALS4", "CEACAM7", "VTCN1", "TRPV6"),
+    Endothelial = c("PLVAP", "KDR", "ESM1", "VWF", "PCAT19", "PECAM1", "CLDN5", "CLEC14A", "ADGRL4", "FCN3"),
+    Gamma_Epsilon = c("PPY", "CARTPT", "NPW", "GPC5-AS1", "CALB1", "SERTM1", "LY6H", "GHRL", "ERICH3", "PRG4"),
+    epsilon <- c("ACSL1", "SPINK1", "SERPINA1", "DEFB1", "RBP4", "TTR", "TM4SF4", "TM4SF5", "HES4"),
+    Macrophage = c("C1QA", "C1QB", "C1QC", "TYROBP", "SDS", "LAPTM5", "MS4A7", "RGS1", "ITGB2", "GPR183"),
+    Mast = c("TPSB2", "TPSAB1", "CD69", "SAMSN1", "CD37", "CD48", "KIT", "GCSAML", "SRGN", "ITGAX"),
+    Stellate = c("COL3A1", "DCN", "LUM", "SFRP2", "PTGDS", "PRRX1", "COL1A2", "BGN", "C7", "COL6A3"),
+    Cycling_alpha = c("UBE2C", "CENPF", "BIRC5", "TOP2A", "FOXM1", "NUSAP1", "TPX2", "CKAP2L", "MKI67", "CKS2"),
+    Active_stellate = c("APOD", "SFRP2", "PTGDS", "CFD", "CCL11", "DPT", "C7", "PODN", "CHI3L1", "CYP1B1"),
+    Quiescent_stellate = c("FABP4", "RGS5", "PDK4", "ADIRF", "MCAM", "MUSTN1", "ESAM", "EFHD1", "ADAMTS9", "ADAMTS4"),
+    MUC5B_ductal = c("TFF2", "TFF1", "MGST1", "TFF3", "TCN1", "FXYD3", "SPINK1", "MMP1", "C19orf33", "LDHB"),
+    ku_ductal = c("CFTR+", "SPP1+", "SOX9+", "KRT19+", "AMY2A-", "CPA1-", "PTF1A-", "GP2-", "CEL-"),
+    chen_cancer = c("BCL2L1+", "ATP6V0D1+", "ERO1A+", "RNF139+", "BFAR+", "ARFGAP1+", "MAP3K5+", "PLA2G4B-", "TSPYL2-", "NCCRP1-"),
+    chronic_er_stress = c("ATF4+", "GADD34+", "WFS1+", "VIMP+", "SEL1L+", "DERL2+", "P4HB+", "NKX2-2-", "PDX1-", "MAFA-", "INS-", "SLC2A2-"),
+    active_er_stress = c("BIP+", "CHOP+", "XBP1+", "ATF6+", "IRE1α+", "PERK+"),
+    islet_er_stress = c("ATF4+", "GADD34+", "WFS1+", "VIMP+", "SEL1L+", "DERL2+", "P4HB+","BIP+", "CHOP+", "XBP1+", "ATF6+", "IRE1α+", "PERK+", "ERO1A+","RNF139+", "BFAR+", "ARFGAP1+", "MAP3K5+","NKX2-2-", "PDX1-", "MAFA-", "INS-", "SLC2A2-", "PLA2G4B-", "TSPYL2-", "NCCRP1-"),
+    er_stress = c("ERN1+", "ATF6+", "XBP1+", "EIF2AK3+", "HSPA5+", "DDIT3+", "ATF3+", "ATF4+", "TXNIP+", "INS-")
 )
-# classic
-classic <- list(
-    Beta = scGate::gating_model(name = "Beta", signature = c("INS", "IAPP")),
-    Alpha = scGate::gating_model(name = "Alpha", signature = c("GCG")),
-    Proliferating_Cells = scGate::gating_model(name = "Proliferating_Cells", signature = c("MKI67", "CDK1")),
-    Delta = scGate::gating_model(name = "Delta", signature = c("SST")),
-    Gamma = scGate::gating_model(name = "Gamma", signature = c("PPY")),
-    Epsilon = scGate::gating_model(name = "Epsilon", signature = c("GHRL")),
-    Ductal = scGate::gating_model(name = "Ductal", signature = c("CFTR")),
-    `Ductal_MUC5B+` = scGate::gating_model(name = "Ductal_MUC5B+", signature = c("MUC5B")),
-    Acinar = scGate::gating_model(name = "Acinar", signature = c("REG1A", "CTRB2", "PRSS1", "PRSS2")),
-    Stellate = scGate::gating_model(name = "Stellate", signature = c("PDGFRB", "COL6A1")),
-    Quiescent_Stellate = scGate::gating_model(name = "Quiescent_Stellate", signature = c("RGS5")),
-    Endothelial = scGate::gating_model(name = "Endothelial", signature = c("PLVAP", "ESAM", "VWF")),
-    Mast = scGate::gating_model(name = "Mast", signature = c("KIT", "CD69")),
-    Macrophages = scGate::gating_model(name = "Macrophages", signature = c("C1QA", "C1QB", "C1QC"))
-)
+
+# epsilon: Dominguez Gutierrez et al https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6963699
+# islet_er_stress: chatGPT
+# er_stress: this study
+# chronic/active stress: Chen et al https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9360004/
+# chen_cancer: https://www.frontiersin.org/articles/10.3389/fmolb.2023.1298077/full
+# ku_ductal: Terasa Ku, COH, personal communication
+
