@@ -50,7 +50,8 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
             INS_hk,
             spliced_ratio_INS,
             spliced_ratio_XBP1,
-            spliced_ratio_GAPDH) %>%
+            spliced_ratio_GAPDH,
+            contains("_UCell")) %>%
         tibble::column_to_rownames(var = "cell")
 
     seurat_object <- Seurat::AddMetaData(
@@ -72,25 +73,25 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
             epsilon_score =
                 scales::rescale(GHRL + SOX15 + FEV, to = c(0, 1)) - scales::rescale(INS + GCG + SST + PPY, to = c(0, 1)),
             cell_type_extra = case_when(
-                INS <= 5.8 ~ "INS+",
+                INS >= 5.8 ~ "INS+",
                 epsilon_score > 0.3 ~ "Epsilon",
-                TRUE ~ cell_type
+                TRUE ~ ""
             )
         )
-    # add Stress scores
-    # Add upr_score and er_stress_score to the Seurat object
-    seurat_object <- seurat_object |>
-        join_features(
-            features = c(upr_genes, er_stress_genes),
-            shape = "wide",
-            assay = assay
-        ) |>
-        mutate(
-            upr_score = scales::rescale(rowSums(across(all_of(upr_genes))), to = c(0, 1)),
-            er_stress_score = scales::rescale(rowSums(across(all_of(er_stress_genes))), to = c(0, 1))
-        ) |>
-        # clean up
-        select(-all_of(c(marker_genes, upr_genes, er_stress_genes)))
+    # # add Stress scores
+    # # Add upr_score and er_stress_score to the Seurat object
+    # seurat_object <- seurat_object |>
+    #     join_features(
+    #         features = c(upr_genes, er_stress_genes),
+    #         shape = "wide",
+    #         assay = assay
+    #     ) |>
+    #     mutate(
+    #         upr_score = scales::rescale(rowSums(across(all_of(upr_genes))), to = c(0, 1)),
+    #         er_stress_score = scales::rescale(rowSums(across(all_of(er_stress_genes))), to = c(0, 1))
+    #     ) |>
+    #     # clean up
+    #     select(-all_of(c(marker_genes, upr_genes, er_stress_genes)))
 
     # project_name <- Seurat::Project(object = seurat_object)
     # seurat_object_path <- glue::glue("{analysis_cache}/data/{project_name}_annotated.qs")
