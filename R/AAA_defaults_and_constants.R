@@ -135,7 +135,7 @@ signatures <- list(
     Ductal = c("FGFBP1", "CFTR", "MMP7", "KRT23", "S100A14", "KRT19", "LGALS4", "CEACAM7", "VTCN1", "TRPV6"),
     Endothelial = c("PLVAP", "KDR", "ESM1", "VWF", "PCAT19", "PECAM1", "CLDN5", "CLEC14A", "ADGRL4", "FCN3"),
     Gamma_Epsilon = c("PPY", "CARTPT", "NPW", "GPC5-AS1", "CALB1", "SERTM1", "LY6H", "GHRL", "ERICH3", "PRG4"),
-    epsilon <- c("ACSL1", "SPINK1", "SERPINA1", "DEFB1", "RBP4", "TTR", "TM4SF4", "TM4SF5", "HES4"),
+    epsilon = c("ACSL1", "SPINK1", "SERPINA1", "DEFB1", "RBP4", "TTR", "TM4SF4", "TM4SF5", "HES4"),
     Macrophage = c("C1QA", "C1QB", "C1QC", "TYROBP", "SDS", "LAPTM5", "MS4A7", "RGS1", "ITGB2", "GPR183"),
     Mast = c("TPSB2", "TPSAB1", "CD69", "SAMSN1", "CD37", "CD48", "KIT", "GCSAML", "SRGN", "ITGAX"),
     Stellate = c("COL3A1", "DCN", "LUM", "SFRP2", "PTGDS", "PRRX1", "COL1A2", "BGN", "C7", "COL6A3"),
