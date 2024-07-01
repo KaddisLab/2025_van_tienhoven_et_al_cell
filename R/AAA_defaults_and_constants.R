@@ -144,17 +144,18 @@ signatures <- list(
     Quiescent_stellate = c("FABP4", "RGS5", "PDK4", "ADIRF", "MCAM", "MUSTN1", "ESAM", "EFHD1", "ADAMTS9", "ADAMTS4"),
     MUC5B_ductal = c("TFF2", "TFF1", "MGST1", "TFF3", "TCN1", "FXYD3", "SPINK1", "MMP1", "C19orf33", "LDHB"),
     ku_ductal = c("CFTR+", "SPP1+", "SOX9+", "KRT19+", "AMY2A-", "CPA1-", "PTF1A-", "GP2-", "CEL-"),
-    chen_cancer = c("BCL2L1+", "ATP6V0D1+", "ERO1A+", "RNF139+", "BFAR+", "ARFGAP1+", "MAP3K5+", "PLA2G4B-", "TSPYL2-", "NCCRP1-"),
-    chronic_er_stress = c("ATF4+", "GADD34+", "WFS1+", "VIMP+", "SEL1L+", "DERL2+", "P4HB+", "NKX2-2-", "PDX1-", "MAFA-", "INS-", "SLC2A2-"),
-    active_er_stress = c("BIP+", "CHOP+", "XBP1+", "ATF6+", "IRE1α+", "PERK+"),
-    islet_er_stress = c("ATF4+", "GADD34+", "WFS1+", "VIMP+", "SEL1L+", "DERL2+", "P4HB+","BIP+", "CHOP+", "XBP1+", "ATF6+", "IRE1α+", "PERK+", "ERO1A+","RNF139+", "BFAR+", "ARFGAP1+", "MAP3K5+","NKX2-2-", "PDX1-", "MAFA-", "INS-", "SLC2A2-", "PLA2G4B-", "TSPYL2-", "NCCRP1-"),
-    er_stress = c("ERN1+", "ATF6+", "XBP1+", "EIF2AK3+", "HSPA5+", "DDIT3+", "ATF3+", "ATF4+", "TXNIP+", "INS-"),
-    msigdb_upr = c("ALDH18A1", "ARFGAP1", "ASNS", "ATF3", "ATF4", "ATF6", "ATP6V0D1", "BAG3", "BANF1", "CALR", "CCL2", "CEBPB", "CEBPG", "CHAC1", "CKS1B", "CNOT2", "CNOT4", "CNOT6", "CXXC1", "DCP1A", "DCP2", "DCTN1", "DDIT4", "DDX10", "DKC1", "DNAJA4", "DNAJB9", "DNAJC3", "EDC4", "EDEM1", "EEF2", "EIF2AK3", "EIF2S1", "EIF4A1", "EIF4A2", "EIF4A3", "EIF4E", "EIF4EBP1", "EIF4G1", "ERN1", "ERO1L", "EXOC2", "EXOSC1", "EXOSC10", "EXOSC2", "EXOSC4", "EXOSC5", "EXOSC9", "FKBP14", "FUS", "GEMIN4", "GOSR2", "H2AFX", "HERPUD1", "HSP90B1", "HSPA5", "HSPA9", "HYOU1", "IARS", "IFIT1", "IGFBP1", "IMP3", "KDELR3", "KHSRP", "KIF5B", "LSM1", "LSM4", "MTHFD2", "NFYA", "NFYB", "NHP2", "NOLC1", "NOP14", "NOP56", "NPM1", "OBFC2A", "PAIP1", "PARN", "PDIA5", "PDIA6", "POP4", "PREB", "PSAT1", "RPS14", "RRP9", "SDAD1", "SEC11A", "SEC31A", "SERP1", "SHC1", "SKIV2L2", "SLC1A4", "SLC30A5", "SLC7A5", "SPCS1", "SPCS3", "SRPR", "SRPRB", "SSR1", "STC2", "TARS", "TATDN2", "TSPYL2", "TTC37", "TUBB2A", "VEGFA", "WFS1", "WIPI1", "XBP1", "XPOT", "YIF1A", "YWHAZ", "ZBTB17")
+    chen_cancer = c("BCL2L1+", "ATP6V0D1+", "ERO1A+", "RNF139+", "BFAR+", "ARFGAP1+", "MAP3K5+", "PLA2G4B-", "TSPYL2-", "FIGLA-"),
+    chronic_er_stress = c("ATF4+", "PPP1R15A+", "WFS1+", "SELS+", "SEL1L+", "DERL2+", "P4HB+", "NKX2-2-", "PDX1-", "MAFA-", "INS-", "SLC2A2-"),
+    active_er_stress = c("HSPA5+", "DDIT3+", "XBP1+", "ATF6+", "ERN1+", "EIF2AK3+"),
+    islet_er_stress = c("ATF4+", "PPP1R15A+", "WFS1+", "SELS+", "SEL1L+", "DERL2+", "P4HB+", "HSPA5+", "DDIT3+", "XBP1+", "ATF6+", "ERN1+", "EIF2AK3+", "ERO1A+", "RNF139+", "BFAR+", "ARFGAP1+", "MAP3K5+", "NKX2-2-", "PDX1-", "MAFA-", "INS-", "SLC2A2-", "PLA2G4B-", "TSPYL2-", "NCCRP1-"),
+    islet_stress = c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "ATF3", "ATF4", "TXNIP"),
+    cellular_stress = c("DDIT3", "PSMB10", "ATF3", "TXNIP"),
+    core_upr_stress = c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "ATF4"),
+    msigdb_upr_stress = c("ALDH18A1", "ARFGAP1", "ASNS", "ATF3", "ATF4", "ATF6", "ATP6V0D1", "BAG3", "BANF1", "CALR", "CCL2", "CEBPB", "CEBPG", "CHAC1", "CKS1B", "CNOT2", "CNOT4", "CNOT6", "CXXC1", "DCP1A", "DCP2", "DCTN1", "DDIT4", "DDX10", "DKC1", "DNAJA4", "DNAJB9", "DNAJC3", "EDC4", "EDEM1", "EEF2", "EIF2AK3", "EIF2S1", "EIF4A1", "EIF4A2", "EIF4A3", "EIF4E", "EIF4EBP1", "EIF4G1", "ERN1", "ERO1A", "EXOC2", "EXOSC1", "EXOSC10", "EXOSC2", "EXOSC4", "EXOSC5", "EXOSC9", "FKBP14", "FUS", "GEMIN4", "GOSR2", "H2AFX", "HERPUD1", "HSP90B1", "HSPA5", "HSPA9", "HYOU1", "IARS1", "IFIT1", "IGFBP1", "IMP3", "KDELR3", "KHSRP", "KIF5B", "LSM1", "LSM4", "MTHFD2", "NFYA", "NFYB", "NHP2", "NOLC1", "NOP14", "NOP56", "NPM1", "OBFC2A", "PAIP1", "PARN", "PDIA5", "PDIA6", "POP4", "PREB", "PSAT1", "RPS14", "RRP9", "SDAD1", "SEC11A", "SEC31A", "SERP1", "SHC1", "SKIV2L2", "SLC1A4", "SLC30A5", "SLC7A5", "SPCS1", "SPCS3", "SRPR", "SRPRB", "SSR1", "STC2", "TARS1", "TATDN2", "TSPYL2", "TTC37", "TUBB2A", "VEGFA", "WFS1", "WIPI1", "XBP1", "XPOT", "YIF1A", "YWHAZ", "ZBTB17")
 )
-
 # epsilon: Dominguez Gutierrez et al https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6963699
 # islet_er_stress: chatGPT
-# er_stress: this study
+# islet_stress, cellular_stress, core_upr_stress: this study
 # chronic/active stress: Chen et al https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9360004/
 # chen_cancer: https://www.frontiersin.org/articles/10.3389/fmolb.2023.1298077/full
 # ku_ductal: Terasa Ku, COH, personal communication

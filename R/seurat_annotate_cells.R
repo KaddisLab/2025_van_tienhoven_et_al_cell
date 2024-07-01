@@ -59,27 +59,14 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
         metadata = cell_metadata
     )
 
-    # Add Beta_like & epsilon cell_type annotations
+    
+    # Add INS+ cell_type annotations
     require(tidyseurat)
-    marker_genes <- c("GHRL", "SOX15", "FEV", "INS", "GCG", "SST", "PPY")
-
+    INS_hk_threshold <- find_expression_valley(seurat_object, "INS_hk")$valley
     seurat_object <- seurat_object |>
-        join_features(
-            features = marker_genes,
-            shape = "wide",
-            assay = assay
-        ) |>
         mutate(
-            epsilon_score =
-                scales::rescale(GHRL + SOX15 + FEV, to = c(0, 1)) - scales::rescale(INS + GCG + SST + PPY, to = c(0, 1)),
-            cell_type_extra = case_when(
-                INS >= 5.8 ~ "INS+",
-                epsilon_score > 0.3 ~ "Epsilon",
-                TRUE ~ ""
-            )
-        ) |>
-        # clean up
-        select(-any_of(c(marker_genes, upr_genes, er_stress_genes)))
+            cell_type_extra = ifelse(INS_hk >= INS_hk_threshold, "INS+", "")
+        ) 
 
     return(seurat_object)
 }

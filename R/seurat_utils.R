@@ -109,3 +109,57 @@ download_zenodo_files <- function(urls, dest_dir) {
   
   return(downloaded_files)
 }
+
+
+
+find_expression_valley <- function(seurat_object, column_name) {
+    require(Seurat)
+    require(ggplot2)
+
+    # Extract the data for the specified column
+    expr_values <- seurat_object[[column_name]]
+
+    # Remove NA and zero values
+    expr_values_clean <- expr_values[!is.na(expr_values) & expr_values > 0]
+
+    # Perform kernel density estimation
+    d <- density(expr_values_clean)
+
+    # Find the valley using optimize()
+    valley <- optimize(approxfun(d$x, d$y), interval = range(expr_values_clean))$minimum
+
+    # Create the density plot with the identified valley
+    p <- ggplot(data.frame(x = d$x, y = d$y), aes(x = x, y = y)) +
+        geom_line() +
+        geom_area(fill = "blue", alpha = 0.5) +
+        geom_vline(xintercept = valley, color = "red", linetype = "dashed") +
+        annotate("text",
+            x = valley, y = 0, label = sprintf("Valley: %.2f", valley),
+            vjust = -0.5, hjust = -0.1, color = "red"
+        ) +
+        theme_bw() +
+        labs(
+            title = paste("Density Plot of", column_name, "Expression with Identified Valley"),
+            x = paste(column_name, "Expression Values"),
+            y = "Density"
+        )
+
+    # Create a list to return multiple objects
+    result <- list(
+        valley = valley,
+        plot = p,
+        na_count = sum(is.na(expr_values)),
+        zero_count = sum(expr_values == 0, na.rm = TRUE)
+    )
+
+    return(result)
+}
+
+# Example usage:
+# result <- find_expression_valley(seurat_object, "INS_hk")
+#
+# print(paste("The valley between the two main peaks is at:", round(result$valley, 2)))
+# print(paste("Number of NA values removed:", result$na_count))
+# print(paste("Number of zero values removed:", result$zero_count))
+#
+# print(result$plot)
