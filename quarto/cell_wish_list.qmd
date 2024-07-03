@@ -6,7 +6,6 @@ date-modified: last-modified
 format:
   html:
     embed-resources: true
-    theme: simplex
     code-fold: true
 ---
 
