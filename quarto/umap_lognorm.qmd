@@ -1,6 +1,6 @@
 
 ---
-title: "UMAP lognorm"
+title: "UMAP: all cells"
 date: "2024-6-10" 
 date-modified: last-modified
 ---
@@ -138,14 +138,14 @@ FeaturePlot(seurat_object_NODM, features = "sample_age", reduction = "umap", ras
     scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
 ```
 
-### ER Stress score
+### Islet Stress
 ```{r}
 #| fig-cap: "ER Stress, NODM"
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object_NODM, features = "er_stress_score", reduction = "umap", raster = FALSE) +
-    labs(title = "ER stress score") +
+FeaturePlot(seurat_object_NODM, features = "islet_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Islet stress") +
     theme(
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
@@ -154,16 +154,16 @@ FeaturePlot(seurat_object_NODM, features = "er_stress_score", reduction = "umap"
     ) +
     scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlOrRd"))
 ```
-`r er_stress_genes`
+`r signatures$islet_stress`
 
-### UPR score
+### Core UPR stress
 ```{r}
 #| fig-cap: "UPR Score, NODM"
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object_NODM, features = "upr_score", reduction = "umap", raster = FALSE) +
-    labs(title = "UPR stress score") +
+FeaturePlot(seurat_object_NODM, features = "core_upr_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Core UPR stress") +
     theme(
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
@@ -172,7 +172,7 @@ FeaturePlot(seurat_object_NODM, features = "upr_score", reduction = "umap", rast
     ) +
     scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlGnBu"))
 ```
-`r upr_genes`
+`r signatures$core_upr_stress`
 
 ::::
 
@@ -284,14 +284,16 @@ FeaturePlot(seurat_object, features = "sample_age", reduction = "umap", raster =
     ) +
     scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
 ```
-### ER Stress score
+
+### Islet stress
+
 ```{r}
-#| fig-cap: "ER Stress, all donors"
+#| fig-cap: "Islet stress, all donors"
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object, features = "er_stress_score", reduction = "umap", raster = FALSE) +
-    labs(title = "ER stress score") +
+FeaturePlot(seurat_object, features = "islet_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Islet stress") +
     theme(
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
@@ -300,16 +302,16 @@ FeaturePlot(seurat_object, features = "er_stress_score", reduction = "umap", ras
     ) +
     scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlOrRd"))
 ```
-`r er_stress_genes`
+`r signatures$islet_stress`
 
-### UPR score
+### Core UPR stress
 ```{r}
-#| fig-cap: "UPR Score, all donors"
+#| fig-cap: "Core UPR stress, all donors"
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object, features = "upr_score", reduction = "umap", raster = FALSE) +
-    labs(title = "UPR stress score") +
+FeaturePlot(seurat_object, features = "core_upr_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Core UPR stress") +
     theme(
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
@@ -318,5 +320,5 @@ FeaturePlot(seurat_object, features = "upr_score", reduction = "umap", raster = 
     ) +
     scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlGnBu"))
 ```
-`r upr_genes`
+`r signatures$core_upr_stress`
 ::::
