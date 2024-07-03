@@ -109,14 +109,14 @@ plots <- sccomp_result |> plot()
 ```
 
 ```{r}
-#| fig-cap: "A plot of estimates of differential composition (c_) on the x-axis and differential variability (v_) on the y-axis. The error bars represent 95% credible intervals. The dashed lines represent the minimal effect that the hypothesis test is based on. An effect is labelled as significant if bigger than the minimal effect according to the 95% credible interval."
+#| fig-cap: "A plot of estimates of differential composition (c_) on the left and differential variability (v_) on the right. The error bars represent 95% credible intervals. The dashed lines represent the minimal effect that the hypothesis test is based on. An effect is labelled as significant if bigger than the minimal effect according to the 95% credible interval."
 plots$credible_intervals_1D
 ```
 
 ```{r}
-#| eval: FALSE
 #| code-fold: true
-#| fig-cap: "We can plot the relationship between abundance and variability. As we can see below, they are positively correlated, you also appreciate that this relationship is by model for single cell RNA sequencing data."
+#| fig-cap: "Differential composition and variability analysis of cell types in relation to protected status. Each point represents a cell type, with error bars showing 95% credible intervals. The x-axis shows log-fold change in composition, y-axis shows log-fold change in variability. Dashed lines indicate thresholds for biologically meaningful changes. Color coding: Red - significant in both composition and variability; Blue - significant in composition only; Green - significant in variability only; Gray - not significant. The 'Intercept' facet shows the overall mean-variability relationship, while other facets (if present) show relationships for different levels of the 'protected' variable."
+
 plots$credible_intervals_2D
 ```
 
