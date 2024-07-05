@@ -1,6 +1,5 @@
 volcano_plot <- function(.data,
                          .transcripts = ".feature",
-                         .sample = "orig.ident",
                          pvalue = "pvalue",
                          FDR = "padj",
                          FDR_cutoff = 0.05,
@@ -39,7 +38,10 @@ volcano_plot <- function(.data,
             x = "Log2 Fold Change",
             y = "-Log10 p-value"
         ) +
-        theme(legend.position = "none", plot.title = element_textbox_simple())
+        theme(
+            legend.position = "none",
+            plot.title = element_textbox_simple()
+        )
 
     # Add x and y limits if specified
     if (!is.null(xlim)) {
@@ -127,6 +129,10 @@ perform_gsea <- function(.data,
     require(ggplot2)
     require(patchwork)
     require(tidybulk)
+    require(showtext)
+    font_add_google(name = "Roboto", family = "Roboto")
+    font_add_google(name = "Roboto Condensed", family = "Roboto Condensed")
+    showtext_auto()
 
     # Validate ont parameter
     if (analysis_type == "GO" && !(ont %in% c("BP", "CC", "MF"))) {
@@ -223,19 +229,19 @@ perform_gsea <- function(.data,
         }
     }
 
-    # Create separate plots for enriched in control and enriched in case pathways
+    # Create separate plots for activated and suppressed gene sets
     create_plot <- function(data, direction) {
         if (is.null(data) || nrow(data) == 0) {
             ggplot() +
-                geom_text(aes(x = 0.5, y = 0.5, label = paste0("No pathways enriched in ", ifelse(direction == "Positive", "control", "case"))), size = 4) +
+                geom_text(aes(x = 0.5, y = 0.5, label = paste0("No ", ifelse(direction == "Positive", "activated", "suppressed"), " gene sets")), size = 4) +
                 theme_void() +
-                labs(title = ifelse(direction == "Positive", "Enriched in control", "Enriched in case"))
+                labs(title = ifelse(direction == "Positive", "Activated gene sets", "Suppressed gene sets"))
         } else {
             clusterProfiler::dotplot(data, showCategory = 10) +
                 custom_theme +
                 theme(axis.text.y = element_text(size = 12, family = "Roboto Condensed", hjust = 1, lineheight = 0.5)) +
                 scale_y_discrete(labels = custom_label_wrap(40)) +
-                labs(title = ifelse(direction == "Positive", "Enriched in control", "Enriched in case")) +
+                labs(title = ifelse(direction == "Positive", "Activated gene sets", "Suppressed gene sets")) +
                 theme(plot.title = element_text(face = "plain", size = 14)) +
                 guides(
                     fill = guide_colorbar(
@@ -281,20 +287,20 @@ perform_gsea <- function(.data,
 
         return(list(gsea_results = NULL, plot = final_plot))
     } else {
-        # Split results into positively and negatively enriched pathways
-        positive_enriched <- gsea_result %>%
+        # Split results into activated and suppressed gene sets
+        activated_sets <- gsea_result %>%
             dplyr::filter(NES > 0) %>%
-            dplyr::arrange(desc(NES))
-        negative_enriched <- gsea_result %>%
+            dplyr::arrange(desc(abs(NES)))
+        suppressed_sets <- gsea_result %>%
             dplyr::filter(NES < 0) %>%
-            dplyr::arrange(NES)
+            dplyr::arrange(desc(abs(NES)))
 
         # Create plots
-        positive_plot <- create_plot(positive_enriched, "Positive")
-        negative_plot <- create_plot(negative_enriched, "Negative")
+        activated_plot <- create_plot(activated_sets, "Positive")
+        suppressed_plot <- create_plot(suppressed_sets, "Negative")
 
         # Combine plots using patchwork with explicit dimensions
-        combined_plot <- (positive_plot | negative_plot) +
+        combined_plot <- (activated_plot | suppressed_plot) +
             plot_layout(widths = c(1, 1)) +
             plot_annotation(
                 title = title,
@@ -315,6 +321,8 @@ perform_gsea <- function(.data,
 
         # Set explicit dimensions for the plot
         final_plot <- combined_plot & theme(plot.background = element_rect(fill = "white", color = NA))
+
+        showtext_end()
 
         return(list(gsea_results = gsea_result, plot = final_plot))
     }
