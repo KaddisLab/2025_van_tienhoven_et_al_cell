@@ -1,6 +1,6 @@
 
 ---
-title: "Beta cells: ER Genes"
+title: "Beta cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -43,7 +43,10 @@ cell_type <- "Beta"
 
 seurat_object_beta <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
-    dplyr::filter(cell_type == cell_type) 
+    dplyr::filter(cell_type == cell_type)
+
+counts <- as(seurat_object_beta[["RNA"]]$counts, "dgCMatrix")
+
 ```
 
 ::: {.panel-tabset}
@@ -52,119 +55,24 @@ seurat_object_beta <- seurat_object |>
  TODO https://davislaboratory.github.io/singscore/
 ## Beta cells
 ```{r }
-#| fig-width: 10
-#| fig-height: 10
+stress_signatures <- signatures[grep("stress", names(signatures), ignore.case = TRUE)]
 
-DefaultAssay(seurat_object_beta) <- "RNA"
+clean_signature <- function(gene_list) {
+    genes <- gene_list[!grepl("-$", gene_list)]
+    genes <- gsub("\\+$", "", genes)
+}
 
-er_expression <- seurat_object %>%
-    dplyr::mutate(protected = factor(protected)) %>%
-    FetchData(vars = c("orig.ident", "protected", "er_stress_score", "upr_score", "INS"), layer = "data") |>
-    pivot_longer(
-        cols = -c(protected, orig.ident, INS),
-        names_to = "score",
-        values_to = "value"
-    )
-donor_palette <- generate_palette(seurat_object[[]]$orig.ident |> unique() |> length())
+# Apply the function to each list in stress_signatures
+stress_signatures <- lapply(stress_signatures, clean_signature)
 
-ggplot(er_expression, aes(x = value, y = INS, fill = orig.ident, col = orig.ident, alpha = 0.1)) +
-    facet_wrap(~score, scales = "free_y") +
-    geom_point() +
-    theme_classic() +
-    NoLegend() +
-    scale_fill_manual(values = donor_palette) +
-    scale_color_manual(values = donor_palette)
-ggsave("plot.png")
-```
+enrichment.scores <- escape::escape.matrix(counts,
+    gene.sets = stress_signatures,
+    method = "UCell",
+    groups = 10000,
+    min.size = 4,
+    BPPARAM = BiocParallel::SnowParam(workers = cpus)
+)
 
-
-
-```{r}
-#| fig-width: 10
-#| fig-height: 10
-#| fig-cap: "Boxplots of ER gene expression, indicating median aggregate expression per donor"
-
-er_expression_PsB <- seurat_object %>%
-    dplyr::mutate(protected = factor(protected)) %>%
-    aggregate_cells("orig.ident", assays = "RNA", layers = "data") |>
-    dplyr::filter(.feature %in% er_genes_of_interest) |>
-    select(gene = ".feature", expression = "RNA", protected)
-
-ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, col = protected)) +
-    stat_dots(position = "dodgejust") +
-    stat_pointinterval(col = "black") +
-    facet_wrap(~gene, scales = "free_y") +
-    geom_signif(
-        test = "wilcox.test",
-        comparisons = list(c("TRUE", "FALSE")),
-        map_signif_level = TRUE,
-        margin_top = -0.4,
-        tip_length = 0,
-        extend_line = -0.35,
-        color = "black"
-    ) +
-    stat_summary(
-        fun = median,
-        geom = "label",
-        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
-        color = "white",
-        hjust = -0.2,
-        vjust = -0.7
-    ) +
-    theme_classic() +
-    NoLegend() +
-    labs(
-        title = "Expression of ER Genes, per donor",
-        x = "Protected Status",
-        y = "Normalized Expression"
-    ) +
-    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
-    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
-```
-
-## Per donor
-
-```{r }
-#| fig-width: 10
-#| fig-height: 10
-#| fig-cap: "Boxplots of ER gene expression, indicating median aggregate expression per donor"
-
-er_expression_PsB <- seurat_object %>%
-    dplyr::mutate(protected = factor(protected)) %>%
-    aggregate_cells("orig.ident", assays = "RNA", layers = "data") |>
-    dplyr::filter(.feature %in% er_genes_of_interest) |>
-    select(gene = ".feature", expression = "RNA", protected)
-
-ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, col = protected)) +
-    stat_dots(position = "dodgejust") +
-    stat_pointinterval(col = "black") +
-    facet_wrap(~gene, scales = "free_y") + 
-    geom_signif(
-        test = "wilcox.test",
-        comparisons = list(c("TRUE", "FALSE")), 
-        map_signif_level = TRUE,
-        margin_top = -0.4,
-        tip_length = 0,
-        extend_line = -0.35,
-        color = "black"
-    ) +
-    stat_summary(
-        fun = median,
-        geom = "label",
-        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
-        color = "white",
-        hjust = -0.2,
-        vjust = -0.7
-    ) +
-    theme_classic() +
-    NoLegend() +
-    labs(
-        title = "Expression of ER Genes, per donor",
-        x = "Protected Status",
-        y = "Normalized Expression"
-    ) +
-    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
-    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
 ```
 
 ::::

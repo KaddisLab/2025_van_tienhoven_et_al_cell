@@ -1,6 +1,6 @@
 
 ---
-title: "Beta-like cells: ER Genes"
+title: "Beta-like cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---

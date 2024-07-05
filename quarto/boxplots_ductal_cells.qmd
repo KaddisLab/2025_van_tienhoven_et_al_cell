@@ -1,6 +1,6 @@
 
 ---
-title: "Ductal cells: ER Genes"
+title: "Ductal cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---

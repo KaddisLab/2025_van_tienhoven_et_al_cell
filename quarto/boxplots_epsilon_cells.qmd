@@ -1,6 +1,6 @@
 
 ---
-title: "Epsilon cells: ER Genes"
+title: "Epsilon cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---

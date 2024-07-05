@@ -1,6 +1,6 @@
 
 ---
-title: "Acinar cells: ER Genes"
+title: "Acinar cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
@@ -36,7 +36,7 @@ seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM") |>
-    dplyr::filter(cell_type == "Acinar") 
+    dplyr::filter(cell_type == "Acinar")
 ```
 
 ::: {.panel-tabset}
@@ -60,7 +60,7 @@ er_expression <- seurat_object %>%
 ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
     stat_dots(position = "dodgejust") +
     stat_pointinterval(col = "black", alpha = 0.6) +
-    facet_wrap(~gene, scales = "free_y") + 
+    facet_wrap(~gene, scales = "free_y") +
     geom_signif(
         test = "wilcox.test",
         comparisons = list(c("TRUE", "FALSE")),
@@ -78,7 +78,8 @@ ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col =
         hjust = 1.1,
         vjust = 1.1
     ) +
-    theme_classic() + NoLegend() +
+    theme_classic() +
+    NoLegend() +
     labs(
         title = "Expression of ER Genes, per cell",
         x = "Protected Status",
@@ -104,10 +105,10 @@ er_expression_PsB <- seurat_object %>%
 ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, col = protected)) +
     stat_dots(position = "dodgejust") +
     stat_pointinterval(col = "black") +
-    facet_wrap(~gene, scales = "free_y") + 
+    facet_wrap(~gene, scales = "free_y") +
     geom_signif(
         test = "wilcox.test",
-        comparisons = list(c("TRUE", "FALSE")), 
+        comparisons = list(c("TRUE", "FALSE")),
         map_signif_level = TRUE,
         margin_top = -0.4,
         tip_length = 0,

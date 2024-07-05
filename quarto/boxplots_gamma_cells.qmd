@@ -1,6 +1,6 @@
 
 ---
-title: "Gamma+Epsilon cells: ER Genes"
+title: "Gamma+Epsilon cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---

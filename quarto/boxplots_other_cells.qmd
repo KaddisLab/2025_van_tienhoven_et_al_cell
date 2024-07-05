@@ -1,6 +1,6 @@
 
 ---
-title: "Other cells: ER Genes"
+title: "Other cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---

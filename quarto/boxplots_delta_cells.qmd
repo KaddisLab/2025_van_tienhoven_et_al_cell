@@ -1,6 +1,6 @@
 
 ---
-title: "Delta cells: ER Genes"
+title: "Delta cells"
 date: "2024-5-15" 
 date-modified: last-modified
 ---
