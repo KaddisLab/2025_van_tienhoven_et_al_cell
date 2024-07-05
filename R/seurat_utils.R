@@ -163,3 +163,23 @@ find_expression_valley <- function(seurat_object, column_name) {
 # print(paste("Number of zero values removed:", result$zero_count))
 #
 # print(result$plot)
+
+
+seurat_sce <- function(seurat_object) {
+    # Check if the input is a Seurat object
+    if (!inherits(seurat_object, "Seurat")) {
+        stop("Input must be a Seurat object")
+    }
+
+    # Extract the counts matrix
+    counts <- as(seurat_object[["RNA"]]$counts, "dgCMatrix")
+
+    # Create the SingleCellExperiment object
+    sce <- SingleCellExperiment(assays = list(counts = counts))
+
+    # Add metadata to the SingleCellExperiment object
+    col_data <- seurat_object[[]] |> S4Vectors::DataFrame()
+    SummarizedExperiment::colData(sce) <- col_data
+
+    return(sce)
+}
