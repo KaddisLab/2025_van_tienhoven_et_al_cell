@@ -1,6 +1,6 @@
 
 ---
-title: "Beta cells: UMAP"
+title: "UMAP: Beta cells"
 date: "2024-5-8" 
 date-modified: last-modified
 ---
@@ -28,6 +28,7 @@ suppressPackageStartupMessages({
     library(SCP)
     library(harmony)
     library(downloadthis)
+    library(sccomp)
 })
 
 tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
@@ -52,16 +53,14 @@ total_endocrine_cells_per_donor <- beta_cells_object$total_endocrine_cells_per_d
 #| fig-height: 10
 #| fig-width: 10
 
-seurat_object <- seurat_object |>
-    dplyr::filter(cell_type %in% c("Beta", "Alpha+Beta")) |>
-    Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("percent_mt", "percent_rb"), verbose = FALSE) |>
-    Seurat::RunPCA(verbose = FALSE) |>
-    harmony::RunHarmony(group.by.vars = c("tissue_source", "reagent_kit", "orig.ident"), verbose = FALSE) |>
-    Seurat::FindNeighbors(reduction = "harmony", verbose = FALSE) |>
-    Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = FALSE) |>
-    Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = FALSE)
-
-num_clusters <- length(unique(seurat_object[[]]$seurat_clusters))
+# seurat_object <- seurat_object |>
+#     dplyr::filter(cell_type %in% c("Beta", "Alpha+Beta")) |>
+#     Seurat::SCTransform(vst.flavor = "v2", vars.to.regress = c("percent_mt", "percent_rb"), verbose = FALSE) |>
+#     Seurat::RunPCA(verbose = FALSE) |>
+#     harmony::RunHarmony(group.by.vars = c("tissue_source", "reagent_kit", "orig.ident"), verbose = FALSE) |>
+#     Seurat::FindNeighbors(reduction = "harmony", verbose = FALSE) |>
+#     Seurat::FindClusters(resolution = 0.1, method = "igraph", verbose = FALSE) |>
+#     Seurat::RunUMAP(reduction = "harmony", dims = 1:30, verbose = FALSE)
 
 DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 6, label.box = TRUE, repel = TRUE, reduction = "umap", shuffle = TRUE, raster = FALSE) +
     labs(title = "Beta cell subclusters") +
@@ -75,7 +74,7 @@ DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, label.size = 
 #| fig-width: 10
 
 DimPlot(seurat_object, group.by = "cell_type", label = FALSE, cols = cell_type_palette, reduction = "umap", shuffle = TRUE, raster = FALSE) +
-    labs(title = "Protected status") +
+    labs(title = "Cell type") +
     theme(legend.position = c(0.8, 0.9), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
@@ -133,43 +132,119 @@ FeaturePlot(seurat_object, features = "sample_age", reduction = "umap", raster =
     scale_colour_gradientn(colours = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG")))
 ```
 
-## ER Stress score
+## Islet stress
 
 ```{r}
-#| fig-cap: "ER Stress"
+#| fig-cap: "Islet Stress"
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object, features = "er_stress_score", reduction = "umap", raster = FALSE) +
-    labs(title = "ER stress score") +
+FeaturePlot(seurat_object, features = "islet_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Islet stress") +
     theme(
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         legend.position = c(0.8, 0.9) # Adjust these values as needed
     ) +
-    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlOrRd"))
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 9, name = "YlOrRd"))
 ```
-`r er_stress_genes`
+`r signatures$islet_stress`
 
-## UPR score
+## Cellular stress
 
 ```{r}
-#| fig-cap: "UPR Score"
+#| fig-cap: "Cellular Stress"
 #| fig-height: 10
 #| fig-width: 10
 
-FeaturePlot(seurat_object, features = "upr_score", reduction = "umap", raster = FALSE) +
-    labs(title = "UPR stress score") +
+FeaturePlot(seurat_object, features = "cellular_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Cellular stress") +
     theme(
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
         legend.position = c(0.8, 0.9) # Adjust these values as needed
     ) +
-    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 11, name = "YlGnBu"))
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 9, name = "YlOrRd"))
 ```
-`r upr_genes`
+`r signatures$cellular_stress`
+
+## Core UPR stress
+
+```{r}
+#| fig-cap: "Core UPR stress"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "core_upr_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Core UPR stress") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 9, name = "YlGnBu"))
+```
+`r signatures$core_upr_stress`
+
+## Chronic ER stress
+
+```{r}
+#| fig-cap: "Chronic ER stress"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "chronic_er_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Chronic ER stress") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 9, name = "YlGnBu"))
+```
+`r signatures$chronic_er_stress`
+
+## Active ER stress
+
+```{r}
+#| fig-cap: "Active ER stress"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "active_er_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "Active ER stress") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 9, name = "YlGnBu"))
+```
+`r signatures$active_er_stress`
+
+## MSigDB UPR stress
+
+```{r}
+#| fig-cap: "MSigDB UPR stress"
+#| fig-height: 10
+#| fig-width: 10
+
+FeaturePlot(seurat_object, features = "msigdb_upr_stress_UCell", reduction = "umap", raster = FALSE) +
+    labs(title = "MSigDB UPR stress") +
+    theme(
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.8, 0.9) # Adjust these values as needed
+    ) +
+    scale_colour_gradientn(colours = RColorBrewer::brewer.pal(n = 9, name = "YlGnBu"))
+```
+`r signatures$msigdb_upr_stress_UCell`
 
 ::::
 
@@ -225,6 +300,50 @@ ggplot(data, aes(x = cluster, y = donor, fill = proportion)) +
     theme(strip.text.y = element_text(angle = 0))
     
 ```
+
+## sccomp
+
+```{r}
+sccomp_result <-
+    seurat_object |>
+    dplyr::mutate(protected = as.factor(c(protected))) |>
+    dplyr::filter(orig.ident != "HPAP-019") |> # enriched for b-cells
+    dplyr::filter(!is.na(cell_type)) |>
+    dplyr::filter(diabetes_status == "NODM") |>
+    sccomp::sccomp_estimate(
+        formula_composition = ~protected,
+        formula_variability = ~protected,
+        .sample = orig.ident,
+        .cell_group = seurat_clusters,
+        bimodal_mean_variability_association = TRUE,
+        variational_inference = FALSE,
+        cores = cpus
+    ) |>
+    sccomp::sccomp_remove_outliers(cores = cpus) |> # Optional
+    sccomp::sccomp_test()
+
+plots <- sccomp_result |> plot()
+```
+
+
+```{r}
+#| fig-cap: "A plot of estimates of differential composition (c_) on the left and differential variability (v_) on the right. The error bars represent 95% credible intervals. The dashed lines represent the minimal effect that the hypothesis test is based on. An effect is labelled as significant if bigger than the minimal effect according to the 95% credible interval."
+plots$credible_intervals_1D
+```
+
+```{r}
+#| eval: FALSE
+#| code-fold: true
+#| fig-cap: "Differential composition and variability analysis of cell types in relation to protected status. Each point represents a cell type, with error bars showing 95% credible intervals. The x-axis shows log-fold change in composition, y-axis shows log-fold change in variability. Dashed lines indicate thresholds for biologically meaningful changes. Color coding: Red - significant in both composition and variability; Blue - significant in composition only; Green - significant in variability only; Gray - not significant. The 'Intercept' facet shows the overall mean-variability relationship, while other facets (if present) show relationships for different levels of the 'protected' variable."
+
+plots$credible_intervals_2D
+```
+
+```{r}
+#| fig-cap: "A plot of cell type proportion, faceted by *protected*. \n The blue boxplots represent the posterior predictive check. If the model is likely to be descriptively adequate to the data, the blue box plot should roughly overlay with the black box plot, which represents the observed data. The colour coding represents the significant associations for composition and/or variability."
+plots$boxplot
+```
+
 
 ::::
 
