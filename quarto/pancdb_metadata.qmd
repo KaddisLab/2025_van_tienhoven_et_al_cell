@@ -39,7 +39,7 @@ pancdb_metadata %>%
       geom_text(stat = 'count', aes(label = ..count..),
         position = position_dodge(width = 0.9), vjust = -0.5, show.legend = FALSE) +
       scale_fill_manual(values = diabetes_palette) +
-      scale_alpha_manual(values = c(`FALSE` = 0.5, `TRUE` = 1), labels = c("susceptible", "Protected")) +  # Set the alpha transparency for protected status
+      scale_alpha_manual(values = c(`FALSE` = 0.5, `TRUE` = 1), labels = c("susceptible", "Protected")) + 
       labs(x = "Disease Status", y = "Count", title = "Disease Status by Cohort", fill = "Disease Status") + theme_classic() 
 ```
 
@@ -58,7 +58,6 @@ ggplot(pancdb_metadata, aes(x = sample_age, fill = diabetes_status, alpha = prot
   theme_minimal() + ylab(NULL) + guides(alpha = FALSE) +
   theme(legend.position = "bottom", strip.text = element_text(size = 8)) +
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
-
 ```
 
 
