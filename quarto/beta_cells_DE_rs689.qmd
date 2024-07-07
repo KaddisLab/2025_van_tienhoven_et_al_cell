@@ -26,6 +26,10 @@ suppressPackageStartupMessages({
     library(ggdist)
     library(ggsignif)
     library(ggpubr)
+    require(showtext)
+    font_add_google(name = "Roboto", family = "Roboto")
+    font_add_google(name = "Roboto Condensed", family = "Roboto Condensed")
+    showtext_auto()
 })
 
 tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
@@ -36,7 +40,9 @@ tar_load(seurat_object_sct_annotated)
 seurat_object <- load_seurat(seurat_object_sct_annotated)
 
 seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM") 
+    dplyr::filter(diabetes_status == "NODM")
+
+make_plots_clickable()
 ```
 
 ## Differential expression
@@ -56,86 +62,113 @@ beta.bulk <- subset(bulk, cell_type == "Beta")
 
 ::: {.panel-tabset}
 
-### DESeq2
+## DESeq2
 
 ```{r }
+#| fig-asp: 1
 Idents(beta.bulk) <- "rs689_consensus"
 
 de_markers <- FindMarkers(beta.bulk,
-    ident.1 = "TT", ident.2 = "AA", slot = "counts", test.use = "DESeq2",
+    ident.2 = "TT",
+    ident.1 = "AA", slot = "counts", test.use = "DESeq2", pseudocount.use = 0.001, min.pct = 0.25,
     verbose = F
 )
 
 de_markers$gene <- rownames(de_markers)
 
-ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
-    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
-    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
-    labs(
-        x = "Average Log2 Fold Change",
-        y = "-log10(Unadjusted p-value)",
-        title = "Beta-cell Differential Expression",
-        subtitle = "Comparison protected (AA ←) vs susceptible (TT →) cells",
-    ) +
-    geom_text_repel(
-        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
-        size = 3.5, # Slightly larger text size for readability
-        box.padding = 0.35, # Adjust padding around text to avoid overlap
-        point.padding = 0.5, # Adjust distance from points to text
-        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
-        color = "blue", # Change text color to blue for better visibility against the background
-        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
-        nudge_y = 0.05, # Nudge text up a bit for vertical separation
-        direction = "y" # Optimize text placement primarily in the vertical direction
-    ) +
-    theme(
-        plot.title = element_text(face = "bold"), # Bold title for emphasis
-        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
-        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
-        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
-        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
-    )
+volcano_plot(
+    .data = de_markers,
+    .transcripts = "gene",
+    pvalue = "p_val",
+    FDR = "p_val_adj",
+    FDR_cutoff = 0.05,
+    log2FoldChange = "avg_log2FC",
+    log2FoldChange_cutoff = 1,
+    title = "DEG rs689",
+    subtitle = "Upregulated in susceptible (TT <-) vs protected (AA ->) cells"
+)
 
 ```
 
-### Wilcoxon rank sum test
+
+### GSEA
 
 ```{r }
+gsea_results <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA Results for rs689 protected (AA) v susceptible (TT) beta cells",
+    .transcripts = "gene",
+    .log2fc = "avg_log2FC",
+    log2fc_threshold = 0,
+    analysis_type = "GO",
+    ont = "BP"
+)
+gsea_results$plot
+
+```
+
+```{r }
+gsea_results <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA Results for rs689 protected (AA) v susceptible (TT) beta cells",
+    .transcripts = "gene",
+    .log2fc = "avg_log2FC",
+    log2fc_threshold = 0,
+    analysis_type = "KEGG"
+)
+gsea_results$plot
+```
+
+
+## Wilcoxon rank sum test
+
+```{r }
+#| fig-asp: 1
 de_markers <- FindMarkers(beta.bulk,
-    ident.1 = "TT", ident.2 = "AA", slot = "counts", test.use = "wilcox",
-    verbose = F
+    ident.2 = "TT", ident.1= "AA", slot = "counts", test.use = "wilcox", min.pct = 0.25, pseudocount.use = 0.001,
+    verbose = FALSE
 )
 
 de_markers$gene <- rownames(de_markers)
 
-ggplot(de_markers, aes(x = avg_log2FC, y = -log10(p_val))) +
-    geom_point(size = 0.5, alpha = 0.5) + # Adjust point size and opacity for better visualization
-    theme_bw(base_size = 14) + # Use theme_bw with a base font size for better readability
-    labs(
-        x = "Average Log2 Fold Change",
-        y = "-log10(Unadjusted p-value)",
-        title = "Beta-cell Differential Expression",
-        subtitle = "Comparison protected (AA ←) vs susceptible (TT →) cells",
-    ) +
-    geom_text_repel(
-        aes(label = ifelse(p_val_adj < 0.1, gene, "")), # Label significant genes based on adjusted p-value
-        size = 3.5, # Slightly larger text size for readability
-        box.padding = 0.35, # Adjust padding around text to avoid overlap
-        point.padding = 0.5, # Adjust distance from points to text
-        min.segment.length = 0.1, # Minimize the segment length for a cleaner look
-        color = "blue", # Change text color to blue for better visibility against the background
-        nudge_x = 0.05, # Nudge text a bit to the right for clearer separation from points
-        nudge_y = 0.05, # Nudge text up a bit for vertical separation
-        direction = "y" # Optimize text placement primarily in the vertical direction
-    ) +
-    theme(
-        plot.title = element_text(face = "bold"), # Bold title for emphasis
-        plot.subtitle = element_text(face = "italic"), # Italic subtitle for stylistic differentiation
-        axis.title.x = element_text(vjust = -0.2), # Adjust x-axis title position for closer proximity to axis
-        axis.title.y = element_text(vjust = 1.5), # Adjust y-axis title position for optimal spacing
-        legend.position = "none" # Hide legend (not applicable here but good practice for cleaner plots)
-    )
+volcano_plot(
+    .data = de_markers,
+    .transcripts = "gene",
+    pvalue = "p_val",
+    FDR = "p_val_adj",
+    FDR_cutoff = 0.05,
+    log2FoldChange = "avg_log2FC",
+    log2FoldChange_cutoff = 1,
+    title = "Differential Expression rs689",
+    subtitle = "Upregulated in susceptible (<- TT) vs protected (AA ->) cells"
+)
+```
 
+
+### GSEA
+
+```{r }
+gsea_results <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for protected (AA) v susceptible (TT) beta cells",
+    .transcripts = "gene",
+    .log2fc = "avg_log2FC",
+    log2fc_threshold = 0,
+    analysis_type = "GO",
+    ont = "BP"
+)
+gsea_results$plot
+```
+
+```{r }
+gsea_results <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for protected (AA) v susceptible (TT) beta cells",
+    .transcripts = "gene",
+    .log2fc = "avg_log2FC",
+    log2fc_threshold = 0,
+    analysis_type = "KEGG")
+gsea_results$plot
 ```
 
 ::::
