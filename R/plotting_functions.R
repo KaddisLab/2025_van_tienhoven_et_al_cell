@@ -13,6 +13,22 @@ volcano_plot <- function(.data,
     require(ggrepel)
     require(ggtext)
 
+    custom_theme <- theme_bw() +
+        theme(
+            panel.spacing.x = unit(0.5, "lines"),
+            strip.text = element_text(size = 16),
+            strip.text.x = element_text(size = 20),
+            strip.text.y = element_text(size = 20),
+            legend.key.size = unit(12, "mm"),
+            legend.text = element_text(size = 20),
+            legend.title = element_blank(),
+            legend.position = "bottom",
+            plot.title = element_text(size = 26, face = "bold"),
+            plot.subtitle = element_text(size = 20),
+            axis.text = element_text(size = 20),
+            axis.title = element_text(size = 20, margin = margin(t = 0, r = 0, b = 0, l = 0)),
+            text = element_text(family = "Roboto")
+        )
     # Get significant genes
     sig_genes_symbols <- .data %>%
         arrange(!!sym(FDR)) %>%
@@ -38,10 +54,7 @@ volcano_plot <- function(.data,
             x = "Log2 Fold Change",
             y = "-Log10 p-value"
         ) +
-        theme(
-            legend.position = "none",
-            plot.title = element_textbox_simple()
-        )
+        theme(legend.position = "none", plot.title = element_textbox_simple())
 
     # Add x and y limits if specified
     if (!is.null(xlim)) {
@@ -53,6 +66,7 @@ volcano_plot <- function(.data,
 
     return(p)
 }
+
 # ---------
 sig_genes_plot <- function(.data,
                            .abundance = "RNA_counts_scaled",
@@ -65,21 +79,26 @@ sig_genes_plot <- function(.data,
                            title = NULL,
                            log = TRUE,
                            n_genes = 12) {
-    require(tidyverse)
+    require(dplyr)
     require(tidybulk)
     require(ggtext)
 
 
     # Get top genes
     top_genes_symbols <- .data %>%
-        pivot_transcript() %>%
-        arrange(desc(abs(!!sym(logFC))), FDR) %>%
-        pull(!!sym(.transcripts)) %>%
+        tidybulk::pivot_transcript() %>%
+        dplyr::arrange(desc(abs(!!sym(logFC))), FDR) %>%
+        dplyr::pull(!!sym(.transcripts)) %>%
         head(n_genes)
 
     # Prepare the data
     plot_data <- .data %>%
-        dplyr::filter(!!sym(.transcripts) %in% top_genes_symbols)
+        dplyr::filter(!!sym(.transcripts) %in% top_genes_symbols) |>
+        dplyr::mutate(!!sym(.transcripts) := factor(!!sym(.transcripts),
+            levels = top_genes_symbols,
+            ordered = TRUE
+        ))
+
 
     # Apply log transformation if specified
     if (log) {
@@ -321,8 +340,6 @@ perform_gsea <- function(.data,
 
         # Set explicit dimensions for the plot
         final_plot <- combined_plot & theme(plot.background = element_rect(fill = "white", color = NA))
-
-        showtext_end()
 
         return(list(gsea_results = gsea_result, plot = final_plot))
     }
