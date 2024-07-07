@@ -175,7 +175,7 @@ seurat_sce <- function(seurat_object) {
     counts <- as(seurat_object[["RNA"]]$counts, "dgCMatrix")
 
     # Create the SingleCellExperiment object
-    sce <- SingleCellExperiment(assays = list(counts = counts))
+    sce <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = counts))
 
     # Add metadata to the SingleCellExperiment object
     col_data <- seurat_object[[]] |> S4Vectors::DataFrame()
