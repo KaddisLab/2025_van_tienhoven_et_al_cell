@@ -243,10 +243,10 @@ list(
     #     pattern = map(cellranger_run_folders),
     #     format = "file_fast",
     # ),
-    # MARK:     # Aggregate sample metadata
+    # MARK:     # Collate sample metadata
     tar_target(
         pancdb_metadata_agg,
-        aggregate_sample_metadata(pancdb_metadata, protected_cohort, rs3842753_cohort, rs689_cohort, xbp1_psi_per_sample),
+        collate_sample_metadata(pancdb_metadata, protected_cohort, rs3842753_cohort, rs689_cohort, xbp1_psi_per_sample),
         deployment = "main"
     ),
     # MARK:     # Cellbender using CellRanger counts ------------------------------------------------------------
@@ -454,7 +454,8 @@ list(
             cluster_merged_sketch_man_csv,
             INS_hknorm_per_cell, xbp1_psi_per_cell,
             percent_spliced_per_cell_INS, percent_spliced_per_cell_XBP1, percent_spliced_per_cell_GAPDH,
-            sig_scores_per_cell),
+            sig_scores_per_cell
+        ),
         resources = small
     ),
     # MARK:     # Annotate sketch object --------------------------------------------------------------
@@ -487,7 +488,7 @@ list(
         seurat_merge_sct(sct_ddqc_bpcells, "sct_all_merged"),
         resources = large_mem
     ),
-    # annotate the merged SCT object 
+    # annotate the merged SCT object
     tar_target(
         seurat_object_sct_ann_samples,
         seurat_annotate_samples(seurat_object_sct_all, pancdb_metadata_agg),

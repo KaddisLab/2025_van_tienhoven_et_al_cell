@@ -8,7 +8,7 @@
 #' @return
 #' @author Denis O'Meally
 #' @export
-aggregate_sample_metadata <- function(pancdb_metadata,
+collate_sample_metadata <- function(pancdb_metadata,
                                     protected_cohort,
                                     rs3842753_cohort,
                                     rs689_cohort,
