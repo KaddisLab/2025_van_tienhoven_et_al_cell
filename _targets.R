@@ -447,7 +447,7 @@ list(
     # MARK:     # Aggregate cell annotation -------------------------------------------------------
     tar_target(
         aggregated_cell_annot_csv,
-        seurat_aggregate_cell_annot(
+        seurat_collate_cell_annot(
             ddqc_seurat_objects,
             tosti_cell_type_csv, elgamal_cell_type_csv, hpap_annotation_csv,
             scDblFinder_csv, cell_cycle_csv,

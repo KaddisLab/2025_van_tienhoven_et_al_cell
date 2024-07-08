@@ -1,4 +1,4 @@
-seurat_aggregate_cell_annot <- function(...) {
+seurat_collate_cell_annot <- function(...) {
     # Collect all input arguments as a list
     paths_list <- list(...)
 
