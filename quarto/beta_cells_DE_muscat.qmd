@@ -1,0 +1,305 @@
+
+---
+title: "Muscat DEG beta cells"
+date: "2024-7-11" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggrepel)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+    library(muscat)
+    library(tidyverse)
+    library(SummarizedExperiment)
+    library(scater)
+    library(forcats)
+    require(showtext)
+    font_add_google(name = "Roboto", family = "Roboto")
+    font_add_google(name = "Roboto Condensed", family = "Roboto Condensed")
+    showtext_auto()
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+bbparam <- BiocParallel::MulticoreParam(cpus, progressbar = TRUE)
+
+tar_load(seurat_object_sct_annotated)
+seurat_object <- load_seurat(seurat_object_sct_annotated)
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+
+make_plots_clickable()
+```
+
+## Differential expression using Muscat
+
+```{r }
+#| code-summary: Prepare SingleCellExperiment object
+beta_cells <- subset(seurat_object, cell_type == "Beta")
+
+# Convert Seurat object to SingleCellExperiment
+sce <- seurat_sce(beta_cells)
+# factors
+sce$rs689_consensus <- relevel(factor(sce$rs689_consensus), ref = "AA")
+sce$rs3842753_consensus <- relevel(factor(sce$rs3842753_consensus), ref = "TG")
+sce$rs3842752_consensus <- relevel(factor(sce$rs3842752_consensus), ref = "GA")
+sce$tissue_source <- factor(sce$tissue_source)
+sce$technology <- factor(sce$technology)
+# remove undetected genes
+sce <- sce[rowSums(counts(sce) > 0) > 0, ]
+
+# remove cells with few or many detected genes
+qc <- perCellQCMetrics(sce)
+ol <- isOutlier(metric = qc$detected, nmads = 2, log = TRUE)
+sce <- sce[, !ol]
+# remove lowly expressed genes
+sce <- sce[rowSums(counts(sce) > 1) >= 10, ]
+
+```
+
+::: {.panel-tabset}
+
+### rs3842752
+
+```{r }
+pb <- prepSCE(
+    sce,
+    kid = "cell_type",
+    gid = "rs3842752_consensus",
+    sid = "orig.ident",
+    drop = FALSE
+) |>
+    aggregateData(
+        assay = "counts", fun = "sum", by = c("cluster_id", "sample_id"), BPPARAM = bbparam
+    )
+
+design <- model.matrix(~ group_id + tissue_source + technology, data = colData(pb))
+
+res <- pbDS(pb,
+    verbose = TRUE, BPPARAM = bbparam, design = design
+)
+
+# Extract results for beta cells
+de_markers <- res$table[[1]]$Beta
+
+# Download
+de_markers |>
+    select(-contrast) |>
+    mutate(significant = p_adj.loc < 0.05 & abs(logFC) >= 1) %>%
+    arrange(desc(significant), desc(abs(logFC))) |> as_tibble() |>
+downloadthis::download_this(
+    output_name = glue::glue("differential_expression_rs3842752.xlsx"),
+    output_extension = ".xlsx",
+    button_label = "Download Muscat results",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+)
+
+# Create volcano plot
+volcano_plot(
+    .data = de_markers,
+    .transcripts = "gene",
+    pvalue = "p_val",
+    FDR = "p_adj.loc",
+    FDR_cutoff = 0.05,
+    log2FoldChange = "logFC",
+    log2FoldChange_cutoff = 1,
+    title = "Beta cells: rs3842752",
+    subtitle = NULL
+)
+
+# Perform GSEA
+gsea_results <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for rs3842752 protected v susceptible donors",
+    .transcripts = "gene",
+    .log2fc = "logFC",
+    log2fc_threshold = 0,
+    analysis_type = "GO",
+    ont = "BP"
+)
+gsea_results$plot
+
+# Perform KEGG pathway analysis
+gsea_results_kegg <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for rs3842752 protected v susceptible donors",
+    .transcripts = "gene",
+    .log2fc = "logFC",
+    log2fc_threshold = 0,
+    analysis_type = "KEGG"
+)
+gsea_results_kegg$plot
+```
+
+
+### rs3842753
+
+```{r }
+pb <- prepSCE(
+    sce,
+    kid = "cell_type",
+    gid = "rs3842753_consensus",
+    sid = "orig.ident",
+    drop = FALSE
+) |>
+    aggregateData(
+        assay = "counts", fun = "sum", by = c("cluster_id", "sample_id"), BPPARAM = bbparam
+    )
+
+design <- model.matrix(~ group_id + tissue_source + technology, data = colData(pb))
+
+res <- pbDS(pb,
+    verbose = TRUE, BPPARAM = bbparam, design = design
+)
+
+# Extract results for beta cells
+de_markers <- res$table[[1]]$Beta
+
+# Download
+de_markers |>
+    select(-contrast) |>
+    mutate(significant = p_adj.loc < 0.05 & abs(logFC) >= 1) %>%
+    arrange(desc(significant), desc(abs(logFC))) |> as_tibble() |>
+downloadthis::download_this(
+    output_name = glue::glue("differential_expression_rs3842753.xlsx"),
+    output_extension = ".xlsx",
+    button_label = "Download Muscat results",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+)
+
+# Create volcano plot
+volcano_plot(
+    .data = de_markers,
+    .transcripts = "gene",
+    pvalue = "p_val",
+    FDR = "p_adj.loc",
+    FDR_cutoff = 0.05,
+    log2FoldChange = "logFC",
+    log2FoldChange_cutoff = 1,
+    title = "Beta cells: rs3842753",
+    subtitle = NULL
+)
+
+# Perform GSEA
+gsea_results <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for rs3842753 protected v susceptible donors",
+    .transcripts = "gene",
+    .log2fc = "logFC",
+    log2fc_threshold = 0,
+    analysis_type = "GO",
+    ont = "BP"
+)
+gsea_results$plot
+
+# Perform KEGG pathway analysis
+gsea_results_kegg <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for rs3842753 protected v susceptible donors",
+    .transcripts = "gene",
+    .log2fc = "logFC",
+    log2fc_threshold = 0,
+    analysis_type = "KEGG"
+)
+gsea_results_kegg$plot
+```
+
+### rs689
+
+```{r }
+pb <- prepSCE(
+    sce,
+    kid = "cell_type",
+    gid = "rs3842752_consensus",
+    sid = "orig.ident",
+    drop = FALSE
+) |>
+    aggregateData(
+        assay = "counts", fun = "sum", by = c("cluster_id", "sample_id"), BPPARAM = bbparam
+    )
+
+design <- model.matrix(~ group_id + tissue_source + technology, data = colData(pb))
+
+res <- pbDS(pb,
+    verbose = TRUE, BPPARAM = bbparam, design = design
+)
+
+# Extract results for beta cells
+de_markers <- res$table[[1]]$Beta
+
+# Download
+de_markers |>
+    select(-contrast) |>
+    mutate(significant = p_adj.loc < 0.05 & abs(logFC) >= 1) %>%
+    arrange(desc(significant), desc(abs(logFC))) |> as_tibble() |>
+downloadthis::download_this(
+    output_name = glue::glue("differential_expression_rs689.xlsx"),
+    output_extension = ".xlsx",
+    button_label = "Download Muscat results",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+)
+
+# Create volcano plot
+volcano_plot(
+    .data = de_markers,
+    .transcripts = "gene",
+    pvalue = "p_val",
+    FDR = "p_adj.loc",
+    FDR_cutoff = 0.05,
+    log2FoldChange = "logFC",
+    log2FoldChange_cutoff = 1,
+    title = "Beta cells: rs689",
+    subtitle = NULL
+)
+
+# Perform GSEA
+gsea_results <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for rs689 protected v susceptible donors",
+    .transcripts = "gene",
+    .log2fc = "logFC",
+    log2fc_threshold = 0,
+    analysis_type = "GO",
+    ont = "BP"
+)
+gsea_results$plot
+
+# Perform KEGG pathway analysis
+gsea_results_kegg <- perform_gsea(
+    .data = de_markers,
+    title = "GSEA for rs689 protected v susceptible donors",
+    .transcripts = "gene",
+    .log2fc = "logFC",
+    log2fc_threshold = 0,
+    analysis_type = "KEGG"
+)
+gsea_results_kegg$plot
+```
+
+::::
