@@ -1,0 +1,188 @@
+
+---
+title: "All cells: DEG rs3842752"
+date: "2024-5-21" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggrepel)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+    library(muscat)
+    library(tidyverse)
+    library(SummarizedExperiment)
+    library(scater)
+    library(forcats)
+    library(edgeR)
+    library(tidybulk)
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+bbparam <- BiocParallel::MulticoreParam(cpus, progressbar = TRUE)
+
+sig_genes_palette <- c("red", "blue", "green")
+
+tar_load(pseudo_bulk_object)
+
+pseudo_bulk <- pseudo_bulk_object |>
+     dplyr::filter(diabetes_status == "NODM")
+```
+
+## Differential expression
+
+```{r}
+
+pseudo_bulk_nested <- pseudo_bulk |>
+    tidybulk::tidybulk(.sample = orig.ident, .abundance = RNA, .transcript = .feature)  |>
+    nest(grouped_summarized_experiment = -cell_type) |>
+    mutate(title = paste0("rs3842752_", cell_type))
+```
+
+
+```{r }
+pseudo_bulk_nested <-
+    pseudo_bulk_nested |>
+    mutate(grouped_summarized_experiment = map(
+        grouped_summarized_experiment,
+        ~ .x |>
+            # Removing genes with low expression
+            keep_abundant(factor_of_interest = rs3842752_consensus) |>
+            # Testing for differential expression using edgeR likelihood ratio test
+            # https://www.nature.com/articles/s41467-021-25960-2
+            test_differential_abundance(
+                ~ 0 + rs3842752_consensus + tissue_source + technology,
+                contrasts = c("rs3842752_consensusGG - rs3842752_consensusGA"),
+                method = "edgeR_likelihood_ratio",
+                omit_contrast_in_colnames = TRUE
+            ) |>
+            scale_abundance(method = "TMMwsp")
+    ))
+```
+
+```{r }
+pseudo_bulk_nested <-
+    pseudo_bulk_nested |>
+    # Filter for significant genes
+    mutate(
+        filtered_grouped_summarized_experiment = map(
+            grouped_summarized_experiment,
+            ~ filter(.x, FDR < 0.05)
+        ),
+        deg_results = map(
+            grouped_summarized_experiment, ~ .x |> pivot_transcript()
+        )
+    ) |>
+    # Filter SummarisedExperiments with no differentially expressed genes
+    # map_int is map that returns integer instead of list
+    #dplyr::filter(map_int(filtered_grouped_summarized_experiment, ~ nrow(.x)) > 0) |>
+    # Plot significant genes for each cell type
+    mutate(
+        sig_genes_plot = map2(
+            grouped_summarized_experiment, title,
+            ~ sig_genes_plot(.x, title = .y, logFC = "logFC", .abundance = "RNA_scaled",
+            fill_palette = "Set1",
+            group_by = "rs3842752_consensus")
+        ),
+        volcano_plot = map2(
+            deg_results, title,
+            ~ volcano_plot(.x, title = .y, log2FoldChange = "logFC", FDR = "FDR", pvalue="PValue", subtitle = NULL)
+        ),
+        deg_summary = map2(
+            grouped_summarized_experiment, title,
+            ~ {
+                .x |>
+                    pivot_transcript() |>
+                    mutate(
+                        FDR = replace_na(FDR, 1),
+                        logFC = replace_na(logFC, 0),
+                        signif = FDR < 0.05
+                    ) %>%
+                    summarise(
+                        Title = .y,
+                        Up = sum(signif & logFC > 0),
+                        Down = sum(signif & logFC < 0),
+                        NotSig = sum(!signif)
+                    )
+            }
+        ),
+        deg_table = map2(
+            grouped_summarized_experiment, title,
+            ~ {
+                .x |>
+                    pivot_transcript() |>
+                    dplyr::filter(.abundant == TRUE) |>
+                    mutate(
+                        title = .y,
+                        FDR = replace_na(FDR, 1),
+                        logFC = replace_na(logFC, 0),
+                        signif = FDR < 0.05 & abs(logFC) >= 1
+                    ) |>
+                    dplyr::arrange(desc(signif), desc(abs(logFC))) |>
+                    select(title, gene = .feature, logCPM, log2FC = logFC, LR, pvalue = PValue, padj = FDR, signif)
+            } 
+        ),
+        # GSEA with GO terms
+        gseaGO_bp = map2(
+            deg_results, title,
+            ~ perform_gsea(.x, .y, analysis_type = "GO", ont = "BP", .log2fc = "logFC")
+        ),
+        gseaGO_cc = map2(
+            deg_results, title,
+            ~ perform_gsea(.x, .y, analysis_type = "GO", ont = "CC", .log2fc = "logFC")
+        ),
+        gseaGO_mf = map2(
+            deg_results, title,
+            ~ perform_gsea(.x, .y, analysis_type = "GO", ont = "MF", .log2fc = "logFC")
+        ),
+        gseaKEGG = map2(
+            deg_results, title,
+            ~ perform_gsea(.x, .y, analysis_type = "KEGG", .log2fc = "logFC")
+        ),
+        gseaWP = map2(
+            deg_results, title,
+            ~ perform_gsea(.x, .y, analysis_type = "WP", .log2fc = "logFC")
+        )
+    )
+```
+
+## Results
+```{r deg_summary}
+pseudo_bulk_nested |>
+    pull(deg_summary) |>
+    map_df(~.x) |>
+    gt::gt()
+```
+
+```{r results, results='asis', echo=FALSE}
+render_child <- function(i) {
+    res <- knitr::knit_child(
+        text = xfun::read_utf8("_template.Rmd"),
+        envir = rlang::env(i = i, pseudo_bulk_nested = pseudo_bulk_nested),
+        quiet = TRUE
+    )
+    cat(res, sep = "\n")
+    cat("\n")
+}
+
+purrr::iwalk(1:nrow(pseudo_bulk_nested), ~ render_child(.x))
+```
