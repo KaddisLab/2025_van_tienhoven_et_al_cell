@@ -36,8 +36,8 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_sct_annotated)
-seurat_object <- load_seurat(seurat_object_sct_annotated)
+tar_load(seurat_object_lognorm_annotated)
+seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
@@ -139,7 +139,7 @@ volcano_plot(
 ```{r }
 gsea_results <- perform_gsea(
     .data = de_markers,
-    title = "GSEA Results for rs3842753",
+    title = "GSEA Results for rs3842753 protected (TT) v susceptible (TG) beta cells",
     .transcripts = "gene",
     .log2fc = "avg_log2FC",
     log2fc_threshold = 0,
@@ -152,7 +152,7 @@ gsea_results$plot
 ```{r }
 gsea_results <- perform_gsea(
     .data = de_markers,
-    title = "GSEA Results for rs3842753",
+    title = "GSEA Results for rs3842753 protected (TT) v susceptible (TG) beta cells",
     .transcripts = "gene",
     .log2fc = "avg_log2FC",
     log2fc_threshold = 0,
