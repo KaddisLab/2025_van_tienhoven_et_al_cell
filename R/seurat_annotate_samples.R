@@ -23,7 +23,7 @@ seurat_annotate_samples <- function(seurat_object, sample_metadata) {
     sample_metadata <- sample_metadata |>
         select(c(
             sample_name = donor_id, sample_sex, sample_age, sample_ethnicity, diabetes_status, number_abs,
-            tissue_source, reagent_kit, protected, rs3842752_consensus, rs3842753_consensus, rs689_consensus,
+            tissue_source, reagent_kit, technology, protected, rs3842752_consensus, rs3842753_consensus, rs689_consensus,
             sample_xbp1u_psi = xbp1u_psi
         ))
 
