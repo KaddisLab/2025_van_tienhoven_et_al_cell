@@ -114,39 +114,39 @@ generate_palette <- function(n) {
     return(colorRampPalette(palettes)(n))
 }
 
-custom_theme <- theme_bw() +
-    theme(
+custom_theme <- ggplot2::theme_bw() +
+    ggplot2::theme(
         # Panel border and grid lines
         # panel.grid.major = element_blank(),
         # panel.grid.minor = element_blank(),
-        panel.spacing.x = unit(0.5, "lines"),
+        panel.spacing.x = ggplot2::unit(0.5, "lines"),
         # Strip plots
         # strip.background = element_blank(),
-        strip.text = element_text(size = 16),
-        strip.text.x = element_text(size = 20),
-        strip.text.y = element_text(size = 20),
+        strip.text = ggplot2::element_text(size = 16),
+        strip.text.x = ggplot2::element_text(size = 20),
+        strip.text.y = ggplot2::element_text(size = 20),
         # Legend
-        legend.key.size = unit(12, "mm"),
-        legend.text = element_text(size = 20),
-        legend.title = element_blank(),
+        legend.key.size = ggplot2::unit(12, "mm"),
+        legend.text = ggplot2::element_text(size = 20),
+        legend.title = ggplot2::element_blank(),
         legend.position = "bottom",
         # Title
-        plot.title = element_text(size = 26, face = "bold"),
-        plot.subtitle = element_text(size = 20),
+        plot.title = ggplot2::element_text(size = 26, face = "bold"),
+        plot.subtitle = ggplot2::element_text(size = 20),
         # Axis lines
-        axis.line = element_line(linewidth = 0.5),
-        axis.line.x = element_line(linewidth = 0.5),
-        axis.line.y = element_line(linewidth = 0.5),
+        axis.line = ggplot2::element_line(linewidth = 0.5),
+        axis.line.x = ggplot2::element_line(linewidth = 0.5),
+        axis.line.y = ggplot2::element_line(linewidth = 0.5),
         # Axis ticks
-        axis.ticks.x = element_line(linewidth = 0.5),
-        axis.ticks.y = element_line(linewidth = 0.5),
+        axis.ticks.x = ggplot2::element_line(linewidth = 0.5),
+        axis.ticks.y = ggplot2::element_line(linewidth = 0.5),
         # Axis text
-        axis.text.x = element_text(size = 20),
-        axis.text.y = element_text(size = 20),
-        axis.title.y = element_text(margin = margin(t = 0, r = 0, b = 0, l = 0), size = 20),
-        axis.title.x = element_text(margin = margin(t = 0, r = 0, b = 0, l = 0), size = 20),
+        axis.text.x = ggplot2::element_text(size = 20),
+        axis.text.y = ggplot2::element_text(size = 20),
+        axis.title.y = ggplot2::element_text(margin = ggplot2::margin(t = 0, r = 0, b = 0, l = 0), size = 20),
+        axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 0, r = 0, b = 0, l = 0), size = 20),
         # Text
-        text = element_text(family = "Roboto")
+        text = ggplot2::element_text(family = "Roboto")
     )
 
 er_genes_of_interest <- c("ERN1", "ATF6", "XBP1", "EIF2AK3", "HSPA5", "DDIT3", "PSMB10", "INS", "ATF3", "ATF4", "TXNIP", "GAPDH")
