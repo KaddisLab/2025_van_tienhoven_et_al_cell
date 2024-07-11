@@ -59,14 +59,54 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
         metadata = cell_metadata
     )
 
-    
-    # Add INS+ cell_type annotations
+    # Add INS+ cell_type_extra ------------------------------
     require(tidyseurat)
-    INS_hk_threshold <- find_expression_valley(seurat_object, "INS_hk")$valley
+    INS_hk_threshold <- find_valley(seurat_object[[]]$INS_hk)$valley
     seurat_object <- seurat_object |>
         mutate(
             cell_type_extra = ifelse(INS_hk >= INS_hk_threshold, "INS+", "")
-        ) 
+        )
+    ## Add simple Gene Set scores ------------------------------
+    # Function to calculate signature scores
+    calculate_signature_score <- function(seurat_object, signature_genes) {
+        require(tidyseurat)
+        require(dplyr)
+        require(scales)
+
+        positive_genes <- gsub("\\+$", "", signature_genes[!grepl("-$", signature_genes)])
+        negative_genes <- gsub("-$", "", signature_genes[grepl("-$", signature_genes)])
+
+        seurat_object <- seurat_object %>%
+            join_features(
+                features = c(positive_genes, negative_genes),
+                shape = "wide",
+                slot = "data",
+                assay = assay
+            )
+
+        score <- seurat_object %>%
+            mutate(
+                pos_score = rowSums(across(any_of(positive_genes))),
+                neg_score = if (length(negative_genes) > 0) rowSums(across(any_of(negative_genes))) else 0,
+                scaled_pos_score = scales::rescale(pos_score, to = c(0, 1)),
+                scaled_neg_score = if (length(negative_genes) > 0) scales::rescale(neg_score, to = c(0, 1)) else 0,
+                signature_score = scaled_pos_score - scaled_neg_score
+            ) %>%
+            pull(signature_score)
+
+        return(score)
+    }
+
+    # Calculate and add stress scores
+    stress_signatures <- c(
+        "chronic_er_stress", "active_er_stress", "islet_er_stress",
+        "islet_stress", "cellular_stress", "core_upr_stress", "msigdb_upr_stress"
+    )
+
+    for (sig_name in stress_signatures) {
+        message(paste("Calculating signature score for", sig_name))
+        seurat_object[[paste0(sig_name, "_score")]] <- calculate_signature_score(seurat_object, signatures[[sig_name]])
+    }
 
     return(seurat_object)
 }
