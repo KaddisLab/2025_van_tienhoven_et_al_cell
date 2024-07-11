@@ -14,9 +14,9 @@ get_pancdb_metadata <- function() {
                 TRUE ~ "NODM"
             ),
             technology = case_when(
-                stringr::str_detect(reagent_kit, "V2") ~ "10XV2",
-                stringr::str_detect(reagent_kit, "V3.1") ~ "10XV3.1",
-                stringr::str_detect(reagent_kit, "V3") ~ "10XV3",
+                stringr::str_detect(reagent_kit, "v2") ~ "10XV2",
+                stringr::str_detect(reagent_kit, "v3.1") ~ "10XV3.1",
+                stringr::str_detect(reagent_kit, "v3") ~ "10XV3",
                 stringr::str_detect(reagent_kit, "C1") ~ "SMARTSEQ3",
                 TRUE ~ NA_character_
             ),
