@@ -17,18 +17,22 @@ book:
     - beta_cells_umap.qmd
     - part: "DEGs"
       chapters:
+      # - beta_cells_DE_muscat.qmd
       - beta_cells_DE_rs3842752.qmd
       - beta_cells_DE_rs3842753.qmd
       - beta_cells_DE_rs689.qmd
+      # - DEG_rs3842752_edgeR.qmd
+      # - DEG_rs3842753_edgeR.qmd
+      # - DEG_rs689_edgeR.qmd
     - part: "Stress score"
       chapters: 
       - ins_expression.qmd
+      - boxplots_beta_cells_HK.qmd
     - part: "ER genes"
       chapters:
       - boxplots_beta_cells.qmd
       - boxplots_beta_cells_rs3842753.qmd
       - boxplots_beta_cells_rs689.qmd
-      - boxplots_beta_cells_HK.qmd
       - boxplots_alpha_beta_cells.qmd
       - boxplots_alpha_cells.qmd
       - boxplots_delta_cells.qmd
