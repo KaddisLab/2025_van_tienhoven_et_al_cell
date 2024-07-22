@@ -42,8 +42,8 @@ tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 bbparam <- BiocParallel::MulticoreParam(cpus, progressbar = TRUE)
 
-tar_load(seurat_object_sct_annotated)
-seurat_object <- load_seurat(seurat_object_sct_annotated)
+tar_load(seurat_object_lognorm_annotated)
+seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
@@ -60,9 +60,9 @@ beta_cells <- subset(seurat_object, cell_type == "Beta")
 # Convert Seurat object to SingleCellExperiment
 sce <- seurat_sce(beta_cells)
 # factors
-sce$rs689_consensus <- relevel(factor(sce$rs689_consensus), ref = "AA")
+sce$rs689_consensus <- relevel(factor(sce$rs689_consensus), ref = "TT")
+sce$rs3842752_consensus <- relevel(factor(sce$rs3842752_consensus), ref = "GG")
 sce$rs3842753_consensus <- relevel(factor(sce$rs3842753_consensus), ref = "TG")
-sce$rs3842752_consensus <- relevel(factor(sce$rs3842752_consensus), ref = "GA")
 sce$tissue_source <- factor(sce$tissue_source)
 sce$technology <- factor(sce$technology)
 # remove undetected genes
@@ -234,7 +234,7 @@ gsea_results_kegg$plot
 pb <- prepSCE(
     sce,
     kid = "cell_type",
-    gid = "rs3842752_consensus",
+    gid = "rs689_consensus",
     sid = "orig.ident",
     drop = FALSE
 ) |>
@@ -255,15 +255,16 @@ de_markers <- res$table[[1]]$Beta
 de_markers |>
     select(-contrast) |>
     mutate(significant = p_adj.loc < 0.05 & abs(logFC) >= 1) %>%
-    arrange(desc(significant), desc(abs(logFC))) |> as_tibble() |>
-downloadthis::download_this(
-    output_name = glue::glue("differential_expression_rs689.xlsx"),
-    output_extension = ".xlsx",
-    button_label = "Download Muscat results",
-    button_type = "success",
-    has_icon = TRUE,
-    icon = "fa fa-save"
-)
+    arrange(desc(significant), desc(abs(logFC))) |>
+    as_tibble() |>
+    downloadthis::download_this(
+        output_name = glue::glue("differential_expression_rs689.xlsx"),
+        output_extension = ".xlsx",
+        button_label = "Download Muscat results",
+        button_type = "success",
+        has_icon = TRUE,
+        icon = "fa fa-save"
+    )
 
 # Create volcano plot
 volcano_plot(
