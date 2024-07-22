@@ -557,6 +557,11 @@ list(
         make_beta_cell_object(seurat_object_lognorm_annotated),
         resources = large
     ),
+    tar_target(
+        pseudo_bulk_object,
+        make_pseudo_bulk_object(seurat_object_lognorm_annotated),
+        resources = large
+    ),
     # Housekeeping --------------------------------------------------------------------------
     # Update the mtime of all files in the cache
     tar_target(
