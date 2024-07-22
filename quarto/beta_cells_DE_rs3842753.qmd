@@ -67,7 +67,7 @@ beta.bulk <- subset(bulk, cell_type == "Beta")
 Idents(beta.bulk) <- "rs3842753_consensus"
 
 de_markers <- FindMarkers(beta.bulk,
-    ident.2 = "TG", ident.1 = "TT", test.use = "DESeq2", verbose = FALSE, min.pct = 0.25, pseudocount.use = 0.001
+    ident.1 = "TT", ident.2 = "TG", test.use = "DESeq2", verbose = FALSE, min.pct = 0.25, pseudocount.use = 0.001
 )
 
 de_markers$gene <- rownames(de_markers)
@@ -116,7 +116,7 @@ gsea_results$plot
 
 ```{r }
 de_markers <- FindMarkers(beta.bulk,
-    ident.2 = "TG", ident.1 = "TT", test.use = "wilcox", verbose = FALSE, min.pct = 0.25, pseudocount.use = 0.001
+    ident.1 = "TT", ident.2 = "TG", test.use = "wilcox", verbose = FALSE, min.pct = 0.25, pseudocount.use = 0.001
 )
 
 de_markers$gene <- rownames(de_markers)
