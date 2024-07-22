@@ -39,8 +39,7 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 bbparam <- BiocParallel::MulticoreParam(cpus, progressbar = TRUE)
-
-sig_genes_palette <- c("red", "blue", "green")
+make_plots_clickable()
 
 tar_load(pseudo_bulk_object)
 
@@ -55,7 +54,7 @@ pseudo_bulk <- pseudo_bulk_object |>
 pseudo_bulk_nested <- pseudo_bulk |>
     tidybulk::tidybulk(.sample = orig.ident, .abundance = RNA, .transcript = .feature)  |>
     nest(grouped_summarized_experiment = -cell_type) |>
-    mutate(title = paste0("rs689_", cell_type))
+    mutate(title = paste0("rs689 ", cell_type))
 ```
 
 

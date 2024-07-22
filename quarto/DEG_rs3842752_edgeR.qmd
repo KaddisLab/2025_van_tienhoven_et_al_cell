@@ -39,23 +39,21 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 bbparam <- BiocParallel::MulticoreParam(cpus, progressbar = TRUE)
-
-sig_genes_palette <- c("red", "blue", "green")
+make_plots_clickable()
 
 tar_load(pseudo_bulk_object)
 
 pseudo_bulk <- pseudo_bulk_object |>
-     dplyr::filter(diabetes_status == "NODM")
+    dplyr::filter(diabetes_status == "NODM")
 ```
 
 ## Differential expression
 
 ```{r}
-
 pseudo_bulk_nested <- pseudo_bulk |>
     tidybulk::tidybulk(.sample = orig.ident, .abundance = RNA, .transcript = .feature)  |>
     nest(grouped_summarized_experiment = -cell_type) |>
-    mutate(title = paste0("rs3842752_", cell_type))
+    mutate(title = paste0("rs3842752 ", cell_type))
 ```
 
 
@@ -70,8 +68,8 @@ pseudo_bulk_nested <-
             # Testing for differential expression using edgeR likelihood ratio test
             # https://www.nature.com/articles/s41467-021-25960-2
             test_differential_abundance(
-                ~ 0 + rs3842752_consensus + tissue_source + technology,
-                contrasts = c("rs3842752_consensusGG - rs3842752_consensusGA"),
+                ~ 0 + rs3842752_consensus, tissue_source + technology,
+                contrasts = c("rs3842752_consensusGA - rs3842752_consensusGG"),
                 method = "edgeR_likelihood_ratio",
                 omit_contrast_in_colnames = TRUE
             ) |>
@@ -101,8 +99,7 @@ pseudo_bulk_nested <-
             grouped_summarized_experiment, title,
             ~ sig_genes_plot(.x, title = .y, logFC = "logFC", .abundance = "RNA_scaled",
             fill_palette = "Set1",
-            group_by = "rs3842752_consensus")
-        ),
+            group_by = "rs3842752_consensus      ),
         volcano_plot = map2(
             deg_results, title,
             ~ volcano_plot(.x, title = .y, log2FoldChange = "logFC", FDR = "FDR", pvalue="PValue", subtitle = NULL)
