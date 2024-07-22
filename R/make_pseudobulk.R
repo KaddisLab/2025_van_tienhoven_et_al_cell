@@ -16,7 +16,7 @@ make_pseudo_bulk_object <- function(seurat_object) {
 #     dplyr::filter(diabetes_status == "NODM") 
 
 seurat_object$rs689_consensus <- relevel(factor(seurat_object$rs689_consensus), ref = "TT")
-seurat_object$rs3842752_consensus <- relevel(factor(seurat_object$rs3842752_consensus), ref = "GA")
+seurat_object$rs3842752_consensus <- relevel(factor(seurat_object$rs3842752_consensus), ref = "GG")
 seurat_object$rs3842753_consensus <- relevel(factor(seurat_object$rs3842753_consensus), ref = "TG")
 seurat_object$tissue_source <- factor(seurat_object$tissue_source)
 seurat_object$technology <- factor(seurat_object$technology)
