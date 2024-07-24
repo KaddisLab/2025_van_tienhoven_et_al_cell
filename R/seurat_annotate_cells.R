@@ -48,9 +48,9 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
             seurat_clusters,
             xbp1u_psi,
             INS_hk,
-            spliced_ratio_INS,
-            spliced_ratio_XBP1,
-            spliced_ratio_GAPDH,
+            contains("gene_ratio_INS"),
+            contains("spliced_counts"),
+            contains("unspliced_counts"),
             contains("_UCell")) %>%
         tibble::column_to_rownames(var = "cell")
 
