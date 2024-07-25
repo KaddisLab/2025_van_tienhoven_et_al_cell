@@ -2,18 +2,13 @@
 library(dplyr)
 library(ggplot2)
 library(patchwork)
-library(stringr)
-library(targets)
-library(pheatmap)
-library(tidyr)
-library(viridis)
-library(ggpubr)
-library(MASS)
 library(lme4)
 library(performance)
 library(see)
 library(parameters)
 library(datawizard)
+library(lmerTest)
+library(emmeans)
 
 # Source necessary files
 source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R/AAA_defaults_and_constants.R")
@@ -52,72 +47,71 @@ plot_data <- metadata %>%
         ~ datawizard::standardize(.)
     ))
 
-# Refit the models with additional variables
-lmm_mature <- lmer(
-    log_mature_cpm_INS ~ protected + rs3842752_consensus + rs3842753_consensus + rs689_consensus +
-        total_counts + percent_mt +
-        chronic_er_stress_score + active_er_stress_score +
-        islet_stress_score + cellular_stress_score +
-        chronic_er_stress_UCell + active_er_stress_UCell +
-        islet_er_stress_UCell + islet_stress_UCell +
-        cellular_stress_UCell + core_upr_stress_UCell +
-        msigdb_upr_stress_UCell +
-        Beta_UCell + technology + tissue_source + (1 | orig.ident),
+# Define initial variables for analysis
+vars_for_analysis <- c(
+    "protected", "rs3842752_consensus", "rs3842753_consensus", "rs689_consensus",
+    "total_counts", "percent_mt", "islet_stress_score", "cellular_stress_score",
+    "islet_stress_UCell", "cellular_stress_UCell",
+    "core_upr_stress_UCell", "msigdb_upr_stress_UCell", "Beta_UCell",
+    "technology", "tissue_source"
+)
+
+# Ensure all categorical variables are factors
+plot_data <- plot_data %>%
+    mutate(across(all_of(c(vars_for_analysis, "orig.ident")), as.factor))
+
+# Fit models using lmerTest
+mature_model <- lmerTest::lmer(
+    log_mature_cpm_INS ~ protected + rs3842752_consensus + rs3842753_consensus +
+        rs689_consensus + total_counts + percent_mt + islet_stress_score +
+        cellular_stress_score + islet_stress_UCell + cellular_stress_UCell +
+        core_upr_stress_UCell + msigdb_upr_stress_UCell + Beta_UCell +
+        technology + tissue_source + (1 | orig.ident),
     data = plot_data
 )
 
-lmm_nascent <- lmer(
-    log_nascent_cpm_INS ~ protected + rs3842752_consensus + rs3842753_consensus + rs689_consensus +
-        total_counts + percent_mt +
-        chronic_er_stress_score + active_er_stress_score +
-        islet_stress_score + cellular_stress_score +
-        chronic_er_stress_UCell + active_er_stress_UCell +
-        islet_er_stress_UCell + islet_stress_UCell +
-        cellular_stress_UCell + core_upr_stress_UCell +
-        msigdb_upr_stress_UCell +
-        Beta_UCell + technology + tissue_source + (1 | orig.ident),
+nascent_model <- lmerTest::lmer(
+    log_nascent_cpm_INS ~ protected + rs3842752_consensus + rs3842753_consensus +
+        rs689_consensus + total_counts + percent_mt + islet_stress_score +
+        cellular_stress_score + islet_stress_UCell + cellular_stress_UCell +
+        core_upr_stress_UCell + msigdb_upr_stress_UCell + Beta_UCell +
+        technology + tissue_source + (1 | orig.ident),
     data = plot_data
 )
+
+# Model summaries
+print(summary(mature_model))
+print(summary(nascent_model))
 
 # Model diagnostics
-check_model(lmm_mature)
-check_model(lmm_nascent)
+check_model(mature_model)
+check_model(nascent_model)
 
 # Model performance
-print(model_performance(lmm_mature))
-print(model_performance(lmm_nascent))
+print(model_performance(mature_model))
+print(model_performance(nascent_model))
 
-# Visualize model parameters
-plot_parameters <- function(model, title) {
-    plot(parameters(model)) +
-        ggtitle(title) +
-        theme_minimal() +
-        theme(axis.text.y = element_text(size = 8))
-}
+# Estimated Marginal Means
+# Let's look at the effect of 'protected' while averaging over other predictors
+emm_mature <- emmeans(mature_model, ~protected)
+emm_nascent <- emmeans(nascent_model, ~protected)
 
-mature_params_plot <- plot_parameters(lmm_mature, "Mature INS Expression Model Parameters")
-nascent_params_plot <- plot_parameters(lmm_nascent, "Nascent INS Expression Model Parameters")
+print(emm_mature)
+print(emm_nascent)
 
-# Combine parameter plots
-combined_params_plot <- mature_params_plot + nascent_params_plot +
-    plot_layout(ncol = 2) +
-    plot_annotation(
-        title = "Model Parameters for INS Expression",
-        theme = theme(plot.title = element_text(hjust = 0.5))
-    )
+# Pairwise comparisons
+pairs(emm_mature)
+pairs(emm_nascent)
 
-print(combined_params_plot)
+# Visualize emmeans results
+plot(emm_mature) + ggtitle("Estimated Marginal Means for Mature INS Expression")
+plot(emm_nascent) + ggtitle("Estimated Marginal Means for Nascent INS Expression")
 
-# Save the combined parameter plot
-ggsave("figure_model_parameters_updated.png", combined_params_plot, width = 20, height = 16, units = "in", dpi = 300)
+# If you want to look at interactions, you can do something like:
+emm_interaction_mature <- emmeans(mature_model, ~ protected * technology)
+plot(emm_interaction_mature) + ggtitle("Interaction of Protected and Technology for Mature INS Expression")
 
-# Model comparison
-lmm_mature_no_protected <- update(lmm_mature, . ~ . - protected)
-lmm_nascent_no_protected <- update(lmm_nascent, . ~ . - protected)
-
-print(compare_performance(lmm_mature, lmm_mature_no_protected))
-print(compare_performance(lmm_nascent, lmm_nascent_no_protected))
-
-# Print model summaries
-print(summary(lmm_mature))
-print(summary(lmm_nascent))
+# You can also use emmeans for more complex contrasts or custom comparisons
+# For example, to compare the effect of 'protected' across different technologies:
+emm_nested <- emmeans(mature_model, ~ protected | technology)
+pairs(emm_nested)
