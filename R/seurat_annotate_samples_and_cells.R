@@ -36,9 +36,9 @@ seurat_annotate_samples_and_cells <- function(seurat_object,
             hpap_clusters = cluster_labels,
             seurat_clusters = manual_clusters,
             xbp1u_psi = xbp1_psi,
-            spliced_ratio_INS = gene_ratio_INS,
-            spliced_ratio_XBP1 = gene_ratio_XBP1,
-            spliced_ratio_GAPDH = gene_ratio_GAPDH) %>%
+            spliced_ratio_INS = count_ratio_INS,
+            spliced_ratio_XBP1 = count_ratio_XBP1,
+            spliced_ratio_GAPDH = count_ratio_GAPDH) %>%
         dplyr::select(
             cell,
             cell_cycle,

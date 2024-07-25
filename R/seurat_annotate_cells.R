@@ -29,14 +29,16 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
                 HPAPcell_type %in% c("Alpha", "Cycling Alpha", "Beta", "Alpha+Beta", "Delta", "Gamma+Epsilon", "Epsilon") ~ HPAPcell_type,
                 HPAPcell_type %in% c("Acinar") ~ HPAPcell_type,
                 HPAPcell_type %in% c("Ductal", "MUC5B+ Ductal") ~ HPAPcell_type,
-                TRUE ~ "Other"),
+                TRUE ~ "Other"
+            ),
             hpap_cell_type = hpap_celltype,
             hpap_clusters = cluster_labels,
             seurat_clusters = manual_clusters,
             xbp1u_psi = xbp1_psi,
-            spliced_ratio_INS = gene_ratio_INS,
-            spliced_ratio_XBP1 = gene_ratio_XBP1,
-            spliced_ratio_GAPDH = gene_ratio_GAPDH) %>%
+            spliced_ratio_INS = count_ratio_INS,
+            spliced_ratio_XBP1 = count_ratio_XBP1,
+            spliced_ratio_GAPDH = count_ratio_GAPDH
+        ) %>%
         dplyr::select(
             cell,
             cell_cycle,
@@ -48,10 +50,11 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
             seurat_clusters,
             xbp1u_psi,
             INS_hk,
-            contains("gene_ratio_INS"),
+            contains("count_ratio_INS"),
             contains("spliced_counts"),
             contains("unspliced_counts"),
-            contains("_UCell")) %>%
+            contains("_UCell")
+        ) %>%
         tibble::column_to_rownames(var = "cell")
 
     seurat_object <- Seurat::AddMetaData(
