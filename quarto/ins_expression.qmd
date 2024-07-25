@@ -170,7 +170,7 @@ seurat_object <- seurat_object_lognorm_annotated |>
     dplyr::filter(diabetes_status == "NODM")
 
 # Fetch control genes
-control_genes <- c("SLC11A2", "SLC40A1", "UBC", "RPLP0")
+control_genes <- c("SLC11A2", "SLC40A1", "UBC", "RPLP0", "ERN1")
 control_genes_hk <- normalize_control_genes(seurat_object, control_genes, housekeeping_genes)
 
 data <- seurat_object[[]] |>
@@ -251,6 +251,7 @@ library(kableExtra)
 library(broom)
 
 # Remove cells that dont express INS
+data_unfiltered <- data
 data <- data %>%
     dplyr::filter(INS_hk > 0)
 
@@ -391,7 +392,17 @@ data |>
 downloadthis::download_this(
     output_name = glue::glue("INS_expression_vs_stress.xlsx"),
     output_extension = ".xlsx",
-    button_label = "Download stress scores",
+    button_label = "Download filtered (INS > 0) stress scores",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+)
+
+data_unfiltered |>
+downloadthis::download_this(
+    output_name = glue::glue("INS_expression_vs_stress_unfiltered.xlsx"),
+    output_extension = ".xlsx",
+    button_label = "Download unfiltered stress scores",
     button_type = "success",
     has_icon = TRUE,
     icon = "fa fa-save"
