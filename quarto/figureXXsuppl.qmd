@@ -1,0 +1,218 @@
+---
+title: "Supplementary Figure XX"
+date: "2024-7-22" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(targets)
+    library(ggplot2)
+    library(Seurat)
+    library(patchwork)
+    require(showtext)
+    font_add_google(name = "Roboto", family = "Roboto")
+    font_add_google(name = "Roboto Condensed", family = "Roboto Condensed")
+    showtext_auto()
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+make_plots_clickable()
+
+tar_load(seurat_object_lognorm_annotated)
+seurat_object <- load_seurat(seurat_object_lognorm_annotated)
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM")
+```
+
+### A. Cell type
+
+```{r}
+#| fig-cap: "Elgamal et al cell types, NODM"
+#| fig-alt: "UMAP of Elgamal et al cell types"
+#| fig-width: 5
+
+plot_a <- DimPlot(
+    seurat_object, 
+    group.by = "cell_type", 
+    label = FALSE,  # Turn off default labeling
+    cols = cell_type_palette, 
+    reduction = "umap", 
+    raster = FALSE) +
+    NoLegend() +
+    labs(x = "UMAP 1", y = "UMAP 2", title = NULL) +
+    theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank()) +
+    coord_fixed(ratio = 1)
+
+# Apply LabelClusters with increased repulsion
+plot_a <- LabelClusters(plot = plot_a, 
+                        id = "cell_type", 
+                        box.padding = 0.4,  
+                        size = 9,
+                        box = TRUE, 
+                        repel = TRUE)
+
+print(plot_a)
+#ggsave("plot.png", plot_a, width = 5)
+```
+
+### B. Feature plots
+
+```{r}
+#| fig-width: 5
+
+genes_of_interest <- c("INS", "PDX1", "MAFA", "GCG", "SST", "PPY", "GHR", "KRT19")
+
+plot_b <- FeaturePlot(seurat_object,
+    features = genes_of_interest,
+    keep.scale = "feature",
+    reduction = "umap",
+    ncol = 4,
+    raster = FALSE,
+) &
+    theme(
+        plot.title = element_text(size = 16, face = "bold"),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = c(0.99, 0.98), # Position legend in top right
+        legend.justification = c(1, 1),
+        legend.box.just = "right",
+        legend.margin = margin(2, 2, 2, 2),
+        legend.key.size = unit(0.15, "lines"),
+        legend.text = element_text(size = 10, margin = margin(l = 1, unit = "pt")),
+        legend.title = element_blank()
+    ) &
+    labs(x = "UMAP 1", y = "UMAP 2") &
+    coord_fixed(ratio = 1) &
+    guides(color = guide_colorbar(barwidth = 0.25, barheight = 1.5)) # Adjust legend size
+
+plot_b <- plot_b & theme(
+    plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm") # Reduce plot margins
+) 
+
+print(plot_b)
+# ggsave('plot.png', plot_b,width = 5)
+```
+
+### C. Cell type proportions
+
+```{r}
+#| fig-cap: "Cell type proportions, NODM"
+#| fig-alt: "Barplot of cell type proportions"
+#| fig-width: 5
+#| fig-height: 3
+
+library(ggplot2)
+library(dplyr)
+library(ggtext)
+
+plot_data <- seurat_object[[]]
+
+# Define the desired order for cell types
+cell_type_order <- c(
+    "Alpha", "Cycling Alpha", "Alpha+Beta", "Beta", "Delta",
+    "Gamma+Epsilon", "Acinar", "Ductal", "MUC5B+ Ductal", "Other"
+)
+
+plot_data_modified <- plot_data %>%
+    filter(diabetes_status == "NODM") %>%
+    group_by(orig.ident, cell_type, protected) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    group_by(orig.ident) %>%
+    mutate(prop = count / sum(count)) %>%
+    ungroup() %>%
+    mutate(cell_type = factor(cell_type, levels = cell_type_order))
+
+# Calculate alpha cell proportion for each donor
+alpha_proportions <- plot_data_modified %>%
+    filter(cell_type == "Alpha") %>%
+    select(orig.ident, protected, alpha_prop = prop)
+
+# Join alpha proportions back to the main dataset
+plot_data_modified <- plot_data_modified %>%
+    left_join(alpha_proportions, by = c("orig.ident", "protected"))
+
+# Create donor order based on alpha cell proportion within each protected group
+donor_order <- plot_data_modified %>%
+    arrange(protected, desc(alpha_prop), orig.ident) %>%
+    distinct(protected, orig.ident) %>%
+    group_by(protected) %>%
+    mutate(donor_order = row_number()) %>%
+    ungroup()
+
+# Join the donor order back to the main dataset
+plot_data_modified <- plot_data_modified %>%
+    left_join(donor_order, by = c("orig.ident", "protected"))
+
+plot_c <- ggplot(
+    plot_data_modified,
+    aes(x = reorder(orig.ident, donor_order), y = prop, fill = cell_type)
+) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = cell_type_palette) +
+    labs(
+        y = "Proportion"
+    ) +
+    theme_classic() +
+    theme(
+        axis.text.x = element_markdown(angle = 45, hjust = 1, vjust = 1, size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size = 14),
+        axis.ticks.x = element_blank(),
+        axis.line.x = element_blank(),
+        axis.title.x = element_blank(),
+        strip.text = element_text(size = 14, face = "bold"),
+        strip.background = element_blank(),
+        panel.spacing = unit(0.5, "lines"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.position = "bottom",
+        legend.key.size = unit(0.5, "lines"),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.box = "horizontal"
+    ) +
+    guides(fill = guide_legend(title = "Cell Type", nrow = 2, byrow = TRUE)) + # Adjusted to single row
+    facet_grid(~protected,
+        scales = "free_x", space = "free_x",
+        labeller = as_labeller(c(`TRUE` = "Protected", `FALSE` = "Susceptible"))
+    ) +
+    scale_y_continuous(expand = c(0, 0))
+
+print(plot_c)
+#ggsave("plot.png", plot_c, width = 5, height = 3) 
+
+```
+
+### D. Patchwork plot
+
+```{r}
+#|fig-width: 5
+#|fig-height: 11
+
+# Create the patchwork plot 
+plot_d <- (plot_a / plot_b / plot_c) +
+    plot_layout(heights = c(1, 1, 0.5))
+
+# print(plot_d)
+ggsave("assets/figureXXsuppl_combined_plot.png", plot_d, width = 5, height = 10, dpi = 300)
+```
+
+![](assets/figureXXsuppl_combined_plot.png)
+[Download high resolution image](assets/figureXXsuppl_combined_plot.png)

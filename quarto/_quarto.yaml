@@ -11,6 +11,10 @@ book:
   date: "2024-3-25" 
   chapters:
     - index.qmd
+    - part: "Publication figs"
+      chapters: 
+        - figureX.qmd
+        - figureXXsuppl.qmd
     - cell_wish_list.qmd
     - pancdb_metadata.qmd
     - umap_lognorm.qmd
