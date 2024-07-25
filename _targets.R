@@ -173,7 +173,7 @@ list(
     # MARK:     # percent spliced per cell
     tar_target(
         percent_spliced_per_cell_INS,
-        percent_spliced_per_cell(starsolo_alltech, "INS"),
+        percent_spliced_per_cell(starsolo_alltech, "INS", housekeeping_genes),
         resources = tiny,
         pattern = map(starsolo_alltech)
     ),
@@ -219,6 +219,8 @@ list(
     tar_target(rs3842753_cohort, get_cellsnp_lite_genotypes("11\t2159830", "rs3842753"), deployment = "main"),
     tar_target(rs689_cohort, get_cellsnp_lite_genotypes("11\t2160994", "rs689"), deployment = "main"),
     tar_target(rs13266634_cohort, get_cellsnp_lite_genotypes("8\t117172544", "rs13266634"), deployment = "main"),
+    # parse cell genotypes
+    tar_target(cell_genotypes, get_cellsnp_lite_cell_genotypes(cellsnp_lite)),
     # MARK:     # VarTrix ---------------------------------------------------------------------
     # # prep reference snps
     # tar_target(
