@@ -347,7 +347,7 @@ plots$boxplot
 
 ::::
 
-TRUE = Protected (G/G), FALSE = Susceptible (G/A)
+TRUE = Protected (G/A), FALSE = Susceptible (G/G)
 
 ## Beta cells by ER genes
 
