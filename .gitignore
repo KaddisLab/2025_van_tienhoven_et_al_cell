@@ -23,3 +23,4 @@ quarto/**
 HPAP113_velocity_seurat_object.qs
 plot_sct_protected.png
 *.qs
+assets/** */
