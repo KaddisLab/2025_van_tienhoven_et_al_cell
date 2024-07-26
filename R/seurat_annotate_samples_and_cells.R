@@ -10,8 +10,8 @@
 #' @author Denis O'Meally
 #' @export
 seurat_annotate_samples_and_cells <- function(seurat_object,
-                                         cell_metadata,
-                                         sample_metadata) {
+                                              cell_metadata,
+                                              sample_metadata) {
     # if (is.null(seurat_object)) seurat_object <- tar_read(integrated_seurat_sketch_750)
     # if (is.null(cell_metadata)) cell_metadata <- tar_read(aggregated_cell_annot_csv)
     # if (is.null(sample_metadata)) sample_metadata <- tar_read(pancdb_metadata_gt)
@@ -31,14 +31,16 @@ seurat_annotate_samples_and_cells <- function(seurat_object,
                 HPAPcell_type %in% c("Alpha", "Cycling Alpha", "Beta", "Alpha+Beta", "Delta", "Gamma+Epsilon", "Epsilon") ~ HPAPcell_type,
                 HPAPcell_type %in% c("Acinar") ~ HPAPcell_type,
                 HPAPcell_type %in% c("Ductal", "MUC5B+ Ductal") ~ HPAPcell_type,
-                TRUE ~ "Other"),
+                TRUE ~ "Other"
+            ),
             hpap_cell_type = hpap_celltype,
             hpap_clusters = cluster_labels,
             seurat_clusters = manual_clusters,
             xbp1u_psi = xbp1_psi,
-            spliced_ratio_INS = count_ratio_INS,
-            spliced_ratio_XBP1 = count_ratio_XBP1,
-            spliced_ratio_GAPDH = count_ratio_GAPDH) %>%
+            spliced_ratio_INS = counts_ratio_INS,
+            spliced_ratio_XBP1 = counts_ratio_XBP1,
+            spliced_ratio_GAPDH = counts_ratio_GAPDH
+        ) %>%
         dplyr::select(
             cell,
             cell_cycle,
@@ -52,7 +54,8 @@ seurat_annotate_samples_and_cells <- function(seurat_object,
             INS_hk,
             spliced_ratio_INS,
             spliced_ratio_XBP1,
-            spliced_ratio_GAPDH) %>%
+            spliced_ratio_GAPDH
+        ) %>%
         tibble::column_to_rownames(var = "cell")
 
 

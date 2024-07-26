@@ -35,9 +35,9 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
             hpap_clusters = cluster_labels,
             seurat_clusters = manual_clusters,
             xbp1u_psi = xbp1_psi,
-            spliced_ratio_INS = count_ratio_INS,
-            spliced_ratio_XBP1 = count_ratio_XBP1,
-            spliced_ratio_GAPDH = count_ratio_GAPDH
+            spliced_ratio_INS = counts_ratio_INS,
+            spliced_ratio_XBP1 = counts_ratio_XBP1,
+            spliced_ratio_GAPDH = counts_ratio_GAPDH
         ) %>%
         dplyr::select(
             cell,
@@ -50,7 +50,7 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
             seurat_clusters,
             xbp1u_psi,
             INS_hk,
-            contains("count_ratio_INS"),
+            contains("counts_ratio_INS"),
             contains("spliced_counts"),
             contains("unspliced_counts"),
             contains("_UCell")
