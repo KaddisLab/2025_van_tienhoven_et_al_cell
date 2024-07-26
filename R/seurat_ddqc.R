@@ -68,7 +68,7 @@
 }
 
 .metricFilter <- function(seurat_object, df.qc, param = 2, metric.name, do.upper.co = FALSE, do.lower.co = FALSE,
-                          lower.bound = -10E10, upper.bound = 10E10) {
+                          lower.bound = -10E10, upper.bound = 10E10, use_mad_filtering = TRUE) {
     passed.qc <- rep(TRUE, length(colnames(seurat_object)))
     names(passed.qc) <- colnames(seurat_object)
 
@@ -82,10 +82,15 @@
         values <- seurat_object[, idx][[metric.name]][[metric.name]]
 
         median.v <- median(values, na.rm = TRUE)
-        mad.v <- mad(values, na.rm = TRUE)
-        lower.co <- max(median.v - param * mad.v, lower.bound)
-        upper.co <- min(median.v + param * mad.v, upper.bound)
-
+        
+        if (use_mad_filtering) {
+            mad.v <- mad(values, na.rm = TRUE)
+            lower.co <- max(median.v - param * mad.v, lower.bound)
+            upper.co <- min(median.v + param * mad.v, upper.bound)
+            } else {
+            lower.co <- lower.bound
+            upper.co <- upper.bound
+            }
         qc.pass.cl <- rep(TRUE, length(values))
 
         if (do.lower.co) {
@@ -114,29 +119,37 @@
 
 #' ddQC and scDblFinder filtering for Seurat objects
 #'
-#' This function takes a Seurat object after running seurat_cell_metrics(), runs ddQC and 
+#' This function takes a Seurat object after running seurat_cell_metrics(), runs ddQC and
 #' returns a path to the CSV file with ddQC statistics, or a path to the filtered Seurat object if "do.filter" is TRUE
 #'
 #' @param seurat_object Seurat object, or a path to a Seurat object file
 #' @param n.pcs number of principal components for clustering. 50 by default
 #' @param k.param k for FindNeighbors. 20 by default
 #' @param res clustering resolution. 1 by default
-#' @param threshold MAD multiplier for ddqc. 2 by default
+#' @param threshold MAD multiplier for ddqc. 3.5 by default
 #' @param do.plots whether to generate plots. TRUE by default
 #' @param do.counts whether to consider nCount_RNA for ddqc. TRUE by default
 #' @param do.genes whether to consider nFeature_RNA for ddqc. TRUE by default
 #' @param do.mito whether to consider percent_mt for ddqc. TRUE by default
 #' @param do.ribo whether to consider percent_rb for ddqc. TRUE by default
+#' @param n.reads.lower.bound bound for lower nCount_RNA cluster-level threshold. 500 by default
 #' @param n.genes.lower.bound bound for lower nFeature_RNA cluster-level threshold. 200 by default
-#' @param percent.mito.upper.bound bound for upper percent_mt cluster-level threshold. 15 by default
-#' @param percent.rb.lower.bound bound for lower percent_rm cluster-level threshold. 5 by default
+#' @param percent.mito.upper.bound bound for upper percent_mt cluster-level threshold. 20 by default
+#' @param percent.rb.lower.bound bound for lower percent_rb cluster-level threshold. 0 by default
 #' @param do.filter Logical. Filter MAD outliers and doublets if scDblFinder_out is provided. TRUE by default
 #' @param scDblFinder_out Path to the CSV file with scDoublet results.
+#' @param use_mad_counts Logical. Whether to use MAD filtering for nCount_RNA. TRUE by default
+#' @param use_mad_genes Logical. Whether to use MAD filtering for nFeature_RNA. TRUE by default
+#' @param use_mad_mito Logical. Whether to use MAD filtering for percent_mt. TRUE by default
+#' @param use_mad_ribo Logical. Whether to use MAD filtering for percent_rb. TRUE by default
 #'
 #' @return Path to the filtered seurat_object at "{analysis_cache}/ddqc_out/{sample_id}_ddqc.qs", or the similarly named CSV file with ddqc statistics if do.filter is FALSE
 #' @export
-seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20, res = 1, threshold = 3.5, do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
-                        n.reads.lower.bound = 500, n.genes.lower.bound = 200, percent.mito.upper.bound = 20, percent.rb.lower.bound = 0, do.filter = TRUE) {
+seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20, res = 1, threshold = 3.5, 
+                        do.plots = TRUE, do.counts = TRUE, do.genes = TRUE, do.mito = TRUE, do.ribo = TRUE,
+                        n.reads.lower.bound = 500, n.genes.lower.bound = 200, percent.mito.upper.bound = 20, 
+                        percent.rb.lower.bound = 0, do.filter = TRUE, 
+                        use_mad_counts = TRUE, use_mad_genes = TRUE, use_mad_mito = TRUE, use_mad_ribo = TRUE) {
     message("Loading Seurat object...")
     seurat_object <- load_seurat(seurat_object)
     sample_id <- Seurat::Project(seurat_object)
@@ -155,38 +168,48 @@ seurat_ddqc <- function(seurat_object, scDblFinder_out, n.pcs = 50, k.param = 20
         message("Filtering cells based on nCount_RNA")
         df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nCount_RNA",
             do.lower.co = TRUE,
-            lower.bound = n.reads.lower.bound
+            lower.bound = n.reads.lower.bound,
+            use_mad_filtering = use_mad_counts
         )
         if (do.plots) {
             plots[["nCount_RNA"]] <- .ddqcBoxplot(df.qc, "nCount_RNA", n.reads.lower.bound, scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$nCount_RNA.passed.qc
     }
+
     if (do.genes) {
         message("Filtering cells based on nFeature_RNA")
         df.qc <- .metricFilter(seurat_object, df.qc, threshold, "nFeature_RNA",
             do.lower.co = TRUE,
-            lower.bound = n.genes.lower.bound
+            lower.bound = n.genes.lower.bound,
+            use_mad_filtering = use_mad_genes
         )
         if (do.plots) {
             plots[["nFeature_RNA"]] <- .ddqcBoxplot(df.qc, "nFeature_RNA", log1p(n.genes.lower.bound), TRUE, scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$nFeature_RNA.passed.qc
     }
+
     if (do.mito) {
         message("Filtering cells based on percent_mt")
         df.qc <- .metricFilter(seurat_object, df.qc, threshold, "percent_mt",
             do.upper.co = TRUE,
-            upper.bound = percent.mito.upper.bound
+            upper.bound = percent.mito.upper.bound,
+            use_mad_filtering = use_mad_mito
         )
         if (do.plots) {
             plots[["percent_mt"]] <- .ddqcBoxplot(df.qc, "percent_mt", percent.mito.upper.bound, FALSE, scDblFinder_out = scDblFinder_out)
         }
         passed.qc <- passed.qc & df.qc$percent_mt.passed.qc
     }
+
     if (do.ribo) {
         message("Filtering cells based on percent_rb")
-        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "percent_rb", do.lower.co = TRUE, lower.bound = percent.rb.lower.bound)
+        df.qc <- .metricFilter(seurat_object, df.qc, threshold, "percent_rb",
+            do.lower.co = TRUE,
+            lower.bound = percent.rb.lower.bound,
+            use_mad_filtering = use_mad_ribo
+        )
         if (do.plots) {
             plots[["percent_rb"]] <- .ddqcBoxplot(df.qc, "percent_rb", percent.rb.lower.bound, scDblFinder_out = scDblFinder_out)
         }
