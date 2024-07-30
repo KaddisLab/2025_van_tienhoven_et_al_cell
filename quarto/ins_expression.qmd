@@ -175,9 +175,8 @@ control_genes_hk <- normalize_control_genes(seurat_object, control_genes, housek
 
 data <- seurat_object[[]] |>
     tibble::rownames_to_column(var = "cell") |>
-    dplyr::select(cell, orig.ident, INS_hk, rs3842752_consensus, protected, cell_type, contains("stress")) |>
+    dplyr::select(cell, orig.ident, rs3842752_consensus, protected, cell_type, contains("INS"), contains("stress"), -contains("ratio")) |>
     dplyr::left_join(control_genes_hk, by = "cell")
-
 ```
 
 ## Beta cell INS expression & Islet stress score
