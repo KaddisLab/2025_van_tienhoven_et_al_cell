@@ -368,7 +368,7 @@ list(
     # MARK:     # ddqc -------------------------------------------------------------------------------
     tar_target(
         ddqc_seurat_objects,
-        seurat_ddqc(cellbender_seurat_objects, scDblFinder_csv),
+        seurat_ddqc(cellbender_seurat_objects, scDblFinder_csv, use_mad_mito = FALSE, percent.mito.upper.bound = 30),
         pattern = map(cellbender_seurat_objects, scDblFinder_csv),
         format = "file_fast",
         resources = small
