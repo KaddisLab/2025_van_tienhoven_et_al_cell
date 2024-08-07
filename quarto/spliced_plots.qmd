@@ -31,13 +31,13 @@ tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
 tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
 cpus <- hprcc::slurm_allocation()$CPUs
 
-tar_load(seurat_object_sct_annotated)
-seurat_object <- load_seurat(seurat_object_sct_annotated)
+tar_load(seurat_object_lognorm_annotated)
+seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 
 seurat_object <- seurat_object |>
     dplyr::filter(diabetes_status == "NODM")
 
-spliced_ratio_genes <- c("spliced_ratio_INS", "spliced_ratio_XBP1", "spliced_ratio_GAPDH")
+counts_ratio_genes <- c("counts_ratio_INS", "counts_ratio_XBP1", "counts_ratio_GAPDH")
 ```
 
 ::: {.panel-tabset}
@@ -56,8 +56,8 @@ spliced_ratio_genes <- c("spliced_ratio_INS", "spliced_ratio_XBP1", "spliced_rat
 beta <- seurat_object |> dplyr::filter(cell_type == "Beta")
 expression <- beta %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    dplyr::select(protected, all_of(spliced_ratio_genes)) |>
-    rename_with(~ gsub("spliced_ratio_", "", .x)) |>
+    dplyr::select(protected, all_of(counts_ratio_genes)) |>
+    rename_with(~ gsub("counts_ratio_", "", .x)) |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",
@@ -108,8 +108,8 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 # Prepare the data
 expression <- beta %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    dplyr::select(orig.ident, protected, all_of(spliced_ratio_genes)) %>%
-    rename_with(~ gsub("spliced_ratio_", "", .x)) %>%
+    dplyr::select(orig.ident, protected, all_of(counts_ratio_genes)) %>%
+    rename_with(~ gsub("counts_ratio_", "", .x)) %>%
     pivot_longer(
         cols = -c(orig.ident, protected),
         names_to = "gene",
@@ -170,8 +170,8 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
 alpha <- seurat_object |> dplyr::filter(cell_type == "Alpha")
 expression <- alpha %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    dplyr::select(protected, all_of(spliced_ratio_genes)) |>
-    rename_with(~ gsub("spliced_ratio_", "", .x)) |>
+    dplyr::select(protected, all_of(counts_ratio_genes)) |>
+    rename_with(~ gsub("counts_ratio_", "", .x)) |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",
@@ -222,8 +222,8 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 # Prepare the data
 expression <- alpha %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    dplyr::select(orig.ident, protected, all_of(spliced_ratio_genes)) %>%
-    rename_with(~ gsub("spliced_ratio_", "", .x)) %>%
+    dplyr::select(orig.ident, protected, all_of(counts_ratio_genes)) %>%
+    rename_with(~ gsub("counts_ratio_", "", .x)) %>%
     pivot_longer(
         cols = -c(orig.ident, protected),
         names_to = "gene",
@@ -281,11 +281,11 @@ ggplot(expression, aes(x = protected, y = mean_expression, fill = protected, col
 #| fig-height: 10
 #| fig-cap: "Boxplots of nascent/mature gene expression, indicating mean values per cell. Non-expressing cells are excluded."
 
-spliced_ratio_genes <- c("spliced_ratio_INS", "spliced_ratio_XBP1", "spliced_ratio_GAPDH")
+counts_ratio_genes <- c("counts_ratio_INS", "counts_ratio_XBP1", "counts_ratio_GAPDH")
 expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    dplyr::select(protected, all_of(spliced_ratio_genes)) |>
-    rename_with(~ gsub("spliced_ratio_", "", .x)) |>
+    dplyr::select(protected, all_of(counts_ratio_genes)) |>
+    rename_with(~ gsub("counts_ratio_", "", .x)) |>
     pivot_longer(
         cols = -protected,
         names_to = "gene",
@@ -336,8 +336,8 @@ ggplot(expression, aes(x = protected, y = expression, fill = protected, col = pr
 # Prepare the data
 expression <- seurat_object %>%
     dplyr::mutate(protected = factor(protected)) %>%
-    dplyr::select(orig.ident, protected, all_of(spliced_ratio_genes)) %>%
-    rename_with(~ gsub("spliced_ratio_", "", .x)) %>%
+    dplyr::select(orig.ident, protected, all_of(counts_ratio_genes)) %>%
+    rename_with(~ gsub("counts_ratio_", "", .x)) %>%
     pivot_longer(
         cols = -c(orig.ident, protected),
         names_to = "gene",
