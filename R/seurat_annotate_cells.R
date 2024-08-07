@@ -50,7 +50,7 @@ seurat_annotate_cells <- function(seurat_object, cell_metadata) {
             seurat_clusters,
             xbp1u_psi,
             INS_hk,
-            contains("counts_ratio_INS"),
+            contains("counts_ratio"),
             contains("spliced_counts"),
             contains("unspliced_counts"),
             contains("_UCell")
