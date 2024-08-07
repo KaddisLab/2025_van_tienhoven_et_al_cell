@@ -1,0 +1,431 @@
+---
+title: "QC: stats"
+date: "2024-8-7" 
+date-modified: last-modified
+format:
+  html:
+    code-fold: true
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(targets)
+    library(tidyseurat)
+    library(Seurat)
+    library(Matrix)
+    library(ggplot2)
+    library(ggdist)
+    library(dplyr)
+    library(tidyr)
+    library(gt)
+    library(lubridate)
+    library(stringr)
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+
+tar_load(pancdb_metadata_agg)
+tar_load(aggregated_cell_annot_csv)
+```
+
+## Sample QC
+
+### All donors
+
+```{r}
+
+# Table 1: Revised Summary of sample demographics
+demographics_summary <- pancdb_metadata_agg %>%
+    summarise(
+        total_samples = n(),
+        mean_age = mean(sample_age, na.rm = TRUE),
+        sd_age = sd(sample_age, na.rm = TRUE),
+        median_age = median(sample_age, na.rm = TRUE),
+        min_age = min(sample_age, na.rm = TRUE),
+        max_age = max(sample_age, na.rm = TRUE)
+    )
+
+# Create separate summaries for sex and ethnicity
+sex_summary <- pancdb_metadata_agg %>%
+    count(sample_sex) %>%
+    mutate(percentage = n / sum(n) * 100)
+
+ethnicity_summary <- pancdb_metadata_agg %>%
+    count(sample_ethnicity) %>%
+    mutate(percentage = n / sum(n) * 100)
+
+# Create the demographics table
+demographics_table <- demographics_summary %>%
+    gt() %>%
+    fmt_number(columns = c("mean_age", "sd_age", "median_age", "min_age", "max_age"), decimals = 1) %>%
+    cols_label(
+        total_samples = "Total Samples",
+        mean_age = "Mean Age (years)",
+        sd_age = "SD Age (years)",
+        median_age = "Median Age (years)",
+        min_age = "Min Age (years)",
+        max_age = "Max Age (years)"
+    ) %>%
+    tab_header(title = "Table 1: Summary of Sample Demographics")
+
+demographics_table
+
+# Create the sex distribution table
+sex_table <- sex_summary %>%
+    gt() %>%
+    fmt_number(columns = "percentage", decimals = 1) %>%
+    cols_label(
+        sample_sex = "Sex",
+        n = "Count",
+        percentage = "Percentage (%)"
+    ) %>%
+    tab_header(title = "Table 2: Distribution of Sex")
+
+sex_table
+
+# Create the ethnicity distribution table
+ethnicity_table <- ethnicity_summary %>%
+    gt() %>%
+    fmt_number(columns = "percentage", decimals = 1) %>%
+    cols_label(
+        sample_ethnicity = "Ethnicity",
+        n = "Count",
+        percentage = "Percentage (%)"
+    ) %>%
+    tab_header(title = "Table 3: Distribution of Ethnicity")
+
+ethnicity_table
+
+# Additional analysis: Age distribution by sex
+age_by_sex <- pancdb_metadata_agg %>%
+    group_by(sample_sex) %>%
+    summarise(
+        mean_age = mean(sample_age, na.rm = TRUE),
+        sd_age = sd(sample_age, na.rm = TRUE),
+        median_age = median(sample_age, na.rm = TRUE)
+    )
+
+age_by_sex_table <- age_by_sex %>%
+    gt() %>%
+    fmt_number(columns = c("mean_age", "sd_age", "median_age"), decimals = 1) %>%
+    cols_label(
+        sample_sex = "Sex",
+        mean_age = "Mean Age (years)",
+        sd_age = "SD Age (years)",
+        median_age = "Median Age (years)"
+    ) %>%
+    tab_header(title = "Table 4: Age Distribution by Sex")
+
+age_by_sex_table
+```
+
+### NODM donors
+
+```{r}
+
+# Filter the dataset for NODM donors and remove failed QC samples
+nodm_filtered <- pancdb_metadata_agg %>%
+    filter(diabetes_status == "NODM") %>%
+    filter(!str_detect(donor_id, failed_qc_donor_ids))
+
+# Table 1: Summary of NODM sample demographics
+nodm_demographics_summary <- nodm_filtered %>%
+    summarise(
+        total_samples = n(),
+        mean_age = mean(sample_age, na.rm = TRUE),
+        sd_age = sd(sample_age, na.rm = TRUE),
+        median_age = median(sample_age, na.rm = TRUE),
+        min_age = min(sample_age, na.rm = TRUE),
+        max_age = max(sample_age, na.rm = TRUE)
+    )
+
+nodm_demographics_table <- nodm_demographics_summary %>%
+    gt() %>%
+    fmt_number(columns = c("mean_age", "sd_age", "median_age", "min_age", "max_age"), decimals = 1) %>%
+    cols_label(
+        total_samples = "Total NODM Samples",
+        mean_age = "Mean Age (years)",
+        sd_age = "SD Age (years)",
+        median_age = "Median Age (years)",
+        min_age = "Min Age (years)",
+        max_age = "Max Age (years)"
+    ) %>%
+    tab_header(title = "Table 1: Summary of NODM Sample Demographics After QC")
+
+nodm_demographics_table
+
+# Table 2: Sex distribution and age summary of NODM samples
+nodm_sex_age_summary <- nodm_filtered %>%
+    group_by(sample_sex) %>%
+    summarise(
+        count = n(),
+        percentage = n() / nrow(nodm_filtered) * 100,
+        mean_age = mean(sample_age, na.rm = TRUE),
+        sd_age = sd(sample_age, na.rm = TRUE),
+        median_age = median(sample_age, na.rm = TRUE)
+    )
+
+nodm_sex_age_table <- nodm_sex_age_summary %>%
+    gt() %>%
+    fmt_number(columns = c("percentage", "mean_age", "sd_age", "median_age"), decimals = 1) %>%
+    cols_label(
+        sample_sex = "Sex",
+        count = "Count",
+        percentage = "Percentage (%)",
+        mean_age = "Mean Age (years)",
+        sd_age = "SD Age (years)",
+        median_age = "Median Age (years)"
+    ) %>%
+    tab_header(title = "Table 2: Sex Distribution and Age Summary of NODM Samples After QC")
+
+nodm_sex_age_table
+
+# Table 3: Ethnicity distribution of NODM samples
+nodm_ethnicity_summary <- nodm_filtered %>%
+    count(sample_ethnicity) %>%
+    mutate(percentage = n / sum(n) * 100)
+
+nodm_ethnicity_table <- nodm_ethnicity_summary %>%
+    gt() %>%
+    fmt_number(columns = "percentage", decimals = 1) %>%
+    cols_label(
+        sample_ethnicity = "Ethnicity",
+        n = "Count",
+        percentage = "Percentage (%)"
+    ) %>%
+    tab_header(title = "Table 3: Distribution of Ethnicity in NODM Samples After QC")
+
+nodm_ethnicity_table
+
+# # Table 4: Summary of single-cell sequencing metrics for NODM samples
+# nodm_sequencing_metrics_summary <- nodm_filtered %>%
+#     summarise(
+#         mean_cells = mean(estimated_number_of_cells, na.rm = TRUE),
+#         sd_cells = sd(estimated_number_of_cells, na.rm = TRUE),
+#         median_cells = median(estimated_number_of_cells, na.rm = TRUE),
+#         mean_genes = mean(median_genes_per_cell, na.rm = TRUE),
+#         sd_genes = sd(median_genes_per_cell, na.rm = TRUE),
+#         median_genes = median(median_genes_per_cell, na.rm = TRUE)
+#     )
+
+# nodm_sequencing_metrics_table <- nodm_sequencing_metrics_summary %>%
+#     gt() %>%
+#     fmt_number(columns = everything(), decimals = 1) %>%
+#     cols_label(
+#         mean_cells = "Mean Cells per Sample",
+#         sd_cells = "SD Cells per Sample",
+#         median_cells = "Median Cells per Sample",
+#         mean_genes = "Mean Genes per Cell",
+#         sd_genes = "SD Genes per Cell",
+#         median_genes = "Median Genes per Cell"
+#     ) %>%
+#     tab_header(title = "Table 4: Summary of Single-Cell Sequencing Metrics for NODM Samples After QC")
+
+# nodm_sequencing_metrics_table
+```
+
+## Cell QC
+
+### All donors
+```{r}
+# Load required libraries
+library(tidyverse)
+library(gt)
+library(ggplot2)
+library(patchwork)
+
+# Function to create summary statistics
+create_summary <- function(data) {
+    bind_rows(
+        "Before QC" = summarise(data,
+            total_cells = n(),
+            mean_nCount_RNA = mean(nCount_RNA, na.rm = TRUE),
+            median_nCount_RNA = median(nCount_RNA, na.rm = TRUE),
+            mean_nFeature_RNA = mean(nFeature_RNA, na.rm = TRUE),
+            median_nFeature_RNA = median(nFeature_RNA, na.rm = TRUE),
+            mean_percent_mt = mean(percent_mt, na.rm = TRUE),
+            median_percent_mt = median(percent_mt, na.rm = TRUE),
+            mean_percent_rb = mean(percent_rb, na.rm = TRUE),
+            median_percent_rb = median(percent_rb, na.rm = TRUE)
+        ),
+        "After QC" = summarise(filter(data, passed.qc == TRUE),
+            total_cells = n(),
+            mean_nCount_RNA = mean(nCount_RNA, na.rm = TRUE),
+            median_nCount_RNA = median(nCount_RNA, na.rm = TRUE),
+            mean_nFeature_RNA = mean(nFeature_RNA, na.rm = TRUE),
+            median_nFeature_RNA = median(nFeature_RNA, na.rm = TRUE),
+            mean_percent_mt = mean(percent_mt, na.rm = TRUE),
+            median_percent_mt = median(percent_mt, na.rm = TRUE),
+            mean_percent_rb = mean(percent_rb, na.rm = TRUE),
+            median_percent_rb = median(percent_rb, na.rm = TRUE)
+        ),
+        .id = "QC_Status"
+    )
+}
+
+# Join aggregated_cell_annot_csv with pancdb_metadata_agg
+joined_data <- aggregated_cell_annot_csv %>%
+    mutate(donor_id = str_extract(cell, "^[^_]+")) %>%
+    left_join(pancdb_metadata_agg, by = "donor_id")
+
+# Analysis for all data
+all_summary <- create_summary(joined_data)
+all_summary_table <- all_summary %>%
+    gt() %>%
+    fmt_number(columns = -c(QC_Status, total_cells), decimals = 2) %>%
+    tab_header(title = "Table 1: Overall Cell QC Summary")
+
+all_summary_table
+
+# Cell type summary
+all_cell_type_summary <- joined_data %>%
+    group_by(HPAPcell_type) %>%
+    summarise(
+        total_cells = n(),
+        cells_passed_qc = sum(passed.qc == TRUE),
+        percent_passed_qc = mean(passed.qc == TRUE) * 100,
+        mean_nCount_RNA = mean(nCount_RNA, na.rm = TRUE),
+        mean_nFeature_RNA = mean(nFeature_RNA, na.rm = TRUE),
+        mean_percent_mt = mean(percent_mt, na.rm = TRUE),
+        mean_percent_rb = mean(percent_rb, na.rm = TRUE),
+        percent_passed_nCount = mean(nCount_RNA.passed.qc == TRUE) * 100,
+        percent_passed_nFeature = mean(nFeature_RNA.passed.qc == TRUE) * 100,
+        percent_passed_percent_mt = mean(percent_mt.passed.qc == TRUE) * 100,
+        percent_passed_percent_rb = mean(percent_rb.passed.qc == TRUE) * 100
+    )
+
+all_cell_type_summary_table <- all_cell_type_summary %>%
+    gt() %>%
+    fmt_number(columns = c(total_cells, cells_passed_qc), decimals = 0) %>%
+    fmt_percent(columns = contains("percent"), decimals = 1, scale_values = FALSE) %>%
+    fmt_number(columns = contains("mean_"), decimals = 2) %>%
+    tab_header(title = "Table 2: Cell Type QC Summary")
+
+all_cell_type_summary_table
+
+# Bar plot
+all_bar_plot <- joined_data %>%
+    group_by(HPAPcell_type, passed.qc) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(QC_status = ifelse(passed.qc == TRUE, "Passed QC", "Failed QC")) %>%
+    ggplot(aes(x = HPAPcell_type, y = count, fill = QC_status)) +
+    geom_bar(stat = "identity", position = "stack") +
+    geom_text(aes(label = count), position = position_stack(vjust = 0.5), size = 3) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(
+        title = "Cell Type Counts by QC Status",
+        x = "Cell Type",
+        y = "Count",
+        fill = "QC Status"
+    )
+
+all_bar_plot
+
+# Scatter plot
+all_scatter_plot <- ggplot(joined_data, aes(x = nCount_RNA, y = nFeature_RNA, color = passed.qc)) +
+    geom_point(alpha = 0.5) +
+    scale_color_manual(values = c("FALSE" = "red", "TRUE" = "blue")) +
+    theme_minimal() +
+    labs(
+        title = "nCount RNA vs nFeature RNA",
+        x = "nCount RNA",
+        y = "nFeature RNA",
+        color = "Passed QC"
+    ) +
+    scale_x_log10() +
+    scale_y_log10() +
+    annotation_logticks() +
+    theme(legend.position = "bottom")
+
+all_scatter_plot
+```
+
+### NODM donors
+
+```{r}
+# Analysis for NODM donors
+nodm_data <- joined_data %>% filter(diabetes_status == "NODM")
+
+nodm_summary <- create_summary(nodm_data)
+nodm_summary_table <- nodm_summary %>%
+    gt() %>%
+    fmt_number(columns = -c(QC_Status, total_cells), decimals = 2) %>%
+    tab_header(title = "Table 3: NODM Cell QC Summary")
+
+nodm_summary_table
+
+nodm_cell_type_summary <- nodm_data %>%
+    group_by(HPAPcell_type) %>%
+    summarise(
+        total_cells = n(),
+        cells_passed_qc = sum(passed.qc == TRUE),
+        percent_passed_qc = mean(passed.qc == TRUE) * 100,
+        mean_nCount_RNA = mean(nCount_RNA, na.rm = TRUE),
+        mean_nFeature_RNA = mean(nFeature_RNA, na.rm = TRUE),
+        mean_percent_mt = mean(percent_mt, na.rm = TRUE),
+        mean_percent_rb = mean(percent_rb, na.rm = TRUE),
+        percent_passed_nCount = mean(nCount_RNA.passed.qc == TRUE) * 100,
+        percent_passed_nFeature = mean(nFeature_RNA.passed.qc == TRUE) * 100,
+        percent_passed_percent_mt = mean(percent_mt.passed.qc == TRUE) * 100,
+        percent_passed_percent_rb = mean(percent_rb.passed.qc == TRUE) * 100
+    )
+
+nodm_cell_type_summary_table <- nodm_cell_type_summary %>%
+    gt() %>%
+    fmt_number(columns = c(total_cells, cells_passed_qc), decimals = 0) %>%
+    fmt_percent(columns = contains("percent"), decimals = 1, scale_values = FALSE) %>%
+    fmt_number(columns = contains("mean_"), decimals = 2) %>%
+    tab_header(title = "Table 4: NODM Cell Type QC Summary")
+
+nodm_cell_type_summary_table
+
+nodm_bar_plot <- nodm_data %>%
+    group_by(HPAPcell_type, passed.qc) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(QC_status = ifelse(passed.qc == TRUE, "Passed QC", "Failed QC")) %>%
+    ggplot(aes(x = HPAPcell_type, y = count, fill = QC_status)) +
+    geom_bar(stat = "identity", position = "stack") +
+    geom_text(aes(label = count), position = position_stack(vjust = 0.5), size = 3) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(
+        title = "NODM Cell Type Counts by QC Status",
+        x = "Cell Type",
+        y = "Count",
+        fill = "QC Status"
+    )
+
+nodm_bar_plot
+
+nodm_scatter_plot <- ggplot(nodm_data, aes(x = nCount_RNA, y = nFeature_RNA, color = passed.qc)) +
+    geom_point(alpha = 0.5) +
+    scale_color_manual(values = c("FALSE" = "red", "TRUE" = "blue")) +
+    theme_minimal() +
+    labs(
+        title = "NODM nCount RNA vs nFeature RNA",
+        x = "nCount RNA",
+        y = "nFeature RNA",
+        color = "Passed QC"
+    ) +
+    scale_x_log10() +
+    scale_y_log10() +
+    annotation_logticks() +
+    theme(legend.position = "bottom")
+
+nodm_scatter_plot
+```
