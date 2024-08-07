@@ -2,6 +2,9 @@
 title: "Supplementary Figure XX"
 date: "2024-7-22" 
 date-modified: last-modified
+format:
+  html:
+    css: https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css
 ---
 
 ```{r, include = FALSE}
@@ -27,6 +30,7 @@ suppressPackageStartupMessages({
     font_add_google(name = "Roboto", family = "Roboto")
     font_add_google(name = "Roboto Condensed", family = "Roboto Condensed")
     showtext_auto()
+    showtext_opts(dpi = 300)
 })
 
 tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
@@ -46,30 +50,40 @@ seurat_object <- seurat_object |>
 #| fig-alt: "UMAP of Elgamal et al cell types"
 #| fig-width: 5
 
-plot_a <- DimPlot(
-    seurat_object, 
-    group.by = "cell_type", 
-    label = FALSE,  # Turn off default labeling
-    cols = cell_type_palette, 
-    reduction = "umap", 
-    raster = FALSE) +
+# plot_a <- rotate_umap(seurat_object, y = TRUE) |>
+plot_a <- seurat_object |>
+    dplyr::filter(!is.na(elgamal_cell_type)) |>
+    DimPlot(
+        group.by = "elgamal_cell_type",
+        label = FALSE, # Turn off default labeling
+        cols = cell_type_palette,
+        reduction = "umap",
+        raster = FALSE,
+        seed = 42
+    ) +
     NoLegend() +
     labs(x = "UMAP 1", y = "UMAP 2", title = NULL) +
-    theme(axis.text.x = element_blank(),
+    theme(
+        axis.text.x = element_blank(),
         axis.text.y = element_blank(),
-        axis.ticks = element_blank()) +
+        axis.ticks = element_blank()
+    ) +
     coord_fixed(ratio = 1)
 
-# Apply LabelClusters with increased repulsion
-plot_a <- LabelClusters(plot = plot_a, 
-                        id = "cell_type", 
-                        box.padding = 0.4,  
-                        size = 9,
-                        box = TRUE, 
-                        repel = TRUE)
+# # Apply LabelClusters with increased repulsion
+plot_a <- LabelClusters(
+    plot = plot_a,
+    id = "elgamal_cell_type",
+    box.padding = 0.4,
+    size = 3,
+    box = TRUE,
+    repel = TRUE,
+    cols = cell_type_palette
+)
 
-print(plot_a)
-#ggsave("plot.png", plot_a, width = 5)
+# print(plot_a)
+ggsave("assets/umap_nodm.svg", plot_a, width = 5)
+knitr::include_graphics("assets/umap_nodm.svg")
 ```
 
 ### B. Feature plots
@@ -77,38 +91,37 @@ print(plot_a)
 ```{r}
 #| fig-width: 5
 
-genes_of_interest <- c("INS", "PDX1", "MAFA", "GCG", "SST", "PPY", "GHR", "KRT19")
+genes_of_interest <- c("INS", "MAFA", "GCG", "PPY", "CPA1", "PECAM1", "SST", "KRT19")
 
 plot_b <- FeaturePlot(seurat_object,
     features = genes_of_interest,
     keep.scale = "feature",
     reduction = "umap",
     ncol = 4,
-    raster = FALSE,
+    raster = TRUE,
 ) &
     theme(
-        plot.title = element_text(size = 16, face = "bold"),
+        plot.title = element_text(size = 12, face = "bold.italic"),
+        plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"),
+        axis.title = element_text(size = 10),
         axis.text.x = element_blank(),
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
-        legend.position = c(0.99, 0.98), # Position legend in top right
+        legend.position = c(0.99, 0.98),
         legend.justification = c(1, 1),
         legend.box.just = "right",
-        legend.margin = margin(2, 2, 2, 2),
-        legend.key.size = unit(0.15, "lines"),
-        legend.text = element_text(size = 10, margin = margin(l = 1, unit = "pt")),
+        legend.margin = margin(1, 1, 1, 1),
+        legend.key.size = unit(1, "cm"),
+        legend.text = element_text(size = 6, margin = margin(l = 1, unit = "pt")),
         legend.title = element_blank()
     ) &
     labs(x = "UMAP 1", y = "UMAP 2") &
     coord_fixed(ratio = 1) &
     guides(color = guide_colorbar(barwidth = 0.25, barheight = 1.5)) # Adjust legend size
 
-plot_b <- plot_b & theme(
-    plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm") # Reduce plot margins
-) 
-
-print(plot_b)
-# ggsave('plot.png', plot_b,width = 5)
+# print(plot_b)
+ggsave("assets/genes_of_interest_feature_plots.svg", plot_b, width = 10)
+knitr::include_graphics("assets/genes_of_interest_feature_plots.svg")
 ```
 
 ### C. Cell type proportions
@@ -116,8 +129,8 @@ print(plot_b)
 ```{r}
 #| fig-cap: "Cell type proportions, NODM"
 #| fig-alt: "Barplot of cell type proportions"
-#| fig-width: 5
-#| fig-height: 3
+#| fig-width: 10
+#| fig-height: 6
 
 library(ggplot2)
 library(dplyr)
@@ -172,7 +185,7 @@ plot_c <- ggplot(
     ) +
     theme_classic() +
     theme(
-        axis.text.x = element_markdown(angle = 45, hjust = 1, vjust = 1, size = 12),
+        axis.text.x = element_markdown(angle = 45, hjust = 1, vjust = 1, size = 8),
         axis.text.y = element_text(size = 12),
         axis.title.y = element_text(size = 14),
         axis.ticks.x = element_blank(),
@@ -195,24 +208,30 @@ plot_c <- ggplot(
     ) +
     scale_y_continuous(expand = c(0, 0))
 
-print(plot_c)
-#ggsave("plot.png", plot_c, width = 5, height = 3) 
-
+#print(plot_c)
+ggsave("assets/cell_type_proportions_NODM.svg", plot_c, width = 10, height = 6)
+knitr::include_graphics("assets/cell_type_proportions_NODM.svg")
 ```
 
 ### D. Patchwork plot
 
 ```{r}
-#|fig-width: 5
-#|fig-height: 11
+#|fig-height: 10
 
 # Create the patchwork plot 
-plot_d <- (plot_a / plot_b / plot_c) +
-    plot_layout(heights = c(1, 1, 0.5))
+plot_d <- (plot_c / plot_a / plot_b) +
+    plot_layout(heights = c(0.5, 1, 1))
 
 # print(plot_d)
-ggsave("assets/figureXXsuppl_combined_plot.png", plot_d, width = 5, height = 10, dpi = 300)
+ggsave("assets/figureXXsuppl_combined_plot.svg", plot_d, height = 10)
+knitr::include_graphics("assets/figureXXsuppl_combined_plot.svg")
 ```
 
-![](assets/figureXXsuppl_combined_plot.png)
-[Download high resolution image](assets/figureXXsuppl_combined_plot.png)
+::: {.callout-note icon=false appearance="simple"}
+
+Figure XX: Parenchymal pancreatic islet cell composition and gene expression in non-diabetic donors. (A) Stacked bar plot showing proportions of cell types for individual donors, separated into protected and susceptible groups by rs3842752 genotype. Each bar represents a donor, with colors proportional to cell type labels transferred from Elgamal et al. using SingleR. Donors are ordered by decreasing proportion of alpha cells within each group. "Other" includes endothelial, mast, stellate, and immune cells and cells where SingleR could not confidently assign a primary label. (B) UMAP visualization of cell types in non-diabetic pancreatic islets. Each point represents a single cell, and colors denote different cell types. (C) Feature plots showing the expression of key genes across cell types. Each plot represents the expression level of a single gene (*`r genes_of_interest`*) mapped onto the UMAP coordinates. Intensity indicates the level of gene expression.
+
+[<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/figureXXsuppl_combined_plot.svg){download="assets/figureXXsuppl_combined_plot.svg"}
+
+:::
+
