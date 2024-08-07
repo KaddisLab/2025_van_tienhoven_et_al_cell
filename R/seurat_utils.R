@@ -170,3 +170,42 @@ seurat_sce <- function(seurat_object) {
 
     return(sce)
 }
+
+#' Rotate UMAP
+#'
+#' Makes the 1st cell in a Seurat object plot in the top left quadrant (ie -1,-1)
+#' This is useful for plotting UMAPs in a consistent way across platforms/runs.
+#' The "x" and "y" parameters rotate the axis by 90 degrees.
+#'
+#' @name rotate_umap
+#' @param seurat_object a Seurat object
+#' @param x flip the x-axis LOGICAL (TRUE or FALSE)
+#' @param y flip the y-axis LOGICAL (TRUE or FALSE)
+#' @return A Seurat object
+#' @author Denis O'Meally
+#' @export
+rotate_umap <- function(seurat_object, x = FALSE, y = FALSE) {
+    umap_coord <- (Seurat::Embeddings(seurat_object[["umap"]]))
+
+    # check X coords
+    if (umap_coord[1, 1] > 0) {
+        umap_coord[, 1] <- umap_coord[, 1] * -1
+    }
+    if (x) {
+        umap_coord[, 1] <- umap_coord[, 1] * -1
+    }
+
+    # check Y coords
+    if (umap_coord[1, 2] > 0) {
+        umap_coord[, 2] <- umap_coord[, 2] * -1
+    }
+    if (y) {
+        umap_coord[, 2] <- umap_coord[, 2] * -1
+    }
+
+    seurat_object@reductions$umap <- Seurat::CreateDimReducObject(
+        embeddings = umap_coord,
+        assay = "RNA"
+    )
+    return(seurat_object)
+}
