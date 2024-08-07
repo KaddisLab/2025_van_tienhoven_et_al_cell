@@ -52,21 +52,28 @@ beta_cell_metadata <- cell_metadata %>%
     filter(cell_type == "Beta", diabetes_status == "NODM")
 ```
 
-## A. Nascent and mature *INS* counts for NODM Beta cells
+::: {.callout-important icon=false }
+
+## Excluding HPAP-118 & HPAP-093 
+
+- HPAP-093 failed sequencing QC (Suscptible)
+- HPAP-118 has unusual Nascent INS expression, high A1C (> 6) & BMI > 30 (Protected)
+
+:::
+
+## A. Nascent and mature *INS* counts for NODM Beta cells (rs3842752)
 
 ```{r}
 #| fig-width: 4
-#| fig-height: 3
+#| fig-height: 4
 
 # Data preparation
 plot_data <- beta_cell_metadata %>%
     mutate(
         mature_counts_INS = spliced_counts_INS_hk,
         nascent_INS = unspliced_counts_INS_hk,
-        # log_mature_INS = log1p(mature_counts_INS),
-        # log_nascent_INS = log1p(nascent_INS),
-        log_mature_INS = mature_counts_INS, # already logged for housekeeping normalisation
-        log_nascent_INS = nascent_INS, # already logged for housekeeping normalisation
+        log_mature_INS = mature_counts_INS,
+        log_nascent_INS = nascent_INS,
         protected_status = ifelse(protected, "Protected", "Susceptible")
     )
 
@@ -156,13 +163,18 @@ summary_plot <- summary_plot +
         vjust = -0.5
     )
 # print(summary_plot)
-ggsave("assets/spliced_ins_expression_per_donor.svg", summary_plot, width = 4, height = 3)
+ggsave("assets/spliced_ins_expression_per_donor.svg", summary_plot, width = 4, height = 4)
 knitr::include_graphics("assets/spliced_ins_expression_per_donor.svg")
+
+format_genes_italic <- function(genes) {
+    formatted <- paste0("*", genes, "*", collapse = ", ")
+    return(formatted)
+}
 ```
 
 ::: {.callout-note icon=false appearance="minimal"}
 
-Comparison of *INS* expression in protected and susceptible donor Beta cells. The boxplot shows the distribution of mean mature and nascent *INS* transcript levels across different donors, with counts log-normalized by housekeeping genes. Each point represents a donor, with median values labeled. Statistical significance between protected and susceptible groups was assessed using the Wilcoxon rank-sum test.
+Comparison of INS expression in protected and susceptible donor beta cells. The boxplot shows the distribution of mean nascent and mature INS log(counts+1) across donors, normalized by housekeeping genes. Each point represents a donor, with median values labeled. Statistical significance between protected and susceptible groups was assessed using the Wilcoxon rank-sum test. Housekeeping genes used for normalization were `r format_genes_italic(housekeeping_genes)`.
 
 [<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/spliced_ins_expression_per_donor.svg){download="spliced_INS_expression_per_donor.svg"}
 
@@ -205,6 +217,96 @@ final_plot <- nascent_plot + mature_plot +plot_layout(ncol = 2) +
 print(final_plot)
 ```
 
+### Per cell plot
+
+```{r}
+#| fig-width: 12
+# Prepare data for individual cell plot
+individual_cell_data <- plot_data %>%
+    select(protected_status, log_mature_INS, log_nascent_INS) %>%
+    pivot_longer(
+        cols = c(log_mature_INS, log_nascent_INS),
+        names_to = "expression_type",
+        values_to = "expression"
+    ) %>%
+    mutate(
+        expression_type = factor(ifelse(expression_type == "log_mature_INS", "Mature", "Nascent"), levels = c("Nascent", "Mature")),
+        protected_status = factor(protected_status, levels = c("Protected", "Susceptible"))
+    ) %>%
+    filter(!is.infinite(expression) & !is.na(expression))
+
+# Create individual cell plot
+individual_cell_plot <- ggplot(individual_cell_data, aes(x = protected_status, y = expression, fill = protected_status)) +
+    coord_cartesian(clip = "off") +
+    geom_violin(position = position_dodge(width = 0.8), width = 0.7, alpha = 0.5) +
+    geom_jitter(
+        position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.3),
+        size = 0.5, alpha = 0.1,
+        aes(color = protected_status)
+    ) +
+    facet_wrap(~expression_type,
+        scales = "fixed",
+        shrink = FALSE
+    ) +
+    scale_fill_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
+    scale_color_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, 16)) +
+    ggdist::theme_ggdist() +
+    theme(
+        legend.position = "none",
+        plot.title = element_markdown(size = 16),
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        axis.line.y = element_line(color = "black"),
+        axis.line.x = element_line(color = "black"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = margin(r = 20, b = 10, l = 10, t = 10),
+        strip.text = element_text(size = 14),
+        strip.background = element_rect(colour = NA, fill = NA),
+        panel.border = element_rect(fill = NA, color = NA)
+    ) +
+    labs(
+        title = "INS expression in <span style='color:blue;'>protected</span> and <br><span style='color:red;'>susceptible</span> Beta cells",
+        y = "Log-normalized counts"
+    )
+
+# Add statistical comparisons and median labels
+individual_cell_plot <- individual_cell_plot +
+    geom_signif(
+        comparisons = list(c("Protected", "Susceptible")),
+        map_signif_level = TRUE,
+        test = "wilcox.test",
+        margin_top = -0.3,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = median,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y))),
+        color = "white",
+        alpha = 0.8,
+        size = 3.75,
+        hjust = -0.25,
+        vjust = -0.5
+    )
+
+# Save the plot
+ggsave("assets/individual_cell_ins_expression.svg", individual_cell_plot, width = 4, height = 4)
+knitr::include_graphics("assets/individual_cell_ins_expression.svg")
+```
+
+
+::: {.callout-note icon=false appearance="minimal"}
+
+[<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression.svg){download="individual_cell_ins_expression.svg"}
+
+:::
+
+:::
 
 ## B. Beta cell allele-specific *INS* expression
 
@@ -275,7 +377,7 @@ create_summary_stats <- function(data, min_depth = 10) {
 }
 
 # Function to create a scatter plot for a single locus
-create_locus_plot <- function(data, locus, min_depth = 10) {
+create_locus_plot <- function(data, locus, min_depth = 10, color_by = NULL) {
     filtered_data <- data %>%
         filter(!!sym(paste0(locus, "_DP")) > min_depth) %>%
         mutate(
@@ -288,27 +390,38 @@ create_locus_plot <- function(data, locus, min_depth = 10) {
     r_squared <- summary(model)$r.squared
     slope <- coef(model)[2]
 
-    ggplot(filtered_data, aes(x = x, y = y)) +
-        geom_point(alpha = 0.5, color = "blue") +
-        geom_smooth(method = "lm", color = "red", se = FALSE) +
+    plot <- ggplot(filtered_data, aes(x = x, y = y)) +
         labs(
             title = locus,
             x = "Reference Allele Depth",
             y = "Alternate Allele Depth"
         ) +
-        ggdist::theme_ggdist(base_size = 12) + # Reduced base font size
+        ggdist::theme_ggdist(base_size = 12) +
         geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
         theme(
             plot.title = element_text(size = 14, face = "bold"),
-            plot.margin = margin(5, 5, 5, 5) # Reduced margins
+            plot.margin = margin(5, 5, 5, 5),
+            aspect.ratio = 1
         ) +
-        # Add smaller, darker red R-squared and slope label
         annotate("text",
             x = -0.5, y = Inf,
             label = sprintf("R² = %.3f\nSlope = %.3f", r_squared, slope),
             hjust = 0, vjust = 1, size = 3, color = "brown1",
             lineheight = 0.8
-        )
+        ) 
+
+    if (is.null(color_by)) {
+        plot <- plot + geom_point(alpha = 0.5, color = "blue")
+    } else {
+        plot <- plot + 
+            geom_point(aes(color = !!sym(color_by)), alpha = 0.5) +
+            scale_color_viridis_c() +
+            labs(color = color_by)
+    }
+
+    plot <- plot + geom_smooth(method = "lm", color = "red", se = FALSE)
+
+    return(plot)
 }
 
 # Create plots for each locus
@@ -336,7 +449,7 @@ knitr::include_graphics("assets/INS_biallelic_expression.svg")
 
 ::: {.callout-note icon=false appearance="simple"}
 
-Scatter plots showing allele-specific expression for three *INS* loci (rs3842752, rs3842753, rs689) in Beta cells. Each point represents a cell, with the x-axis showing the reference allele depth and the y-axis showing the alternate allele depth. The red line represents the linear regression fit, and the dashed gray line represents the expected 1:1 ratio. The R-squared and slope of the linear regression are shown in the top left corner of each plot.
+Scatter plots showing allele-specific expression for three *INS* loci (rs3842752, rs3842753, rs689) in Beta cells. Each point represents a cell, with the x-axis showing the reference allele depth and the y-axis showing the alternate allele depth (counts per cell). The red line represents the linear regression fit, and the dashed grey line represents the expected 1:1 ratio. The R-squared and slope of the linear regression are shown in the top left corner of the plot.
 
 [<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/INS_biallelic_expression.svg){download="INS_biallelic_expression.svg"}
 
@@ -387,3 +500,34 @@ create_summary_stats(beta_cell_metadata) %>%
 We cannot compute allele-specific expression for nascent and mature transcripts separately from this analysis. 
 
 :::
+
+### B. Beta cell allele-specific *INS* expression, coloured by msigdb_upr_stress_UCell
+
+```{r}
+#| fig-width: 12
+
+# Create locus plot
+create_locus_plot(beta_cell_metadata, "rs3842752", color_by = "msigdb_upr_stress_UCell")
+```
+
+### B. Beta cell allele-specific *INS* expression, top 10% stressed cells
+
+```{r}
+filtered_data <- beta_cell_metadata %>%
+    filter(msigdb_upr_stress_UCell >= quantile(msigdb_upr_stress_UCell, 0.9))
+
+# Print summary statistics
+cat("Original number of rows:", nrow(beta_cell_metadata), "\n")
+cat("Number of rows after filtering:", nrow(filtered_data), "\n")
+cat(
+    "Percentage of cells retained:",
+    round(nrow(filtered_data) / nrow(beta_cell_metadata) * 100, 2), "%\n"
+)
+```
+
+```{r}
+#| fig-width: 12
+#| fig-cap: "rs3842752 allele-specific expression in top 10% stressed cells, by msigdb_upr_stress_UCell"
+
+create_locus_plot(filtered_data, "rs3842752", color_by = "msigdb_upr_stress_UCell")
+```
