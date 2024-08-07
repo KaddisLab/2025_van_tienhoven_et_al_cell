@@ -3,9 +3,10 @@ analysis_cache <- "/scratch/domeally/DCD.tienhoven_scRNAseq.2024_cache"
 scrnaseq_release <- "2.5.1"
 
 failed_qc_donor_ids <- paste0(
-    c("HPAP-021|HPAP-023|HPAP-027|"), # v2
-    c("HPAP-038|HPAP-093"), # v3
-    c("HPAP-023|HPAP-027|HPAP-070|HPAP-106|HPAP-109"), # failed_qc: see QC_PCA report
+    c("HPAP-021|HPAP-023|HPAP-027|"), # v2 multiqc report
+    c("HPAP-038|HPAP-093|"), # v3 multiqc report
+    c("HPAP-023|HPAP-027|HPAP-070|HPAP-106|HPAP-109|"), # failed_qc: see QC_PCA report
+    c("HPAP-118"), # failed nascent INS QC; also poor "NODM" as this donor has high A1C & morbid obesity
     collapse = "|"
 )
 
