@@ -217,7 +217,12 @@ final_plot <- nascent_plot + mature_plot +plot_layout(ncol = 2) +
 print(final_plot)
 ```
 
-### Per cell plot
+
+### Per cell plots
+
+::: {.panel-tabset .tabset-fade}
+
+## Wilcox test
 
 ```{r}
 #| fig-width: 12
@@ -295,14 +300,152 @@ individual_cell_plot <- individual_cell_plot +
     )
 
 # Save the plot
-ggsave("assets/individual_cell_ins_expression.svg", individual_cell_plot, width = 4, height = 4)
-knitr::include_graphics("assets/individual_cell_ins_expression.svg")
+ggsave("assets/individual_cell_ins_expression_wilcox.svg", individual_cell_plot, width = 4, height = 4)
+knitr::include_graphics("assets/individual_cell_ins_expression_wilcox.svg")
 ```
-
 
 ::: {.callout-note icon=false appearance="minimal"}
 
-[<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression.svg){download="individual_cell_ins_expression.svg"}
+[<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression_wilcox.svg){download="individual_cell_ins_expression_wilcox.svg"}
+
+**NOTE:** 
+
+- Here p-values were calculated using a Wilcoxon rank-sum test. Labels show median values for each group.
+
+:::
+
+## Mixed model w random effects
+```{r}
+#| fig-width: 12
+library(tidyverse)
+library(ggplot2)
+library(ggdist)
+library(ggtext)
+library(lme4)
+library(lmerTest)
+library(ggsignif)
+
+# Prepare data for individual cell plot
+individual_cell_data <- plot_data %>%
+    select(protected_status, log_mature_INS, log_nascent_INS, orig.ident) %>%
+    pivot_longer(
+        cols = c(log_mature_INS, log_nascent_INS),
+        names_to = "expression_type",
+        values_to = "expression"
+    ) %>%
+    mutate(
+        expression_type = factor(ifelse(expression_type == "log_mature_INS", "Mature", "Nascent"), levels = c("Nascent", "Mature")),
+        protected_status = factor(protected_status, levels = c("Protected", "Susceptible"))
+    ) %>%
+    filter(!is.infinite(expression) & !is.na(expression))
+
+# Function to run mixed model and extract p-value
+run_mixed_model <- function(data) {
+    model <- lmer(expression ~ protected_status + (1 | orig.ident), data = data)
+    anova_results <- anova(model)
+    p_value <- anova_results$`Pr(>F)`[1]
+    return(p_value)
+}
+
+# Function to convert p-value to asterisks
+p_to_asterisk <- function(p) {
+    if (p <= 0.001) {
+        return("***")
+    } else if (p <= 0.01) {
+        return("**")
+    } else if (p <= 0.05) {
+        return("*")
+    } else {
+        return("ns")
+    }
+}
+
+# Run mixed models and get p-values
+p_values <- individual_cell_data %>%
+    group_by(expression_type) %>%
+    summarise(
+        p_value = run_mixed_model(cur_data()),
+        asterisk = p_to_asterisk(p_value),
+        .groups = "drop"
+    )
+
+# Create annotation data
+annotation_data <- data.frame(
+    expression_type = factor(c("Nascent", "Mature"), levels = c("Nascent", "Mature")),
+    y_position = c(12.2, 12.2),
+    xmin = c(1.15, 1.15),
+    xmax = c(1.85, 1.85),
+    annotation = p_values$asterisk
+)
+
+# Create individual cell plot
+individual_cell_plot <- ggplot(individual_cell_data, aes(x = protected_status, y = expression, fill = protected_status)) +
+    coord_cartesian(clip = "off") +
+    geom_violin(position = position_dodge(width = 0.8), width = 0.7, alpha = 0.5) +
+    geom_jitter(
+        position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.3),
+        size = 0.5, alpha = 0.1,
+        aes(color = protected_status)
+    ) +
+    facet_wrap(~expression_type,
+        scales = "fixed",
+        shrink = FALSE
+    ) +
+    scale_fill_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
+    scale_color_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)), limits = c(0, 16)) +
+    ggdist::theme_ggdist() +
+    theme(
+        legend.position = "none",
+        plot.title = element_markdown(size = 16),
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        axis.line.y = element_line(color = "black"),
+        axis.line.x = element_line(color = "black"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = margin(r = 20, b = 10, l = 10, t = 10),
+        strip.text = element_text(size = 14),
+        strip.background = element_rect(colour = NA, fill = NA),
+        panel.border = element_rect(fill = NA, color = NA)
+    ) +
+    labs(
+        title = "INS expression in <span style='color:blue;'>protected</span> and <br><span style='color:red;'>susceptible</span> Beta cells",
+        y = "Log-normalized counts"
+    ) +
+    geom_segment(
+        data = annotation_data,
+        aes(x = xmin, xend = xmax, y = y_position, yend = y_position),
+        inherit.aes = FALSE
+    ) +
+    geom_text(
+        data = annotation_data,
+        aes(x = 1.5, y = y_position, label = annotation),
+        inherit.aes = FALSE, vjust = -0.5
+    ) +
+    stat_summary(
+        fun = mean,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y))),
+        color = "white",
+        alpha = 0.8,
+        size = 3.75,
+        hjust = -0.25,
+        vjust = -0.5
+    )
+# Save the plot
+ggsave("assets/individual_cell_ins_expression_lmm.svg", individual_cell_plot, width = 4, height = 4)
+knitr::include_graphics("assets/individual_cell_ins_expression_lmm.svg")
+```
+
+::: {.callout-note icon=false appearance="minimal"}
+
+[<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression_lmm.svg){download="individual_cell_ins_expression_lmm.svg"}
+
+**NOTE:** 
+
+- Here p-values were calculated using a linear mixed model with donor identity as a random effect: ***INS expression ~ protected_status + (1 | orig.ident)***. Labels show mean values for each group.
 
 :::
 
@@ -479,8 +622,8 @@ create_summary_stats(beta_cell_metadata) %>%
     cols_label(
         TotalCells = "Total Cells",
         TotalDonors = "Total Donors",
-        DonorsRepresented = "Donors Represented",
-        PercentDonors = "% Donors",
+        DonorsRepresented = "Herozygous Donors",
+        PercentDonors = "% Hets",
         CellsWithMinDepth = "Cells > Min Depth",
         PercentageWithMinDepth = "% > Min Depth",
         MeanDepth = "Mean Depth",
