@@ -60,9 +60,24 @@ DimPlot(seurat_object_NODM, group.by = "elgamal_cell_type", label = TRUE, cols =
 #| fig-height: 10
 #| fig-width: 10
 
-DimPlot(seurat_object_NODM, group.by = "cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+DimPlot(seurat_object_NODM, group.by = "seurat_clusters", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
     NoLegend() +
     labs(title = "Cell type") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Seurat cluster
+
+```{r}
+#| fig-cap: "Seurat clusters, NODM"
+#| fig-alt: "UMAP of Seurat clusters"
+#| fig-height: 10
+#| fig-width: 10
+cluster_palette <- generate_palette(seurat_object_NODM[[]]$seurat_clusters |> unique() |> length())
+
+DimPlot(seurat_object_NODM, group.by = "seurat_clusters", label = TRUE, cols = cluster_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Seurat clusters") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
@@ -204,6 +219,21 @@ DimPlot(seurat_object, group.by = "elgamal_cell_type", label = TRUE, cols = cell
 DimPlot(seurat_object, group.by = "cell_type", label = TRUE, cols = cell_type_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
     NoLegend() +
     labs(title = "Cell type") +
+    theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
+```
+
+### Seurat clusters
+
+```{r}
+#| fig-cap: "Seurat cluster, all donors"
+#| fig-alt: "UMAP of Seurat clusters"
+#| fig-height: 10
+#| fig-width: 10
+cluster_palette <- generate_palette(seurat_object[[]]$seurat_clusters |> unique() |> length())
+
+DimPlot(seurat_object, group.by = "seurat_clusters", label = TRUE, cols = cluster_palette, reduction = "umap", raster = FALSE, shuffle = TRUE) +
+    NoLegend() +
+    labs(title = "Seurat clusters") +
     theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank())
 ```
 
