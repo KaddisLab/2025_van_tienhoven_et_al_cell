@@ -247,21 +247,22 @@ individual_cell_data <- plot_data %>%
     ) %>%
     filter(!is.infinite(expression) & !is.na(expression))
 
-# # Function to run mixed model and extract p-value
-# run_mixed_model <- function(data) {
-#   full_model <- lmer(expression ~ protected_status + (1 | orig.ident), data = data)
-#   null_model <- lmer(expression ~ 1 + (1 | orig.ident), data = data)
-#   lrt_result <- anova(null_model, full_model)
-#   p_value <- lrt_result$`Pr(>Chisq)`[2]
-#   return(p_value)
-# }
+# Function to run mixed model and extract p-value
 run_mixed_model <- function(data) {
-    full_model <- lmer(expression ~ protected_status + technology + tissue_source + (1 | orig.ident), data = data)
-    null_model <- lmer(expression ~ technology + tissue_source + (1 | orig.ident), data = data)
-    lrt_result <- anova(null_model, full_model)
-    p_value <- lrt_result$`Pr(>Chisq)`[2]
-    return(p_value)
+  full_model <- lmer(expression ~ protected_status + (1 | orig.ident), data = data)
+  null_model <- lmer(expression ~ 1 + (1 | orig.ident), data = data)
+  lrt_result <- anova(null_model, full_model)
+  p_value <- lrt_result$`Pr(>Chisq)`[2]
+  return(p_value)
 }
+
+# run_mixed_model <- function(data) {
+#     full_model <- lmer(expression ~ protected_status + technology + tissue_source + (1 | orig.ident), data = data)
+#     null_model <- lmer(expression ~ technology + tissue_source + (1 | orig.ident), data = data)
+#     lrt_result <- anova(null_model, full_model)
+#     p_value <- lrt_result$`Pr(>Chisq)`[2]
+#     return(p_value)
+# }
 
 # Function to convert p-value to asterisks
 p_to_asterisk <- function(p) {
@@ -357,7 +358,9 @@ knitr::include_graphics("assets/individual_cell_ins_expression_lmm.svg")
 
 ::: {.callout-note icon=false appearance="minimal"}
 
-Effect of protected status on INS in beta cells using a linear mixed-effects model. The model was constructed as: `log(INS expression) ~ protected_status + technology + tissue_source + (1 | orig.ident)`, where `protected_status` was the primary fixed effect of interest and `technology` & `tissue_source` were included as batch effects. `orig.ident` was treated as a random effect to account for between-donor variation. P-values for the `protected_status` effect were determined using a likelihood ratio test, comparing the full model to a reduced model without the `protected_status` term, retaining other fixed and random effects. Labels show median expression values. No significant differences were observed between protected and susceptible groups for nascent and mature INS expression.
+Effect of protected status on *INS* in beta cells using a linear mixed-effects model. The model was constructed as: `log(INS expression) ~ protected_status + (1 | orig.ident)`, where `protected_status` was the primary fixed effect of interest. `orig.ident` was treated as a random effect to account for between-donor variation. P-values for the `protected_status` effect were determined using a likelihood ratio test, comparing the full model to a reduced model without the `protected_status` term, retaining random effects. Labels show median expression values. No significant differences were observed between protected and susceptible groups for nascent and mature INS expression.
+
+<!-- Effect of protected status on INS in beta cells using a linear mixed-effects model. The model was constructed as: `log(INS expression) ~ protected_status + technology + tissue_source + (1 | orig.ident)`, where `protected_status` was the primary fixed effect of interest and `technology` & `tissue_source` were included as batch effects. `orig.ident` was treated as a random effect to account for between-donor variation. P-values for the `protected_status` effect were determined using a likelihood ratio test, comparing the full model to a reduced model without the `protected_status` term, retaining other fixed and random effects. Labels show median expression values. No significant differences were observed between protected and susceptible groups for nascent and mature INS expression. -->
 
 [<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression_lmm.svg){download="individual_cell_ins_expression_lmm.svg"}
 
