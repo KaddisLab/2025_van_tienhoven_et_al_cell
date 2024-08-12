@@ -222,97 +222,6 @@ print(final_plot)
 
 ::: {.panel-tabset .tabset-fade}
 
-## Wilcox test
-
-```{r}
-#| fig-width: 12
-# Prepare data for individual cell plot
-individual_cell_data <- plot_data %>%
-    select(protected_status, log_mature_INS, log_nascent_INS) %>%
-    pivot_longer(
-        cols = c(log_mature_INS, log_nascent_INS),
-        names_to = "expression_type",
-        values_to = "expression"
-    ) %>%
-    mutate(
-        expression_type = factor(ifelse(expression_type == "log_mature_INS", "Mature", "Nascent"), levels = c("Nascent", "Mature")),
-        protected_status = factor(protected_status, levels = c("Protected", "Susceptible"))
-    ) %>%
-    filter(!is.infinite(expression) & !is.na(expression))
-
-# Create individual cell plot
-individual_cell_plot <- ggplot(individual_cell_data, aes(x = protected_status, y = expression, fill = protected_status)) +
-    coord_cartesian(clip = "off") +
-    geom_violin(position = position_dodge(width = 0.8), width = 0.7, alpha = 0.5) +
-    geom_jitter(
-        position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.3),
-        size = 0.5, alpha = 0.1,
-        aes(color = protected_status)
-    ) +
-    facet_wrap(~expression_type,
-        scales = "fixed",
-        shrink = FALSE
-    ) +
-    scale_fill_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
-    scale_color_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, 16)) +
-    ggdist::theme_ggdist() +
-    theme(
-        legend.position = "none",
-        plot.title = element_markdown(size = 16),
-        axis.text.y = element_text(size = 12),
-        axis.title.y = element_text(size = 12),
-        axis.line.y = element_line(color = "black"),
-        axis.line.x = element_line(color = "black"),
-        axis.ticks.x = element_blank(),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        plot.margin = margin(r = 20, b = 10, l = 10, t = 10),
-        strip.text = element_text(size = 14),
-        strip.background = element_rect(colour = NA, fill = NA),
-        panel.border = element_rect(fill = NA, color = NA)
-    ) +
-    labs(
-        title = "INS expression in <span style='color:blue;'>protected</span> and <br><span style='color:red;'>susceptible</span> Beta cells",
-        y = "Log-normalized counts"
-    )
-
-# Add statistical comparisons and median labels
-individual_cell_plot <- individual_cell_plot +
-    geom_signif(
-        comparisons = list(c("Protected", "Susceptible")),
-        map_signif_level = TRUE,
-        test = "wilcox.test",
-        margin_top = -0.3,
-        tip_length = 0,
-        extend_line = -0.35,
-        color = "black"
-    ) +
-    stat_summary(
-        fun = median,
-        geom = "label",
-        aes(label = sprintf("%.2f", after_stat(y))),
-        color = "white",
-        alpha = 0.8,
-        size = 3.75,
-        hjust = -0.25,
-        vjust = -0.5
-    )
-
-# Save the plot
-ggsave("assets/individual_cell_ins_expression_wilcox.svg", individual_cell_plot, width = 4, height = 4)
-knitr::include_graphics("assets/individual_cell_ins_expression_wilcox.svg")
-```
-
-::: {.callout-note icon=false appearance="minimal"}
-
-[<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression_wilcox.svg){download="individual_cell_ins_expression_wilcox.svg"}
-
-**NOTE:** 
-
-- Here p-values were calculated using a Wilcoxon rank-sum test. Labels show median values for each group.
-
-:::
 
 ## Mixed model w random effects
 ```{r}
@@ -323,11 +232,10 @@ library(ggdist)
 library(ggtext)
 library(lme4)
 library(lmerTest)
-library(ggsignif)
 
 # Prepare data for individual cell plot
 individual_cell_data <- plot_data %>%
-    select(protected_status, log_mature_INS, log_nascent_INS, orig.ident) %>%
+    select(protected_status, log_mature_INS, log_nascent_INS, orig.ident, technology, tissue_source) %>%
     pivot_longer(
         cols = c(log_mature_INS, log_nascent_INS),
         names_to = "expression_type",
@@ -339,11 +247,19 @@ individual_cell_data <- plot_data %>%
     ) %>%
     filter(!is.infinite(expression) & !is.na(expression))
 
-# Function to run mixed model and extract p-value
+# # Function to run mixed model and extract p-value
+# run_mixed_model <- function(data) {
+#   full_model <- lmer(expression ~ protected_status + (1 | orig.ident), data = data)
+#   null_model <- lmer(expression ~ 1 + (1 | orig.ident), data = data)
+#   lrt_result <- anova(null_model, full_model)
+#   p_value <- lrt_result$`Pr(>Chisq)`[2]
+#   return(p_value)
+# }
 run_mixed_model <- function(data) {
-    model <- lmer(expression ~ protected_status + (1 | orig.ident), data = data)
-    anova_results <- anova(model)
-    p_value <- anova_results$`Pr(>F)`[1]
+    full_model <- lmer(expression ~ protected_status + technology + tissue_source + (1 | orig.ident), data = data)
+    null_model <- lmer(expression ~ technology + tissue_source + (1 | orig.ident), data = data)
+    lrt_result <- anova(null_model, full_model)
+    p_value <- lrt_result$`Pr(>Chisq)`[2]
     return(p_value)
 }
 
@@ -425,7 +341,7 @@ individual_cell_plot <- ggplot(individual_cell_data, aes(x = protected_status, y
         inherit.aes = FALSE, vjust = -0.5
     ) +
     stat_summary(
-        fun = mean,
+        fun = median,
         geom = "label",
         aes(label = sprintf("%.2f", after_stat(y))),
         color = "white",
@@ -441,11 +357,85 @@ knitr::include_graphics("assets/individual_cell_ins_expression_lmm.svg")
 
 ::: {.callout-note icon=false appearance="minimal"}
 
+Effect of protected status on INS in beta cells using a linear mixed-effects model. The model was constructed as: `log(INS expression) ~ protected_status + technology + tissue_source + (1 | orig.ident)`, where `protected_status` was the primary fixed effect of interest and `technology` & `tissue_source` were included as batch effects. `orig.ident` was treated as a random effect to account for between-donor variation. P-values for the `protected_status` effect were determined using a likelihood ratio test, comparing the full model to a reduced model without the `protected_status` term, retaining other fixed and random effects. Labels show median expression values. No significant differences were observed between protected and susceptible groups for nascent and mature INS expression.
+
 [<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression_lmm.svg){download="individual_cell_ins_expression_lmm.svg"}
 
-**NOTE:** 
+:::
 
-- Here p-values were calculated using a linear mixed model with donor identity as a random effect: ***INS expression ~ protected_status + (1 | orig.ident)***. Labels show mean values for each group.
+## Wilcox test
+
+```{r}
+#| fig-width: 12
+# Create individual cell plot
+individual_cell_plot <- ggplot(individual_cell_data, aes(x = protected_status, y = expression, fill = protected_status)) +
+    coord_cartesian(clip = "off") +
+    geom_violin(position = position_dodge(width = 0.8), width = 0.7, alpha = 0.5) +
+    geom_jitter(
+        position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.3),
+        size = 0.5, alpha = 0.1,
+        aes(color = protected_status)
+    ) +
+    facet_wrap(~expression_type,
+        scales = "fixed",
+        shrink = FALSE
+    ) +
+    scale_fill_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
+    scale_color_manual(values = c("Protected" = "blue", "Susceptible" = "red")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, 16)) +
+    ggdist::theme_ggdist() +
+    theme(
+        legend.position = "none",
+        plot.title = element_markdown(size = 16),
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        axis.line.y = element_line(color = "black"),
+        axis.line.x = element_line(color = "black"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = margin(r = 20, b = 10, l = 10, t = 10),
+        strip.text = element_text(size = 14),
+        strip.background = element_rect(colour = NA, fill = NA),
+        panel.border = element_rect(fill = NA, color = NA)
+    ) +
+    labs(
+        title = "INS expression in <span style='color:blue;'>protected</span> and <br><span style='color:red;'>susceptible</span> Beta cells",
+        y = "Log-normalized counts"
+    )
+
+# Add statistical comparisons and median labels
+individual_cell_plot <- individual_cell_plot +
+    geom_signif(
+        comparisons = list(c("Protected", "Susceptible")),
+        map_signif_level = TRUE,
+        test = "wilcox.test",
+        margin_top = -0.3,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = median,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y))),
+        color = "white",
+        alpha = 0.8,
+        size = 3.75,
+        hjust = -0.25,
+        vjust = -0.5
+    )
+
+# Save the plot
+ggsave("assets/individual_cell_ins_expression_wilcox.svg", individual_cell_plot, width = 4, height = 4)
+knitr::include_graphics("assets/individual_cell_ins_expression_wilcox.svg")
+```
+
+::: {.callout-note icon=false appearance="minimal"}
+
+Here p-values were calculated using a Wilcoxon rank-sum test. Labels show median values for each group.
+
+[<i class="bi bi-filetype-svg"></i> Download Vector Image](assets/individual_cell_ins_expression_wilcox.svg){download="individual_cell_ins_expression_wilcox.svg"}
 
 :::
 
