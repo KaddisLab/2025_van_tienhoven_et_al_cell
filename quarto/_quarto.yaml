@@ -60,6 +60,7 @@ book:
   appendices: 
     - QC_PCA.qmd
     - QC_RLE.qmd
+    - QC_stats.qmd
     - ins_snps.qmd
     - references.qmd
 
