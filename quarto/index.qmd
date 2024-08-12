@@ -9,6 +9,10 @@ date-modified: last-modified
 
 ## Literature
 
+Wang et al [CJD 2021 45:775-784](https://www.canadianjournalofdiabetes.com/article/S1499-2671(21)00081-2/abstract)
+
+- rs3842753 and increased beta-cell INS mRNA expression
+
 Gootjes et al [Front Immunol 2022, 13:886736](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2022.886736/full)
     
 - Risk alleles taken from Gootjes et al, [Table 1](https://www.frontiersin.org/files/Articles/886736/fimmu-13-886736-HTML/image_m/fimmu-13-886736-t001.jpg)
