@@ -190,6 +190,7 @@ list(
         pattern = map(starsolo_alltech)
     ),
     # MARK:     # Download SNPs ---------------------------------------------------------------------
+    #TODO inlude a datestamp
     tar_target(
         snp_vcf,
         {
@@ -407,7 +408,7 @@ list(
     tar_target(
         integrated_seurat_sketch_750,
         seurat_sketch_harmony(merged_seurat_sketch_750, group_by_vars = c("tissue_source", "reagent_kit"), pancdb_metadata),
-        resources = large
+        resources = large_mem
     ),
     # MARK:     # Clustering --------------------------------------------------------------------------
     tar_target(
