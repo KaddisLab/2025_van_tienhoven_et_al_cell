@@ -1,4 +1,5 @@
 #!/bin/bash
+export QUARTO_DENO_EXTRA_OPTIONS="--v8-flags=--max-old-space-size=8192"
 
 # make sure the book is built
 quarto render --to html
