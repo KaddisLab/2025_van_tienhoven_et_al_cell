@@ -58,6 +58,10 @@ book:
       - propeller.qmd
       - propeller_endocrine.qmd
   appendices: 
+    - text: "QC: Cellranger v2 MultiQC "
+      href: assets/multiqc_report_v2.html
+    - text: "QC: Cellranger v3 MultiQC "
+      href: assets/multiqc_report_v3.html
     - QC_PCA.qmd
     - QC_RLE.qmd
     - QC_stats.qmd
