@@ -25,6 +25,12 @@ t2dm_donor_ids <- metadata$donor_id[metadata$diabetes_status == "T2DM"] |>
     paste0(collapse = "|")
 rm(metadata)
 
+# BMI Matched (NODM subset)
+bmim_donor_ids <- c("HPAP-047|HPAP-039|HPAP-104|HPAP-026|HPAP-099|HPAP-053|HPAP-097|HPAP-119|HPAP-117|HPAP-077|HPAP-074|HPAP-103|HPAP-037|HPAP-082|HPAP-042|HPAP-044")
+
+# T2DM controls (NODM subset)
+t2dc_donor_ids <- c("HPAP-052|HPAP-053|HPAP-054|HPAP-059|HPAP-063|HPAP-074|HPAP-075|HPAP-077|HPAP-080|HPAP-093|HPAP-097|HPAP-101|HPAP-103|HPAP-105|HPAP-117|HPAP-118|HPAP-119")
+
 cell_type_palette <- c(
     # Endocrine
     "Cycling Alpha" = "#57ed96", # Green
