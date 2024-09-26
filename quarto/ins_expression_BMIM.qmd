@@ -169,7 +169,7 @@ tar_load(seurat_object_lognorm_annotated)
 seurat_object <- seurat_object_lognorm_annotated
 
 # Fetch control genes
-control_genes <- c("SLC11A2", "SLC40A1", "UBC", "RPLP0", "ERN1")
+control_genes <- c("SLC11A2", "SLC40A1", "UBC", "RPLP0", "ERN1", "TBP", "ACTB", "GAPDH", "PGK1", "TUBB", "PPIA", "SDHA", "TFRC", "GUSB", "HMBS", "HPRT1")
 control_genes_hk <- normalize_control_genes(seurat_object, control_genes, housekeeping_genes)
 
 all_data <- seurat_object[[]] |>
