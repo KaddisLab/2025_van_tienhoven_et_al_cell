@@ -1,6 +1,6 @@
 
 ---
-title: "Beta cells: DEG rs689"
+title: "Beta cells: DEG rs689 BMIM"
 date: "2024-5-21" 
 date-modified: last-modified
 ---
@@ -40,7 +40,8 @@ tar_load(seurat_object_lognorm_annotated)
 seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 
 seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM")
+    dplyr::filter(diabetes_status == "NODM") |> 
+    dplyr::filter(grepl(bmim_donor_ids, orig.ident))
 
 make_plots_clickable()
 ```
@@ -75,6 +76,21 @@ de_markers <- FindMarkers(beta.bulk,
 )
 
 de_markers$gene <- rownames(de_markers)
+
+# Download
+de_markers |>
+    select(c("gene", "avg_log2FC", "pct.1", "pct.2", "p_val_adj", "p_val")) |>
+    mutate(significant = p_val_adj < 0.05 & abs(avg_log2FC) >= 1) %>%
+    arrange(desc(significant), desc(abs(avg_log2FC))) |>
+    as_tibble() |>
+    downloadthis::download_this(
+        output_name = glue::glue("differential_expression_rs689.xlsx"),
+        output_extension = ".xlsx",
+        button_label = "Download DESeq2 results",
+        button_type = "success",
+        has_icon = TRUE,
+        icon = "fa fa-save"
+    )
 
 volcano_plot(
     .data = de_markers,
