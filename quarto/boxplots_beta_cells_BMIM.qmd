@@ -1,0 +1,144 @@
+
+---
+title: "Beta cells: BMIM controls"
+date: "2024-5-15" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+
+```{r }
+#| code-fold: true
+#| code-summary: "Setup"
+suppressPackageStartupMessages({
+    library(tidyseurat)
+    library(Seurat)
+    library(targets)
+    library(ggplot2)
+    library(ggdist)
+    library(ggsignif)
+    library(ggpubr)
+})
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+tar_load(seurat_object_lognorm_annotated)
+seurat_object <- load_seurat(seurat_object_lognorm_annotated)
+
+cell_types <- seurat_object |>
+    dplyr::select(cell_type) |>
+    dplyr::distinct()
+
+cell_type <- "Beta"
+
+seurat_object <- seurat_object |>
+    dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(cell_type == cell_type) |>
+    dplyr::filter(grepl(bmim_donor_ids, orig.ident))
+```
+
+::: {.panel-tabset}
+
+## Per cell
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+#| fig-cap: "Boxplots of ER gene expression, indicating modal values per cell. Non-expressing cells are excluded."
+
+er_expression <- seurat_object %>%
+    dplyr::mutate(protected = factor(protected)) %>%
+    FetchData(vars = c("protected", er_genes_of_interest), layer = "data") |>
+    pivot_longer(
+        cols = -protected,
+        names_to = "gene",
+        values_to = "expression"
+    ) |>
+    dplyr::filter(expression > 0)
+
+ggplot(er_expression, aes(x = protected, y = expression, fill = protected, col = protected)) +
+    stat_dots(position = "dodgejust") +
+    stat_pointinterval(col = "black", alpha = 0.6) +
+    facet_wrap(~gene, scales = "free_y") + 
+    geom_signif(
+        test = "wilcox.test",
+        comparisons = list(c("TRUE", "FALSE")),
+        map_signif_level = TRUE,
+        margin_top = -0.4,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = Mode,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
+        color = "white",
+        hjust = 1.1,
+        vjust = 1.1
+    ) +
+    theme_classic() + NoLegend() +
+    labs(
+        title = "Expression of ER Genes, per cell",
+        x = "Protected Status",
+        y = "Normalized Expression"
+    ) +
+    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## Per donor
+
+```{r }
+#| fig-width: 10
+#| fig-height: 10
+#| fig-cap: "Boxplots of ER gene expression, indicating modal aggregate expression per donor"
+
+er_expression_PsB <- seurat_object %>%
+    dplyr::mutate(protected = factor(protected)) %>%
+    aggregate_cells("orig.ident", assays = "RNA", layers = "data") |>
+    dplyr::filter(.feature %in% er_genes_of_interest) |>
+    select(gene = ".feature", expression = "RNA", protected)
+
+ggplot(er_expression_PsB, aes(x = protected, y = expression, fill = protected, col = protected)) +
+    stat_dots(position = "dodgejust") +
+    stat_pointinterval(col = "black") +
+    facet_wrap(~gene, scales = "free_y") + 
+    geom_signif(
+        test = "wilcox.test",
+        comparisons = list(c("TRUE", "FALSE")), 
+        map_signif_level = TRUE,
+        margin_top = -0.4,
+        tip_length = 0,
+        extend_line = -0.35,
+        color = "black"
+    ) +
+    stat_summary(
+        fun = Mode,
+        geom = "label",
+        aes(label = sprintf("%.2f", after_stat(y)), alpha = 0.4),
+        color = "white",
+        hjust = -0.2,
+        vjust = -0.7
+    ) +
+    theme_classic() +
+    NoLegend() +
+    labs(
+        title = "Expression of ER Genes, per donor",
+        x = "Protected Status",
+        y = "Normalized Expression"
+    ) +
+    scale_fill_manual(values = c("TRUE" = "blue", "FALSE" = "red")) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+::::

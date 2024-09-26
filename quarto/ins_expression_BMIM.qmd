@@ -1,0 +1,440 @@
+---
+title: "INS expression: BMIM controls"
+date: "2024-7-11" 
+date-modified: last-modified
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    warning = FALSE,
+    message = FALSE
+)
+```
+
+```{r }
+# Load necessary libraries
+library(Seurat)
+library(tidyseurat)
+library(ggplot2)
+library(ggridges)
+library(dplyr)
+library(forcats)
+library(ggdist)
+library(ggExtra)
+library(targets)
+library(dplyr)
+library(kableExtra)
+
+tar_config_set(store = "/scratch/domeally/DCD.tienhoven_scRNAseq.2024/_targets")
+tar_source("/scratch/domeally/DCD.tienhoven_scRNAseq.2024/R")
+cpus <- hprcc::slurm_allocation()$CPUs
+
+# Define the function to create the ridge plot
+create_ridge_plot <- function(data, gene, group_var1, group_var2, palette = NULL) {
+    # Define endocrine and exocrine cell types
+    endocrine_types <- c("Alpha", "Alpha+Beta", "Beta", "Cycling Alpha", "Delta", "Gamma+Epsilon")
+    exocrine_types <- c("Acinar", "Ductal", "MUC5B+ Ductal")
+
+    # Create a new variable to classify cell types into endocrine, exocrine, and other
+    data <- data %>%
+        mutate(group = case_when(
+            .data[[group_var1]] %in% endocrine_types ~ "Endocrine",
+            .data[[group_var1]] %in% exocrine_types ~ "Exocrine",
+            .data[[group_var1]] == "Other" ~ "Other"
+        ))
+
+    # Ensure that the grouping variable is a factor for proper ordering
+    data[[group_var2]] <- as.factor(data[[group_var2]])
+
+    # Create a new variable to ensure T/F alternate within each cell type
+    data <- data %>%
+        mutate(grouped_cell_type = paste(.data[[group_var1]], .data[[group_var2]], sep = "_"))
+
+    # Create the base plot
+    p <- ggplot(data, aes(x = .data[[gene]], y = fct_rev(.data[[group_var1]]), fill = .data[[group_var2]])) +
+        geom_density_ridges(aes(group = grouped_cell_type), alpha = 0.5, scale = 0.9, color = NA) +
+        facet_grid(rows = vars(group), scales = "free_y", space = "free_y") +
+        labs(title = paste("Ridge Plot of", gene, "Grouped by", group_var1, "and", group_var2), 
+             x = gene, y = group_var1) +
+        theme_classic() +
+        theme(legend.position = "top", legend.title = element_blank())
+
+    # Apply custom palette if supplied
+    if (!is.null(palette)) {
+        p <- p + scale_fill_manual(values = palette)
+    }
+
+    # Return the plot
+    return(p)
+}
+
+# Define the function to create the dot and interval plot
+create_dot_interval_plot <- function(seurat_object, gene, group_var1, group_var2, palette = NULL) {
+    # Fetch the data for the specified gene and grouping variables
+    data <- FetchData(seurat_object, vars = c(gene, group_var1, group_var2))
+
+    # Define endocrine and exocrine cell types
+    endocrine_types <- c("Alpha", "Alpha+Beta", "Beta", "Cycling Alpha", "Delta", "Gamma+Epsilon")
+    exocrine_types <- c("Acinar", "Ductal", "MUC5B+ Ductal")
+
+    # Create a new variable to classify cell types into endocrine, exocrine, and other
+    data <- data %>%
+        mutate(group = case_when(
+            cell_type %in% endocrine_types ~ "Endocrine",
+            cell_type %in% exocrine_types ~ "Exocrine",
+            cell_type == "Other" ~ "Other"
+        ))
+
+    # Ensure that the grouping variable is a factor for proper ordering
+    data[[group_var2]] <- as.factor(data[[group_var2]])
+
+    # Create a new variable to ensure T/F alternate within each cell type
+    data <- data %>%
+        mutate(grouped_cell_type = paste(cell_type, .data[[group_var2]], sep = "_"))
+
+    # Create the base plot
+    p <- ggplot(data, aes(x = fct_rev(cell_type), y = .data[[gene]], fill = .data[[group_var2]])) +
+        stat_dots(position = "dodgejust") +
+        stat_pointinterval(color = "black", alpha = 0.6) +
+        facet_grid(rows = vars(group), scales = "free_y", space = "free_y") +
+        labs(title = paste("Dot and Interval Plot of", gene, "Grouped by Cell Type and", group_var2), x = "Cell Type", y = gene) +
+        theme_classic() +
+        theme(legend.position = "top", legend.title = element_blank())
+
+    # Apply custom palette if supplied
+    if (!is.null(palette)) {
+        p <- p + scale_fill_manual(
+            values = palette
+        )
+    }
+
+    # Return the plot
+    return(p)
+}
+
+normalize_control_genes <- function(seurat_object, control_genes, housekeeping_genes) {
+  # Check if all genes are present in the Seurat object
+  all_genes <- c(control_genes, housekeeping_genes)
+  available_genes <- rownames(seurat_object[["RNA"]])
+  missing_genes <- setdiff(all_genes, available_genes)
+  if (length(missing_genes) > 0) {
+    stop("The following genes are not present in the Seurat object: ", paste(missing_genes, collapse = ", "))
+  }
+
+  # Extract counts for control and housekeeping genes using FetchData
+  control_counts <- Seurat::FetchData(seurat_object, vars = control_genes, layer = "counts")
+  housekeeping_counts <- Seurat::FetchData(seurat_object, vars = housekeeping_genes, layer = "counts")
+
+  # Ensure we're working with matrices
+  control_counts <- as.matrix(control_counts)
+  housekeeping_counts <- as.matrix(housekeeping_counts)
+
+  # Sum of housekeeping gene counts
+  sum_housekeeping_counts <- rowSums(housekeeping_counts)
+
+  # Normalize control gene counts by the sum of housekeeping gene counts,
+  # scaled to a total of 10,000 and natural log transformed
+  normalized_counts <- log1p((control_counts / sum_housekeeping_counts) * 10000)
+
+  # Replace infinite values with 0
+  normalized_counts[is.infinite(normalized_counts)] <- 0
+
+  # Create a tibble with cell names and normalized counts
+  result_tibble <- tibble::tibble(
+    cell = rownames(normalized_counts),
+    !!!setNames(as.data.frame(normalized_counts), paste0(colnames(normalized_counts), "_hk"))
+  )
+
+  return(result_tibble)
+}
+
+```
+
+## Signatures
+
+| Signature Name          | Reference| Genes|
+|---|---|---|
+| chronic_er_stress       | [Chen et al 2022](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9360004/) | `r signatures$chronic_er_stress`|
+| active_er_stress        | [Chen et al 2022](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9360004/) | `r signatures$active_er_stress`|
+| islet_er_stress         | chatGPT| `r signatures$islet_er_stress`|
+| islet_stress            | this study| `r signatures$islet_stress`|
+| cellular_stress         | this study| `r signatures$cellular_stress`|
+| core_upr_stress         | this study| `r signatures$core_upr_stress`|
+| msigdb_upr_stress       | [MSigDB](https://www.gsea-msigdb.org/gsea/msigdb/human/geneset/HALLMARK_UNFOLDED_PROTEIN_RESPONSE.html) | `r signatures$msigdb_upr_stress`|
+
+
+```{r}
+tar_load(seurat_object_lognorm_annotated)
+seurat_object <- seurat_object_lognorm_annotated
+
+# Fetch control genes
+control_genes <- c("SLC11A2", "SLC40A1", "UBC", "RPLP0", "ERN1")
+control_genes_hk <- normalize_control_genes(seurat_object, control_genes, housekeeping_genes)
+
+all_data <- seurat_object[[]] |>
+    tibble::rownames_to_column(var = "cell") |>
+    dplyr::select(cell, orig.ident, diabetes_status, rs3842752_consensus, protected, cell_type, contains("INS"), contains("stress"), -contains("ratio")) |>
+    dplyr::left_join(control_genes_hk, by = "cell")
+data <- all_data |>
+    dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(grepl(bmim_donor_ids, orig.ident))
+```
+
+## Beta cell INS expression & Cellular stress score
+
+### INS
+```{r}
+#| fig-height: 8
+
+data |>
+    dplyr::filter(INS_hk > 0) |>
+    dplyr::filter(cell_type %in% c("Beta") & islet_stress_score > 0) |>
+    ggplot(aes(y = islet_stress_score, x = INS_hk, color = protected, alpha = 0.2)) +
+    geom_point() +
+    labs(title = "INS_hk vs cellular_stress_score", y = "cellular_stress_score", x = "INS_hk") +
+    theme_classic() +
+    Seurat::NoLegend() +
+    geom_smooth(method = "lm", se = FALSE) +
+    scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red")) 
+```
+
+Signature genes: `r signatures$cellular_stress`
+
+## INS expression by protected status and cell type
+
+Compared with control genes
+
+::: {.panel-tabset}
+
+## INS
+
+```{r}
+create_ridge_plot(data, "INS_hk", "cell_type", "protected", palette = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## SLC11A2
+
+```{r}
+create_ridge_plot(data, "SLC11A2_hk", "cell_type", "protected", palette = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## SLC40A1
+
+```{r}
+create_ridge_plot(data, "SLC40A1_hk", "cell_type", "protected", palette = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## UBC
+
+```{r}
+create_ridge_plot(data, "UBC_hk", "cell_type", "protected", palette = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+## RPLP0 (ARBP)
+
+```{r}
+create_ridge_plot(data, "RPLP0_hk", "cell_type", "protected", palette = c("TRUE" = "blue", "FALSE" = "red"))
+```
+
+:::: 
+
+## Effect of INS expression on stress scores
+
+### Download data
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+library(knitr)
+library(kableExtra)
+library(broom)
+
+# Remove cells that dont express INS
+data <- data %>%
+    dplyr::filter(INS_hk > 0)
+
+# Identify stress measures
+stress_measures <- names(data)[grepl("(stress_UCell|stress_score)$", names(data))]
+
+# Function to analyze relationship between INS expression and stress
+analyze_ins_stress <- function(data, stress_measure) {
+    data %>%
+        group_by(cell_type, protected) %>%
+        summarise(
+            n = n(),
+            mean_stress = mean(.data[[stress_measure]], na.rm = TRUE),
+            mean_ins = mean(INS_hk, na.rm = TRUE),
+            cor = cor(INS_hk, .data[[stress_measure]], method = "spearman", use = "complete.obs"),
+            .groups = "drop"
+        ) %>%
+        mutate(stress_measure = stress_measure)
+}
+
+# Perform analysis for each stress measure
+results <- map_dfr(stress_measures, ~ analyze_ins_stress(data, .))
+
+# Function to fit linear model
+fit_lm <- function(data, stress_measure) {
+    formula <- as.formula(paste(stress_measure, "~ INS_hk * protected"))
+    lm(formula, data = data)
+}
+
+# Fit linear models for each stress measure
+lm_models <- map(stress_measures, ~ fit_lm(data, .))
+
+# Function to extract key results from linear model
+extract_lm_results <- function(model, stress_measure) {
+    tidy(model) %>%
+        filter(term != "(Intercept)") %>%
+        select(term, estimate, p.value) %>%
+        mutate(stress_measure = stress_measure)
+}
+
+# Extract results from linear models
+lm_results <- map2_dfr(lm_models, stress_measures, extract_lm_results)
+
+
+# function to create formatted table for Quarto
+create_enhanced_table <- function(data, caption, highlight_column = NULL) {
+    formatted_table <- data %>%
+        kable("html", caption = caption, escape = FALSE) %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+    if (!is.null(highlight_column)) {
+        formatted_table <- formatted_table %>%
+            column_spec(highlight_column, background = spec_color(data[[highlight_column]], end = 0.9))
+    }
+
+    return(formatted_table)
+}
+
+# Process the summary data
+processed_results <- results %>%
+    select(stress_measure, cell_type, protected, mean_stress, cor) %>%
+    pivot_wider(
+        names_from = protected,
+        values_from = c(mean_stress, cor),
+        names_glue = "{.value}_{protected}"
+    ) %>%
+    mutate(
+        mean_diff = mean_stress_TRUE - mean_stress_FALSE,
+        cor_diff = cor_TRUE - cor_FALSE,
+        highlight = ifelse(mean_stress_TRUE < mean_stress_FALSE & cor_TRUE < cor_FALSE, TRUE, FALSE)
+    ) %>%
+    arrange(desc(highlight), desc(abs(mean_diff)))
+
+# Create an improved summary table with highlighting condition
+processed_results_with_highlight <- processed_results %>%
+    select(stress_measure, cell_type, mean_stress_FALSE, mean_stress_TRUE, cor_FALSE, cor_TRUE, highlight) %>%
+    rename(
+        mean_Susceptible = mean_stress_FALSE,
+        mean_Protected = mean_stress_TRUE,
+        cor_Susceptible = cor_FALSE,
+        cor_Protected = cor_TRUE
+    ) %>%
+    mutate(
+        mean_diff = round(mean_Protected - mean_Susceptible, 3),
+        cor_diff = round(cor_Protected - cor_Susceptible, 3)
+    ) %>%
+    arrange(desc(highlight), desc(abs(mean_diff)))
+
+# Create the summary table
+summary_table <- processed_results_with_highlight %>%
+    select(-highlight) %>%
+    kable("html", caption = "Summary of Stress Measures by Cell Type and Protection Status", escape = FALSE) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+    column_spec(1:2, bold = TRUE) %>%
+    row_spec(which(processed_results_with_highlight$highlight), background = "yellow") %>%
+    add_header_above(c(" " = 2, "Mean Stress" = 2, "Correlation with INS" = 2, "Differences" = 2)) %>%
+    footnote(general = "Cell types highlighted in yellow have lower stress and lower correlation with insulin in protected cells.")
+
+# Process linear model results
+process_lm_results <- function(data) {
+    data %>%
+        mutate(
+            p_value = ifelse(p.value < 0.001, "&lt;0.001", sprintf("%.3f", p.value)),
+            significant = p.value < 0.05,
+            estimate = sprintf("%.3f", estimate)
+        ) %>%
+        select(stress_measure, term, estimate, p_value, significant)
+}
+
+# Process the linear model results
+processed_lm_results <- process_lm_results(lm_results)
+
+# Create enhanced linear model results table
+lm_table <- processed_lm_results %>%
+    create_enhanced_table("Linear Model Results") %>%
+    column_spec(3, color = spec_color(as.numeric(processed_lm_results$estimate), end = 0.9)) %>%
+    column_spec(5, color = ifelse(processed_lm_results$significant, "green", "red"))
+
+# Visualization function
+plot_ins_stress <- function(data, stress_measure) {
+    ggplot(data, aes(x = INS_hk, y = .data[[stress_measure]], color = protected)) +
+        geom_point(alpha = 0.3) +
+        geom_smooth(method = "lm", se = FALSE) +
+        facet_wrap(~cell_type, scales = "free") +
+        theme_classic() +
+        labs(
+            title = paste(stress_measure, "vs INS expression"),
+            x = "INS expression (housekeeping normalized)",
+            y = stress_measure
+        ) +
+        scale_color_manual(values = c("TRUE" = "blue", "FALSE" = "red"))
+}
+
+# Generate plots for each stress measure
+plots <- map(stress_measures, ~ plot_ins_stress(data, .))
+
+
+# all_data |>
+# dplyr::filter(INS_hk > 0) |>
+# downloadthis::download_this(
+#     output_name = glue::glue("INS_expression_vs_stress.xlsx"),
+#     output_extension = ".xlsx",
+#     button_label = "Download filtered (INS > 0) stress scores",
+#     button_type = "success",
+#     has_icon = TRUE,
+#     icon = "fa fa-save"
+# )
+
+all_data |>
+downloadthis::download_this(
+    output_name = glue::glue("INS_expression_vs_stress_unfiltered_BMIM.xlsx"),
+    output_extension = ".xlsx",
+    button_label = "Download unfiltered stress scores",
+    button_type = "success",
+    has_icon = TRUE,
+    icon = "fa fa-save"
+)
+
+```
+
+
+### Summary of linear modelling 
+
+::: {.callout-tip collapse=true}
+
+## Interpreting the results
+
+ INS expression is negatively associated with `chronic_er_stress_UCell`. For each unit increase in INS expression, the chronic ER stress measure decreases by 0.006 units, and this effect is statistically significant.
+
+ Being in the protected group is associated with an increase in chronic_er_stress_UCell by 0.014 units, and this effect is statistically significant.
+
+ The interaction effect is very small (-0.000) but statistically significant, indicating that the effect of INS expression on chronic_er_stress_UCell slightly changes depending on protection status.
+
+:::
+
+```{r}
+
+lm_table
+
+plots
+
+summary_table
+
+```
+
