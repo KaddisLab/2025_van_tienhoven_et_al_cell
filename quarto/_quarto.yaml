@@ -14,6 +14,7 @@ book:
     - part: "Publication figs"
       chapters: 
         - figureX.qmd
+        - figureY.qmd
         - figureXXsuppl.qmd
     - cell_wish_list.qmd
     - pancdb_metadata.qmd
@@ -31,10 +32,12 @@ book:
     - part: "Stress score"
       chapters: 
       - ins_expression.qmd
+      - ins_expression_BMIM.qmd
       - boxplots_beta_cells_HK.qmd
     - part: "ER genes"
       chapters:
       - boxplots_beta_cells.qmd
+      - boxplots_beta_cells_BMIM.qmd
       - boxplots_beta_cells_rs3842753.qmd
       - boxplots_beta_cells_rs689.qmd
       - boxplots_alpha_beta_cells.qmd
@@ -58,15 +61,14 @@ book:
       - propeller.qmd
       - propeller_endocrine.qmd
   appendices: 
-    - text: "QC: Cellranger v2 MultiQC "
-      href: assets/multiqc_report_v2.html
-    - text: "QC: Cellranger v3 MultiQC "
-      href: assets/multiqc_report_v3.html
     - QC_PCA.qmd
     - QC_RLE.qmd
     - QC_stats.qmd
     - ins_snps.qmd
-    - references.qmd
+    - text: "QC: Cellranger v2 MultiQC "
+      href: assets/multiqc_report_v2.html
+    - text: "QC: Cellranger v3 MultiQC "
+      href: assets/multiqc_report_v3.html
 
 bibliography: references.bib
 

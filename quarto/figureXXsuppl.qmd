@@ -1,5 +1,5 @@
 ---
-title: "Supplementary Figure XX"
+title: "Suppl Fig XX: BMIM controls"
 date: "2024-7-22" 
 date-modified: last-modified
 format:
@@ -40,7 +40,8 @@ make_plots_clickable()
 tar_load(seurat_object_lognorm_annotated)
 seurat_object <- load_seurat(seurat_object_lognorm_annotated)
 seurat_object <- seurat_object |>
-    dplyr::filter(diabetes_status == "NODM")
+    dplyr::filter(diabetes_status == "NODM") |>
+    dplyr::filter(grepl(bmim_donor_ids, orig.ident))
 ```
 
 ### A. Cell type
