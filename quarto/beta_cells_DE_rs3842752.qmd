@@ -27,6 +27,8 @@ suppressPackageStartupMessages({
     library(ggsignif)
     library(ggpubr)
     require(showtext)
+    require(tibble)
+    require(stringr)
     font_add_google(name = "Roboto", family = "Roboto")
     font_add_google(name = "Roboto Condensed", family = "Roboto Condensed")
     showtext_auto()
@@ -75,6 +77,24 @@ de_markers <- FindMarkers(beta.bulk,
 
 de_markers$gene <- rownames(de_markers)
 
+beta_cell_table <- as.data.frame(beta.bulk@assays$RNA$counts) |>
+    rename_with(
+        ~ str_replace(., "Beta_", ""), # Remove the "Beta_" prefix
+        starts_with("Beta_")
+    ) |>
+    tibble::rownames_to_column("gene") |>
+    pivot_longer(
+        cols = -gene,
+        names_to = "full_id",
+        values_to = "counts"
+    ) |>
+    mutate(
+        orig.ident = str_extract(full_id, "HPAP-\\d+"),
+        rs3842752_consensus = str_extract(full_id, "_[A-Z]+$") |> str_remove("_")
+    ) |>
+    select(-full_id) |> 
+    left_join(de_markers, by = "gene")
+
 # Download
 de_markers |>
     select(c("gene", "avg_log2FC", "pct.1", "pct.2", "p_val_adj", "p_val")) |>
@@ -101,8 +121,6 @@ volcano_plot(
     title = "Beta cells: rs3842752",
     subtitle = "Upregulated in susceptible (<- GG) protected (GA ->) cells",
 )
-
-
 ```
 
 ### GSEA
@@ -135,10 +153,21 @@ gsea_results$plot
 ### Top genes
 
 ```{r }
+pal <- c("GA" = "blue", "GG" = "red")
 
-
+sig_genes_plot(beta_cell_table,
+    title = "Beta cells: rs3842752",
+    .abundance = "counts",
+    .transcript = "gene",
+    .sample = "orig.ident",
+    FDR = "p_val_adj",
+    logFC = "avg_log2FC",
+    fill_palette = "pal",
+    group_by = "rs3842752_consensus",
+    normalization = "CPM",
+    n_genes = 12
+) 
 ```
-
 
 ## Wilcoxon rank sum test
 
@@ -198,11 +227,11 @@ bulk <- AggregateExpression(
     seurat_object,
     return.seurat = TRUE,
     assays = "RNA",
-    group.by = c("cell_type", "orig.ident", "sample_sex")) |>
+    group.by = c("cell_type", "orig.ident", "sample_sex")
+) |>
     separate(.cell, into = c("cell_type", "orig.ident", "sample_sex"), sep = "_", remove = FALSE)
 
 beta.bulk <- subset(bulk, cell_type == "Beta")
-
 ```
 
 ::: {.panel-tabset}
