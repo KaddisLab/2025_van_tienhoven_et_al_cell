@@ -61,8 +61,6 @@ seurat_azimuth <- function(query_seurat_object, azimuth_reference_path) {
   "Unknown" <- "cornsilk2" 
 )
 
-    hprcc::init_multisession()
-
     query_seurat_object <- load_seurat(query_seurat_object) 
 
     azimuth_reference <- dirname(azimuth_reference_path[1])
