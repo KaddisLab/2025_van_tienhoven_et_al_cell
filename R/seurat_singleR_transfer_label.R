@@ -62,10 +62,17 @@ seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object
         ref_seurat_object <- Seurat::NormalizeData(ref_seurat_object)
     }
 
-    # Setup parallel processing
-    BiocParallel::register(
-        BiocParallel::MulticoreParam(workers = hprcc::slurm_allocation()$CPUs, progressbar = TRUE)
-    )
+    # # # Setup parallel processing
+    # BiocParallel::register(
+    #     BiocParallel::MulticoreParam(workers = hprcc::slurm_allocation()$CPUs, progressbar = TRUE)
+    # )
+    ncpus <- if (Sys.getenv("SLURM_CPUS_PER_TASK") != "") {
+        as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK"))
+    } else if (Sys.getenv("SLURM_CPUS_ON_NODE") != "") {
+        as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
+    } else {
+        1 # default if not in SLURM environment
+    }
 
     # Make it reproducible
     set.seed(42)
@@ -76,7 +83,7 @@ seurat_singleR_transfer_label <- function(query_seurat_object, ref_seurat_object
         ref =  Seurat::GetAssayData(ref_seurat_object, assay = "RNA"),
         labels = ref_seurat_object@meta.data[[cell_type_col]],
         de.method = de_method,
-        BPPARAM = BiocParallel::bpparam()
+        BPPARAM = BiocParallel::MulticoreParam(workers = ncpus)
     ) 
     # drop the scores: it's a matrix of scores for each cell type vs each cell type. We just want 
     # the label and the delta.next, which is the difference between the score for the next best cell type
