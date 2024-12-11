@@ -1,46 +1,66 @@
-# Pipeline for Processing HPAP scRNAseq data
+# Pipeline for Processing HPAP scRNAseq Data
 
-This repository contains the R script `_targets.R` for processing 10X samples from [PancDB](https://hpap.pmacs.upenn.edu/about-pancdb). 
+This repository contains R scripts and analysis pipelines for processing single-cell RNA sequencing data from [PancDB](https://hpap.pmacs.upenn.edu/about-pancdb) pancreatic tissue samples. The analysis is performed using R and various Bioconductor packages.
+
+## Project Overview
+
+The project focuses on analyzing single-cell RNA sequencing data with particular attention to:
+- INS gene expression analysis
+- Differential expression analysis
+- Cell type-specific analyses
+- Housekeeping gene normalization
 
 ## Requirements
 
-Set `analysis_cache` in `_targets.R` to a folder on Apollo or Gemeni.
+### Computing Environment
+The analysis is configured to run on SLURM-based HPC systems with appropriate resource allocation.
 
-## Description
+### Prerequisites
+- R version 4.3 or higher
+- Bioconductor 3.19
+- Key packages: Seurat, muscat, tidyverse, ComplexHeatmap
 
-The script sets up a pipeline for processing HPAP data. It defines the paths for the `analysis_cache` and .... The `analysis_cache` path is determined by the cluster, and the transcriptome path is always located in the `analysis_cache`.
+### Installation
 
-The script also sets some options for the {targets}, such as the packages to load and the error handling behaviour.
+The project uses `renv` for package management with a shared cache configuration:
+
+```
+git clone https://github.com/cohmathonc/mmu_10X_preleukemic.git
+cd mmu_10X_preleukemic
+Rscript -e 'renv::restore()'
+```
+
+## Project Structure
+
+- `R/`: Custom R functions and utilities
+- `test_*.r`: Analysis scripts for different aspects of the project
+- `.Rprofile`: Project-specific R configuration
+- `_targets/`: Target pipeline outputs
+- Set `analysis_cache` in `_targets.R` to a folder on you local system
 
 ## Usage
 
-To run the script, clone this repository to your $HOME folder on _Apollo_ or _Gemini_: 
-
-```{sh}
-git clone https://github.com/cohmathonc/mmu_10X_preleukemic.git
-cd mmu_10X_preleukemic
-```
-
+### Running with SLURM
 To run the pipeline in a SLURM session, submit the jobscript:
 
-```{sh}
-sbatch --chdir=$(pwd) _targets.job
+```
+sbatch _targets.job
 ```
 
-You can submit the script from within a SSH shell on Apollo, or from the terminal in RStudio running on Apollo.
-
+### Running Interactively
 To run interactively, open an R session in the folder and launch the targets pipeline:
 
-```{r}
+```
 targets::tar_make()
 ```
+## Data
+Data files should be placed in the appropriate directories as specified in the targets pipeline.
 
-[This issue](https://github.com/cohmathonc/hprcc/issues/9) is currently preventing the pipeline from running interactively in RStudio on Apollo.
-
-### Contributing
-
+## Contributing
 Please read CONTRIBUTING.md for details on our code of conduct, and the process for submitting pull requests.
 
-### License
+## License
+This project is licensed under the MIT License - see the LICENSE.md file for details.
 
-This project is licensed under the MIT License - see the LICENSE.md file for details
+## Contact
+Denis O'Meally (@drejom)
