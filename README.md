@@ -50,7 +50,7 @@ Detailed environment specifications and package versions will be provided.
 ## Contact
 
 For inquiries regarding the single-cell analysis, please contact:
-- Denis O'Meally (data analysis)
+- Denis O'Meally (data analysis): [@drejom](https://github.com/drejom)
 - Bart O. Roep (principal investigator): boroep@lumc.nl
 
 ## Collaborating Institutions
