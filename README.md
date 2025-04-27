@@ -1,17 +1,13 @@
 # scRNA-seq Analysis of Insulin Gene Variants in Type 1 Diabetes
 
-## Project Status
-
-This repository is currently under active development. Code and documentation for single-cell RNA sequencing analysis related to our recent Cell publication will be updated shortly. **'Watch' this repo to get notified when updates are posted or raise an [issue](https://github.com/KaddisLab/2025_van_tienhoven_et_al_cell/issues)**
-
 ## Research Overview
 
-This repository contains code and analysis pipelines for the single-cell RNA sequencing (scRNA-seq) component of our research on genetic protection from Type 1 diabetes (T1D). Our analysis reveals how the protective insulin gene (INS) variant (rs3842752) affects beta-cell stress and gene expression at the single-cell level.
+This repository contains code and analysis pipelines for the single-cell RNA sequencing (scRNA-seq) component of our research on genetic protection from Type 1 diabetes (T1D). Our analysis reveals how the protective insulin gene (*INS*) variant (rs3842752) affects beta-cell stress and gene expression at the single-cell level.
 
 ### Key Analysis Findings
 
-- Beta cells carrying the protective INS variant show an inverse correlation between insulin mRNA levels and cellular stress markers
-- This correlation is not present in beta cells carrying only the susceptible INS variant
+- Beta cells carrying the protective *INS* variant show an inverse correlation between insulin mRNA levels and cellular stress markers
+- This correlation is not present in beta cells carrying only the susceptible *INS* variant
 - Beta cells with the protective variant show significantly reduced expression of TGM2 (tissue transglutaminase-2), which is associated with T1D immunopathogenesis
 - Differential expression analysis identified additional genes associated with beta-cell stress and function
 
@@ -23,29 +19,63 @@ If you use these analysis methods, please cite our paper:
 
 ## Repository Contents
 
-This repository will include:
+[Targets](https://docs.ropensci.org/targets/) pipeline for processing scRNA-seq data from the Human Pancreas Analysis Program ([HPAP](https://hpap.pmacs.upenn.edu/)). The workflow includes targets for
 
-- Preprocessing workflow for scRNA-seq data from human pancreatic islets
-- Code for INS genotype analysis from scRNA-seq data
-- Scripts for identifying nascent vs mature INS transcript counts
-- Differential gene expression analysis between INS variants
-- Beta-cell stress score calculation methodology
-- Visualization code for UMAP, feature plots, and correlation analyses
+- Cellranger counts and library quality control ([nf-core/scrnaseq](https://nf-co.re/scrnaseq/2.7.1))
+- SNP genotyping using CellSNP-lite
+- Ambient RNA removal with CellBender
+- Per cell quality control & doublet detection with scDblFinder
+- Cell type annotation using SingleR with reference atlas from [Elgamal et al. 2023](https://doi.org/10.2337/db23-0130)
+- XBP1 splicing analysis and stress scoring (not used, insufficient read depth)
+- INS expression normalization using housekeeping genes
+- Integration of donor libraries using Harmony
+- Publication figures 3 and S2
+
+### Resource Files
+
+- [MultiQC Report v2](assets/multiqc_report_v2.html) - nf-core/scrnaseq MultiQC report for 10X V2 chemistry libraries
+- [MultiQC Report v3](assets/multiqc_report_v3.html) - nf-core/scrnaseq MultiQC report for 10X V3 chemistry libraries
+- [1000 Genomes SNP data](assets/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz) - Reference variants for genotyping, from [CellSNP](http://ufpr.dl.sourceforge.net/project/cellsnp/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz)
+
+The processed Seurat object (~4.5Gb) is available via Globus. Make your request by raising an [issue](https://github.com/KaddisLab/2025_van_tienhoven_et_al_cell/issues).
 
 ## Data Sources
 
-The scRNA-seq data analyzed in this repository were obtained from the Human Pancreas Analysis Program (HPAP) Database (https://hpap.pmacs.upenn.edu/). Data processing utilized the Human Islet Research Network (HIRN) consortium resources.
+The scRNA-seq data analyzed in this repository were obtained from the Human Pancreas Analysis Program (HPAP) Database (https://hpap.pmacs.upenn.edu/). Computational infrastructure was provided by the City of Hope High Performance Research Computing Center.
 
-## Requirements
+## Technical Requirements
 
-The analysis pipelines require:
-- R v4.3+
-- Bioconductor packages
+### Computing Environment
+- SLURM-based HPC system
+- R version 4.3 or higher
+- Bioconductor 3.19+
+
+### R Packages
 - Seurat v5.1.0+
 - Harmony v0.2.0+
-- tidyomics framework
+- tidyverse & tidyomics framework
+- other packages as documented in the code
 
-Detailed environment specifications and package versions will be provided.
+### Installation
+
+```bash
+git clone https://github.com/KaddisLab/2025_van_tienhoven_et_al_cell.git
+```
+
+## Running the Pipeline
+
+```R
+targets::tar_make()
+```
+
+Note: Set `analysis_cache` in `_targets.R` to a folder on your local system.
+
+## Project Structure
+
+- `R/`: Custom R functions and analysis utilities
+- `assets/`: Resource files including reference data and QC reports
+- `figures/`: Generated figures and visualizations
+- `_targets/`: Target pipeline outputs
 
 ## Contact
 
