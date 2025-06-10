@@ -37,7 +37,7 @@ If you use these analysis methods, please cite our paper:
 - [MultiQC Report v3](assets/multiqc_report_v3.html) - nf-core/scrnaseq MultiQC report for 10X V3 chemistry libraries
 - [1000 Genomes SNP data](assets/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz) - Reference variants for genotyping, from [CellSNP](http://ufpr.dl.sourceforge.net/project/cellsnp/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz)
 
-The processed Seurat object (~4.5Gb) is available via Globus. Make your request by raising an [issue](https://github.com/KaddisLab/2025_van_tienhoven_et_al_cell/issues).
+The processed Seurat object (~4.5Gb) is available via Globus. Make your request via the City of Hope [POSEIDON Data Repository](https://poseidon-pubrepo.coh.org/publication/9).
 
 ## Data Sources
 
